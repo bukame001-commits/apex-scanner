@@ -220,10 +220,10 @@
     <div class="card">
       <div class="market-grid">
         <button class="market-btn active" data-market="crypto_top500" onclick="toggleMarket(this)">
-          <span class="icon">₿</span><div class="name">CRYPTO TOP 5000</div><div class="desc">By market cap</div>
+          <span class="icon">₿</span><div class="name">CRYPTO TOP 500</div><div class="desc">By market cap</div>
         </button>
         <button class="market-btn" data-market="crypto_top1000" onclick="toggleMarket(this)">
-          <span class="icon">🪙</span><div class="name">CRYPTO TOP 10000</div><div class="desc">By market cap</div>
+          <span class="icon">🪙</span><div class="name">CRYPTO TOP 1000</div><div class="desc">By market cap</div>
         </button>
         <button class="market-btn" data-market="sp500" onclick="toggleMarket(this)">
           <span class="icon">📈</span><div class="name">S&amp;P 500</div><div class="desc">US large cap</div>
@@ -363,7 +363,7 @@
 <script>
   let selectedEngine = 'gemini';
   let selectedMarkets = ['crypto_top500'];
-  let selectedInds = ['WaveTrend','RSI Divergence','Bollinger Band Lower Touch','Volume Spike'];
+  let selectedInds = ['WaveTrend','RSI Divergence','Bollinger Band Lower Touch','Volume Spike','Liquidation Zone'];
   let allAlerts = [];
 
   const MARKET_TICKERS = {
@@ -420,11 +420,17 @@
   }
 
   function toggleInd(btn) {
-    btn.classList.toggle('active');
     const ind = btn.dataset.ind;
     const check = btn.querySelector('.ind-check');
-    if (selectedInds.includes(ind)) { selectedInds=selectedInds.filter(x=>x!==ind); check.textContent=''; }
-    else { selectedInds.push(ind); check.textContent='✓'; }
+    if (selectedInds.includes(ind)) {
+      selectedInds = selectedInds.filter(x => x !== ind);
+      btn.classList.remove('active');
+      check.textContent = '';
+    } else {
+      selectedInds.push(ind);
+      btn.classList.add('active');
+      check.textContent = '✓';
+    }
   }
 
   function showToast(msg) {
@@ -643,11 +649,9 @@
     // Split into chunks of 4096 chars (Telegram limit)
     const chunks = [];
     let current = '';
-    msg.split('
-').forEach(line => {
+    msg.split('\n').forEach(line => {
       if ((current + line).length > 3800) { chunks.push(current); current = ''; }
-      current += line + '
-';
+      current += line + '\n';
     });
     if (current) chunks.push(current);
 
@@ -690,52 +694,49 @@
       allTickers=allTickers.filter(t=>{if(seen.has(t.symbol))return false;seen.add(t.symbol);return true;});
 
       const marketsList=selectedMarkets.map(m=>MARKET_TICKERS[m]?.label).join(', ');
-      const tickerList=allTickers.map(t=>`${t.symbol}(${t.market})`).join(',');
 
-      document.getElementById('loadingStatus').textContent=`Analyzing ${allTickers.length} assets across ${selectedMarkets.length} market(s)...`;
+      // Split into batches of 50 to avoid prompt size limits
+      const BATCH_SIZE = 50;
+      const batches = [];
+      for (let i = 0; i < allTickers.length; i += BATCH_SIZE) {
+        batches.push(allTickers.slice(i, i + BATCH_SIZE));
+      }
 
-      const prompt=`You are an expert technical analyst. Today is ${new Date().toDateString()}.
+      document.getElementById('loadingStatus').textContent='Analyzing ' + allTickers.length + ' assets in ' + batches.length + ' batches...';
 
-Analyze these ${allTickers.length} assets on their WEEKLY charts: ${tickerList}
+      let parsed = [];
+      for (let b = 0; b < batches.length; b++) {
+        const batch = batches[b];
+        const tickerList = batch.map(t => t.symbol).join(', ');
+        document.getElementById('loadingStatus').textContent='Batch ' + (b+1) + ' of ' + batches.length + ': ' + tickerList.substring(0,50) + '...';
 
-SCREENING CRITERIA:
-- Indicators: ${selectedInds.join(', ')}
-- WaveTrend oversold threshold: ${wtT}
-- RSI oversold threshold: ${rsiT}
-- Volume spike: ${volT} above average
-- Minimum signals to qualify: ${minT} of ${selectedInds.length}
+        const promptParts = [
+          'You are a crypto technical analyst. Today is ' + new Date().toDateString() + '.',
+          'Analyze these assets on WEEKLY charts: ' + tickerList,
+          'Indicators: ' + selectedInds.join(', '),
+          'WaveTrend oversold below ' + wtT + ', RSI oversold below ' + rsiT,
+          'Volume spike ' + volT + ' above avg. Min signals: ' + minT,
+          'Return ONLY a raw JSON array starting with [ and ending with ].',
+          'Format each item: symbol, market, type, score, signals array, wt1, rsi, timeframe, analysis (1 sentence).',
+          'market value should be: ' + marketsList,
+          'type should be: crypto',
+          'Only include assets meeting ' + minT + '+ criteria. Max 5 results. Return [] if none qualify.'
+        ];
+        const prompt = promptParts.join(' ');
 
-Identify assets MOST LIKELY showing oversold weekly conditions and potential reversal setups based on current market conditions as of ${new Date().toDateString()}.
+        try {
+          const response = await callAI(prompt);
+          try {
+            const clean = response.replace(/```json|```/gi,'').trim();
+            const s = clean.indexOf('['), e = clean.lastIndexOf(']');
+            if (s !== -1 && e !== -1) {
+              const batchParsed = JSON.parse(clean.slice(s, e+1));
+              parsed = [...parsed, ...batchParsed];
+            }
+          } catch(pe) { console.log('Batch ' + b + ' parse error:', pe); }
+        } catch(be) { console.log('Batch ' + b + ' error:', be); }
 
-IMPORTANT: Respond with ONLY a raw JSON array. No markdown. No backticks. No explanation. Start your response with [ and end with ]. Nothing else.
-[{"symbol":"BTC","market":"Crypto Top 50","type":"crypto","score":3,"signals":["WaveTrend Oversold","RSI Divergence","Volume Spike"],"wt1":-58.2,"rsi":31.4,"timeframe":"1W","analysis":"1 sentence max"}]
-
-Rules:
-- Only include assets meeting at least ${minT} criteria
-- Maximum 8 results only, sorted by score descending
-- Be selective and realistic based on current ${new Date().toDateString()} market conditions
-- Return [] if nothing qualifies
-- Score = number of triggered indicators (max ${selectedInds.length})`;
-
-      document.getElementById('loadingStatus').textContent='Analyzing chart patterns...';
-      const response=await callAI(prompt);
-
-      let parsed=[];
-      console.log('Raw AI response:', response);
-      try {
-        let clean=response.replace(/```json|```/gi,'').trim();
-        const s=clean.indexOf('['), e=clean.lastIndexOf(']');
-        if(s!==-1&&e!==-1){
-          clean=clean.slice(s,e+1);
-          parsed=JSON.parse(clean);
-        } else {
-          // No array found — show raw response to user for debugging
-            showError('DEBUG - No JSON array found in response. Raw: ' + response.substring(0,400));
-        }
-      } catch(err){
-        console.error('Parse error:',err);
-        showError('DEBUG - Parse error: ' + err.message + ' | Raw response: ' + response.substring(0,400));
-        parsed=[];
+        if (b < batches.length - 1) await new Promise(r => setTimeout(r, 300));
       }
 
       allAlerts=parsed;
