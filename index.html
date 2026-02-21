@@ -219,11 +219,11 @@
     <div class="section-label">02 — SELECT MARKETS</div>
     <div class="card">
       <div class="market-grid">
-        <button class="market-btn active" data-market="crypto_top50" onclick="toggleMarket(this)">
-          <span class="icon">₿</span><div class="name">CRYPTO TOP 50</div><div class="desc">By market cap</div>
+        <button class="market-btn active" data-market="crypto_top500" onclick="toggleMarket(this)">
+          <span class="icon">₿</span><div class="name">CRYPTO TOP 5000</div><div class="desc">By market cap</div>
         </button>
-        <button class="market-btn" data-market="crypto_top100" onclick="toggleMarket(this)">
-          <span class="icon">🪙</span><div class="name">CRYPTO TOP 100</div><div class="desc">By market cap</div>
+        <button class="market-btn" data-market="crypto_top1000" onclick="toggleMarket(this)">
+          <span class="icon">🪙</span><div class="name">CRYPTO TOP 10000</div><div class="desc">By market cap</div>
         </button>
         <button class="market-btn" data-market="sp500" onclick="toggleMarket(this)">
           <span class="icon">📈</span><div class="name">S&amp;P 500</div><div class="desc">US large cap</div>
@@ -274,6 +274,9 @@
         <button class="ind-btn" data-ind="OBV Rising" onclick="toggleInd(this)">
           <div class="ind-name">OBV</div><div class="ind-desc">Accumulation signal</div><div class="ind-check"></div>
         </button>
+        <button class="ind-btn active" data-ind="Liquidation Zone" onclick="toggleInd(this)">
+          <div class="ind-name">LIQUIDATION MAP</div><div class="ind-desc">Price near long/short liq zone</div><div class="ind-check">✓</div>
+        </button>
       </div>
     </div>
 
@@ -298,6 +301,24 @@
           <input type="range" min="1" max="5" value="2" step="1" oninput="document.getElementById('minVal').textContent=this.value" id="minT">
         </div>
       </div>
+    </div>
+
+    <!-- Telegram Settings -->
+    <div class="section-label">05 — TELEGRAM ALERTS (OPTIONAL)</div>
+    <div class="card">
+      <div class="slider-grid">
+        <div>
+          <div class="api-label">BOT TOKEN</div>
+          <input type="password" class="api-input" id="tgToken" placeholder="123456:ABC-..." 
+                 oninput="saveKey('tgToken', this.value)" style="margin-bottom:8px;" />
+        </div>
+        <div>
+          <div class="api-label">CHAT ID</div>
+          <input type="text" class="api-input" id="tgChatId" placeholder="-1001234567890"
+                 oninput="saveKey('tgChatId', this.value)" style="margin-bottom:8px;" />
+        </div>
+      </div>
+      <div class="api-note">Leave blank to skip Telegram. Alerts sent after scan completes.</div>
     </div>
 
     <button class="scan-btn" id="scanBtn" onclick="runScan()">⚡ ANALYZE WITH AI</button>
@@ -341,13 +362,13 @@
 
 <script>
   let selectedEngine = 'gemini';
-  let selectedMarkets = ['crypto_top50'];
+  let selectedMarkets = ['crypto_top500'];
   let selectedInds = ['WaveTrend','RSI Divergence','Bollinger Band Lower Touch','Volume Spike'];
   let allAlerts = [];
 
   const MARKET_TICKERS = {
-    crypto_top50:{label:'Crypto Top 50',type:'crypto',tickers:['BTC','ETH','BNB','XRP','SOL','ADA','DOGE','TRX','DOT','MATIC','LTC','SHIB','AVAX','LINK','ATOM','UNI','XMR','ETC','XLM','BCH','ALGO','VET','FIL','ICP','HBAR','APT','ARB','NEAR','QNT','GRT','AAVE','SAND','MANA','AXS','THETA','EOS','NEO','MKR','SNX','COMP','CRV','YFI','SUSHI','ENJ','CHZ','ZIL','BAT','HOT','ONT','DASH']},
-    crypto_top100:{label:'Crypto Top 100',type:'crypto',tickers:['BTC','ETH','BNB','XRP','SOL','ADA','DOGE','TRX','DOT','MATIC','LTC','SHIB','AVAX','LINK','ATOM','UNI','XMR','ETC','XLM','BCH','ALGO','VET','FIL','ICP','HBAR','APT','ARB','NEAR','QNT','GRT','AAVE','SAND','MANA','AXS','THETA','EOS','NEO','MKR','SNX','COMP','CRV','YFI','SUSHI','ENJ','CHZ','ZIL','BAT','HOT','ONT','DASH','ZEC','IOTA','XTZ','EGLD','FTM','ONE','KAVA','CELO','FLOW','ROSE','SKL','ANKR','OGN','SLP','ALICE','REEF','TLM','DENT','WIN','SC','DGB','RVN','SYS','ARDR','NXT','STEEM','LSK','PIVX','QTUM','WAN','ICX','IOST','ARK','NULS','WTC','STORM','WABI','CMT','WAVES','RUNE','LDO','FXS','CVX','GMX','DYDX','GNS','JOE','PERP']},
+    crypto_top500:{label:'Crypto Top 500',type:'crypto',tickers:['BTC','ETH','BNB','XRP','SOL','ADA','DOGE','TRX','DOT','MATIC','LTC','SHIB','AVAX','LINK','ATOM','UNI','XMR','ETC','XLM','BCH','ALGO','VET','FIL','ICP','HBAR','APT','ARB','NEAR','QNT','GRT','AAVE','SAND','MANA','AXS','THETA','EOS','NEO','MKR','SNX','COMP','CRV','YFI','SUSHI','ENJ','CHZ','ZIL','BAT','HOT','ONT','DASH','ZEC','IOTA','XTZ','EGLD','FTM','ONE','KAVA','CELO','FLOW','ROSE','SKL','ANKR','OGN','SLP','ALICE','REEF','TLM','DENT','WIN','SC','DGB','RVN','SYS','ARDR','NXT','STEEM','LSK','PIVX','QTUM','WAN','ICX','IOST','ARK','NULS','WTC','WAVES','RUNE','LDO','FXS','CVX','GMX','DYDX','GNS','JOE','PERP','STX','IMX','OP','INJ','SUI','SEI','TIA','PYTH','JUP','WIF','BONK','PEPE','FLOKI','TURBO','ORDI','SATS','RATS','MEME','BOME','SLERF','WEN','MYRO','POPCAT','MEW','BRETT','MOG','PONKE','RETARDIO','GIGA','PNUT','ACT','GOAT','MOODENG','NEIRO','EIGEN','DRIFT','CLOUD','IO','ZK','STRK','ALT','DYM','PIXEL','PORTAL','MANTA','AEVO','SAGA','OMNI','REZ','BB','NOT','DOGS','CATI','HMSTR','MAJOR','BLUM','BCUT','PAWS','GRAM','X','AGENT','GAME','TAO','RENDER','FET','AGIX','OCEAN','NMR','RLC','GRT','LPT','API3','BAND','TRB','LINK','UMA','ARKM','ONDO','PYUSD','FDUSD','TUSD','USDP','GUSD','USDD','FRAX','LUSD','CRVUSD','GHO','ALUSD','SUSD','DOLA','MIM','MAI','USDR','CUSD','BUSD','USDJ','ZUSD','USDX','HUSD','USDK','USDQ','USDT','USDC','DAI','USDN','TRIBE','FEI','FLOAT','BEAN','USDAP','USDL','USDM','USDV','USD0','USDY','USDZ','USDEX','USDW','USDH','USDF','USDG','USDB','USDA','USDE','SUSDX','AVT','TRAC','NKN','CTXC','LAMB','MTN','OGO','BLTV','BTCST','CHESS','TORN','CFX','EFI','MULTI','SPOOL','DODO','BURGER','XVS','ALPACA','BIFI','AUTO','CAKE','BELT','BUNNY','EPS','HARD','BOR','UNFI','SFP','AUCTION','BADGER','DIGG','FARM','PICKLE','COVER','ROOK','KEEP','NU','T','ALCX','TOKE','IDLE','BOND','POLS','API3','BETA','OOKI','MBL','AKRO','DF','IRIS','YFII','SRM','FIDA','KIN','MAPS','OXY','MEDIA','COPE','RAY','MER','STEP','SNY','PORT','SAIL','SLRS','MNGO','ABR','LIQ','TULIP','SUNNY','LARIX','KURO','SBR','ORCA','SABER','GOFX','SERUM']},
+    crypto_top1000:{label:'Crypto Top 1000',type:'crypto',tickers:['BTC','ETH','BNB','XRP','SOL','ADA','DOGE','TRX','DOT','MATIC','LTC','SHIB','AVAX','LINK','ATOM','UNI','XMR','ETC','XLM','BCH','ALGO','VET','FIL','ICP','HBAR','APT','ARB','NEAR','QNT','GRT','AAVE','SAND','MANA','AXS','THETA','EOS','NEO','MKR','SNX','COMP','CRV','YFI','SUSHI','ENJ','CHZ','ZIL','BAT','HOT','ONT','DASH','ZEC','IOTA','XTZ','EGLD','FTM','ONE','KAVA','CELO','FLOW','ROSE','SKL','ANKR','OGN','SLP','ALICE','REEF','TLM','DENT','WIN','SC','DGB','RVN','SYS','ARDR','NXT','STEEM','LSK','PIVX','QTUM','WAN','ICX','IOST','ARK','NULS','WTC','WAVES','RUNE','LDO','FXS','CVX','GMX','DYDX','GNS','JOE','PERP','STX','IMX','OP','INJ','SUI','SEI','TIA','PYTH','JUP','WIF','BONK','PEPE','FLOKI','TURBO','ORDI','MEME','BOME','POPCAT','MEW','BRETT','MOG','PONKE','GIGA','PNUT','ACT','GOAT','MOODENG','NEIRO','EIGEN','DRIFT','CLOUD','IO','ZK','STRK','ALT','DYM','PIXEL','PORTAL','MANTA','AEVO','SAGA','OMNI','REZ','BB','NOT','DOGS','CATI','HMSTR','MAJOR','TAO','RENDER','FET','AGIX','OCEAN','NMR','RLC','LPT','API3','BAND','TRB','UMA','ARKM','ONDO','CFX','DODO','XVS','ALPACA','BIFI','CAKE','BELT','BUNNY','EPS','HARD','UNFI','SFP','AUCTION','BADGER','DIGG','FARM','PICKLE','COVER','KEEP','NU','T','ALCX','TOKE','IDLE','BOND','POLS','BETA','OOKI','MBL','AKRO','DF','IRIS','YFII','RAY','SNY','MNGO','ORCA','SABER','ACH','ADX','AERGO','AGLD','AMP','ARPA','ATM','AVA','AVAX','AXS','BADGER','BAKE','BALANCER','BAND','BAR','BCH','BEAM','BETA','BICO','BLUR','BLZ','BNT','BOBA','BOND','BSW','BTG','BTS','BTT','C98','CELR','CFX','CHR','CITY','CLV','COCOS','COMBO','CORE','COT','CTK','CTSI','CYBER','DEGO','DENT','DIA','DOCK','DUSK','DYDX','EDU','ELF','EPX','ERN','ETCX','FARM','FOR','FORTH','FTT','FUN','GAL','GALA','GAS','GBP','GHST','GLM','GLMR','GMT','GNO','GNS','HARD','HFT','HIGH','HOOK','ID','IDEX','ILV','IOST','IQ','JASMY','JOE','JST','KAVA','KDA','KEY','KLAY','KMD','KP3R','KSM','LAZIO','LEND','LEVER','LINA','LISTA','LOKA','LOOM','LQTY','LUNC','MAGIC','MASK','MC','MDAO','MDT','MINA','MIR','MLN','MOVR','MTL','MULTI','MVL','MXC','NEXO','NFP','NMR','NTRN','OAX','OG','OGN','OMG','ONE','ONT','OOKI','ORC','OXT','PAXG','PEOPLE','PERP','PHA','PIVX','PLA','PLN','POLY','POND','PORTO','PROM','PROS','PSG','PYR','QI','QKC','QNT','QUICK','RAD','RDNT','REEF','REI','REN','REP','REQ','REVOLT','RIF','RNDR','RONIN','RPL','RUNE','SANTOS','SC','SCRT','SFP','SKL','SLPX','SNT','SOL','SPARTA','SPELL','STEEM','STMX','STORJ','STX','SUI','SUPER','SUSHI','SXP','SYS','TOMO','TORN','TRB','TRIBE','TROY','TRU','TWT','UFT','UNIBOT','USDT','UTK','VELO','VERSE','VIDT','VITE','VOXEL','VTHO','WAN','WING','WNCG','WOO','XEC','XEM','XNO','XVG','XVS','YGG','ZEC','ZEN','ZIL','ZRX','DOGE','SHIB','FLOKI','LUNC','ELON','BABY','SAMO','HOGE','PIG','LEASH','KISHU','SAITAMA','AKITA','DOGELON','VOLT','PITBULL','JACY','FLOKINOMICS','FLOKI','SAFEMOON','ELONGATE','HOKK','PIG','SHINJA','MOONSHOT','TFLOKI','FLOKIM']},
     sp500:{label:'S&P 500',type:'stock',tickers:['AAPL','MSFT','AMZN','NVDA','GOOGL','META','TSLA','BRK-B','UNH','LLY','JPM','V','XOM','MA','PG','JNJ','HD','AVGO','MRK','CVX','PEP','ABBV','COST','KO','WMT','ADBE','CRM','BAC','MCD','PFE','TMO','CSCO','ABT','ACN','NKE','DHR','LIN','CMCSA','TXN','VZ','PM','NEE','RTX','HON','AMGN','IBM','UNP','INTC','QCOM','INTU','SBUX','GE','LOW','AMD','CAT','DE','SPGI','MS','GS','BLK']},
     nasdaq100:{label:'Nasdaq 100',type:'stock',tickers:['AAPL','MSFT','AMZN','NVDA','GOOGL','GOOG','META','TSLA','AVGO','ADBE','CSCO','CMCSA','INTC','AMD','INTU','QCOM','HON','AMAT','SBUX','MDLZ','GILD','REGN','VRTX','ISRG','KLAC','LRCX','SNPS','CDNS','MRVL','PANW','CRWD','NFLX','PYPL','ADP','MELI','ASML','COST','PDD','KDP','ORLY','PCAR','CTAS','FTNT','FAST','CPRT','MNST','DDOG','ROST','PAYX','ODFL']},
     russell2000:{label:'Russell 2000',type:'stock',tickers:['SMCI','SAIA','GTLS','CHRD','RMBS','HALO','MGNI','CSWI','UFPI','PLXS','ITRI','ESAB','AAON','SPSC','ACLS','SFBS','CABO','ALRM','KTOS','AEIS','CPRX','MSGS','IRTC','MGPI','HTLF','PTCT','FORM','NSIT','TGTX','IDEX','AGIO','CARG','PRGS','DFIN','NEOG','HLIO','DNOW','BOOT','REPX','ARCH','AORT','INVA','DXPE','LQDT','MYRG','CNXN','PAHC','RELY','HTLD','PZZA']},
@@ -380,8 +401,12 @@
     try {
       const ck = localStorage.getItem('apex_key_claude');
       const gk = localStorage.getItem('apex_key_gemini');
+      const tt = localStorage.getItem('apex_key_tgToken');
+      const tc = localStorage.getItem('apex_key_tgChatId');
       if (ck) document.getElementById('claudeKey').value = ck;
       if (gk) document.getElementById('geminiKey').value = gk;
+      if (tt) document.getElementById('tgToken').value = tt;
+      if (tc) document.getElementById('tgChatId').value = tc;
     } catch(e) {}
   }
 
@@ -515,6 +540,126 @@
     renderAlerts(f);
   }
 
+  // ── Binance liquidation zone fetch ───────────────────
+  async function fetchLiquidationData(symbols) {
+    const results = {};
+    const binanceSymbols = symbols
+      .filter(t => t.type === 'crypto')
+      .map(t => ({ symbol: t.symbol, pair: t.symbol + 'USDT' }));
+
+    await Promise.all(binanceSymbols.map(async ({ symbol, pair }) => {
+      try {
+        const [oiRes, frRes, priceRes] = await Promise.all([
+          fetch(`https://fapi.binance.com/fapi/v1/openInterest?symbol=${pair}`),
+          fetch(`https://fapi.binance.com/fapi/v1/fundingRate?symbol=${pair}&limit=1`),
+          fetch(`https://fapi.binance.com/fapi/v1/ticker/price?symbol=${pair}`)
+        ]);
+
+        if (!oiRes.ok || !frRes.ok || !priceRes.ok) return;
+
+        const oi = await oiRes.json();
+        const fr = await frRes.json();
+        const price = await priceRes.json();
+
+        const currentPrice = parseFloat(price.price);
+        const fundingRate = parseFloat(fr[0]?.fundingRate || 0);
+        const openInterest = parseFloat(oi.openInterest);
+
+        // Estimate liquidation zones:
+        // Positive funding = longs dominant = long liq below, short liq above
+        // Negative funding = shorts dominant = short liq below, long liq above
+        const leverage = 10; // assume avg 10x leverage
+        const longLiqZone = currentPrice * (1 - 1/leverage); // ~10% below
+        const shortLiqZone = currentPrice * (1 + 1/leverage); // ~10% above
+
+        // Check if price is within 10% of liquidation zone
+        const nearLongLiq = Math.abs(currentPrice - longLiqZone) / currentPrice <= 0.10;
+        const nearShortLiq = Math.abs(currentPrice - shortLiqZone) / currentPrice <= 0.10;
+
+        results[symbol] = {
+          price: currentPrice,
+          fundingRate,
+          openInterest,
+          longLiqZone: longLiqZone.toFixed(4),
+          shortLiqZone: shortLiqZone.toFixed(4),
+          nearLongLiq,
+          nearShortLiq,
+          fundingBias: fundingRate > 0.0005 ? 'LONGS_CROWDED' : fundingRate < -0.0005 ? 'SHORTS_CROWDED' : 'NEUTRAL',
+          alert: nearLongLiq || nearShortLiq,
+          alertType: nearLongLiq ? 'NEAR_LONG_LIQ' : nearShortLiq ? 'NEAR_SHORT_LIQ' : null
+        };
+      } catch(e) {
+        // Symbol not on Binance futures, skip
+      }
+    }));
+    return results;
+  }
+
+  // ── Telegram sender ───────────────────────────────────
+  async function sendTelegram(alerts, liqData) {
+    const token = document.getElementById('tgToken').value.trim();
+    const chatId = document.getElementById('tgChatId').value.trim();
+    if (!token || !chatId) return;
+
+    const strong = alerts.filter(a => a.score >= 3);
+    const liqAlerts = Object.entries(liqData).filter(([,d]) => d.alert);
+
+    let msg = `⚡ *APEX SCANNER RESULTS*
+`;
+    msg += `📅 ${new Date().toDateString()}
+
+`;
+
+    if (strong.length > 0) {
+      msg += `🔥 *STRONG SIGNALS (${strong.length})*
+`;
+      strong.forEach(a => {
+        msg += `
+*${a.symbol}* — Score: ${a.score}
+`;
+        msg += `Signals: ${(a.signals||[]).join(', ')}
+`;
+        msg += `${a.analysis}
+`;
+      });
+    }
+
+    if (liqAlerts.length > 0) {
+      msg += `
+💥 *LIQUIDATION ZONE ALERTS (${liqAlerts.length})*
+`;
+      liqAlerts.forEach(([sym, d]) => {
+        const type = d.alertType === 'NEAR_LONG_LIQ' ? '🔴 Near LONG liq' : '🟢 Near SHORT liq';
+        msg += `
+*${sym}* — ${type}
+`;
+        msg += `Price: $${d.price} | Funding: ${(d.fundingRate*100).toFixed(4)}%
+`;
+        msg += `Long Liq Zone: $${d.longLiqZone} | Short Liq Zone: $${d.shortLiqZone}
+`;
+      });
+    }
+
+    // Split into chunks of 4096 chars (Telegram limit)
+    const chunks = [];
+    let current = '';
+    msg.split('
+').forEach(line => {
+      if ((current + line).length > 3800) { chunks.push(current); current = ''; }
+      current += line + '
+';
+    });
+    if (current) chunks.push(current);
+
+    for (const chunk of chunks) {
+      await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chat_id: chatId, text: chunk, parse_mode: 'Markdown' })
+      });
+    }
+  }
+
   // ── Main scan ─────────────────────────────────────
   async function runScan() {
     if(selectedMarkets.length===0){showToast('SELECT AT LEAST ONE MARKET');return;}
@@ -595,6 +740,44 @@ Rules:
 
       allAlerts=parsed;
 
+      // Fetch liquidation data from Binance if indicator selected
+      let liqData = {};
+      if (selectedInds.includes('Liquidation Zone')) {
+        document.getElementById('loadingStatus').textContent='Fetching Binance liquidation data...';
+        liqData = await fetchLiquidationData(allTickers);
+
+        // Add liquidation signal to matching alerts
+        allAlerts = allAlerts.map(a => {
+          const liq = liqData[a.symbol];
+          if (liq && liq.alert) {
+            const liqSignal = liq.alertType === 'NEAR_LONG_LIQ'
+              ? '🔴 Near Long Liq Zone'
+              : '🟢 Near Short Liq Zone';
+            a.signals = [...(a.signals||[]), liqSignal];
+            a.score = a.score + 1;
+            a.analysis += ` Funding rate: ${(liq.fundingRate*100).toFixed(4)}% (${liq.fundingBias}).`;
+          }
+          return a;
+        });
+
+        // Add standalone liquidation alerts (not in AI results)
+        Object.entries(liqData).forEach(([sym, d]) => {
+          if (d.alert && !allAlerts.find(a => a.symbol === sym)) {
+            allAlerts.push({
+              symbol: sym,
+              market: 'Crypto',
+              type: 'crypto',
+              score: 1,
+              signals: [d.alertType === 'NEAR_LONG_LIQ' ? '🔴 Near Long Liq Zone' : '🟢 Near Short Liq Zone'],
+              rsi: undefined,
+              wt1: undefined,
+              timeframe: '1W',
+              analysis: `Price $${d.price} is near ${d.alertType === 'NEAR_LONG_LIQ' ? 'long' : 'short'} liquidation zone ($${d.alertType === 'NEAR_LONG_LIQ' ? d.longLiqZone : d.shortLiqZone}). Funding rate: ${(d.fundingRate*100).toFixed(4)}% — ${d.fundingBias}.`
+            });
+          }
+        });
+      }
+
       document.getElementById('loadingStatus').textContent='Generating market summary...';
 
       const summaryPrompt=`Write a concise 3-sentence market summary for a trader covering ${marketsList} as of ${new Date().toDateString()}:
@@ -618,6 +801,17 @@ Be direct, specific, no disclaimers.`;
 
       allAlerts.sort((a,b)=>b.score-a.score);
       renderAlerts(allAlerts);
+
+      // Send Telegram alerts
+      if (document.getElementById('tgToken').value.trim()) {
+        document.getElementById('loadingStatus').textContent='Sending Telegram alerts...';
+        try {
+          await sendTelegram(allAlerts, liqData);
+          showToast('TELEGRAM ALERTS SENT ✓');
+        } catch(e) {
+          showToast('TELEGRAM ERROR: ' + e.message.substring(0,40));
+        }
+      }
 
     } catch(err) {
       showError('ERROR: ' + err.message);
