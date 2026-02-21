@@ -525,7 +525,8 @@
           </div>
         </div>
         <div class="alert-signals">${signals.map(s=>`<span class="signal-tag ${getSignalClass(s)}">${s}</span>`).join('')}</div>
-        <div class="alert-analysis">${a.analysis||''}</div>
+        <div class="alert-analysis">\${a.analysis||''}</div>
+        \${a.sentiment ? '<div style="margin-top:6px;font-family:Share Tech Mono,monospace;font-size:10px;padding:4px 10px;display:inline-block;border-radius:2px;border:1px solid;' + (a.sentimentEmoji==='green'?'color:#00ff88;border-color:rgba(0,255,136,0.4);background:rgba(0,255,136,0.06)':a.sentimentEmoji==='red'?'color:#ff3366;border-color:rgba(255,51,102,0.4);background:rgba(255,51,102,0.06)':'color:#ffb800;border-color:rgba(255,184,0,0.4);background:rgba(255,184,0,0.06)') + '">REDDIT: ' + a.sentiment + '</div>' : ''}
         <div class="alert-values">
           ${a.wt1!==undefined?`<div class="alert-val">WT1 <span>${a.wt1}</span></div>`:''}
           ${a.rsi!==undefined?`<div class="alert-val">RSI <span>${a.rsi}</span></div>`:''}
@@ -608,60 +609,107 @@
     if (!token || !chatId) return;
 
     const strong = alerts.filter(a => a.score >= 3);
-    const liqAlerts = Object.entries(liqData).filter(([,d]) => d.alert);
+    const liqAlerts = Object.entries(liqData).filter(([,d]) => d && d.alert);
 
-    let msg = `⚡ *APEX SCANNER RESULTS*
-`;
-    msg += `📅 ${new Date().toDateString()}
-
-`;
+    let lines = [];
+    lines.push('APEX SCANNER RESULTS');
+    lines.push(new Date().toDateString());
+    lines.push('');
 
     if (strong.length > 0) {
-      msg += `🔥 *STRONG SIGNALS (${strong.length})*
-`;
+      lines.push('STRONG SIGNALS (' + strong.length + ')');
       strong.forEach(a => {
-        msg += `
-*${a.symbol}* — Score: ${a.score}
-`;
-        msg += `Signals: ${(a.signals||[]).join(', ')}
-`;
-        msg += `${a.analysis}
-`;
+        lines.push('');
+        lines.push(a.symbol + ' - Score: ' + a.score + '/' + selectedInds.length);
+        lines.push('Signals: ' + (a.signals||[]).join(', '));
+        lines.push(a.analysis || '');
+        if (a.sentiment) lines.push('Sentiment: ' + a.sentiment);
       });
+    } else {
+      lines.push('No strong signals found.');
     }
 
     if (liqAlerts.length > 0) {
-      msg += `
-💥 *LIQUIDATION ZONE ALERTS (${liqAlerts.length})*
-`;
-      liqAlerts.forEach(([sym, d]) => {
-        const type = d.alertType === 'NEAR_LONG_LIQ' ? '🔴 Near LONG liq' : '🟢 Near SHORT liq';
-        msg += `
-*${sym}* — ${type}
-`;
-        msg += `Price: $${d.price} | Funding: ${(d.fundingRate*100).toFixed(4)}%
-`;
-        msg += `Long Liq Zone: $${d.longLiqZone} | Short Liq Zone: $${d.shortLiqZone}
-`;
+      lines.push('');
+      lines.push('LIQUIDATION ZONE ALERTS (' + liqAlerts.length + ')');
+      liqAlerts.forEach(function(entry) {
+        var sym = entry[0], d = entry[1];
+        var type = d.alertType === 'NEAR_LONG_LIQ' ? 'Near LONG liq' : 'Near SHORT liq';
+        lines.push('');
+        lines.push(sym + ' - ' + type);
+        lines.push('Price: $' + d.price + ' | Funding: ' + (d.fundingRate*100).toFixed(4) + '%');
       });
     }
 
-    // Split into chunks of 4096 chars (Telegram limit)
+    const msg = lines.join('\n');
+
+    // Split into 4000 char chunks
     const chunks = [];
-    let current = '';
-    msg.split('\n').forEach(line => {
-      if ((current + line).length > 3800) { chunks.push(current); current = ''; }
-      current += line + '\n';
-    });
-    if (current) chunks.push(current);
+    for (let i = 0; i < msg.length; i += 4000) {
+      chunks.push(msg.slice(i, i + 4000));
+    }
 
     for (const chunk of chunks) {
-      await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ chat_id: chatId, text: chunk, parse_mode: 'Markdown' })
-      });
+      try {
+        const res = await fetch('https://api.telegram.org/bot' + token + '/sendMessage', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ chat_id: chatId, text: chunk })
+        });
+        const data = await res.json();
+        if (!data.ok) throw new Error(data.description || 'Telegram error');
+      } catch(e) {
+        showError('Telegram error: ' + e.message);
+        return;
+      }
     }
+  }
+
+  // ── Reddit sentiment fetch ────────────────────────
+  async function fetchRedditSentiment(symbols) {
+    const sentiment = {};
+    const allSymbols = symbols.slice(0, 20); // limit to top 20 alerts
+
+    await Promise.all(allSymbols.map(async ({ symbol, type }) => {
+      try {
+        const isCrypto = type === 'crypto';
+        const query = isCrypto
+          ? encodeURIComponent(symbol + ' crypto')
+          : encodeURIComponent(symbol + ' stock');
+        const url = 'https://www.reddit.com/search.json?q=' + query + '&sort=hot&limit=10&t=day';
+
+        const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+        if (!res.ok) return;
+        const data = await res.json();
+
+        const posts = data.data?.children || [];
+        if (posts.length === 0) { sentiment[symbol] = { score: 0, posts: 0, label: 'NO DATA' }; return; }
+
+        let bullish = 0, bearish = 0, totalUpvotes = 0;
+        posts.forEach(p => {
+          const title = (p.data.title || '').toLowerCase();
+          const ups = p.data.ups || 0;
+          totalUpvotes += ups;
+          const bullWords = ['moon', 'pump', 'bullish', 'buy', 'long', 'breakout', 'surge', 'rally', 'up', 'gain', 'beat', 'earnings beat', 'upgrade', 'outperform', 'oversold', 'accumulate', 'undervalued', 'strong'];
+          const bearWords = ['dump', 'bearish', 'sell', 'short', 'crash', 'drop', 'down', 'fall', 'loss', 'rug', 'miss', 'earnings miss', 'downgrade', 'overbought', 'overvalued', 'weak', 'avoid', 'layoffs'];
+          bullWords.forEach(w => { if (title.includes(w)) bullish++; });
+          bearWords.forEach(w => { if (title.includes(w)) bearish++; });
+        });
+
+        const sentScore = bullish - bearish;
+        const label = sentScore > 1 ? 'BULLISH' : sentScore < -1 ? 'BEARISH' : 'NEUTRAL';
+        sentiment[symbol] = {
+          score: sentScore,
+          posts: posts.length,
+          upvotes: totalUpvotes,
+          label,
+          emoji: sentScore > 1 ? 'green' : sentScore < -1 ? 'red' : 'yellow'
+        };
+      } catch(e) {
+        sentiment[symbol] = { score: 0, posts: 0, label: 'ERROR' };
+      }
+    }));
+    return sentiment;
   }
 
   // ── Main scan ─────────────────────────────────────
@@ -778,6 +826,23 @@
           }
         });
       }
+
+      // Fetch Reddit sentiment for alerted symbols
+      let redditData = {};
+      document.getElementById('loadingStatus').textContent='Fetching Reddit sentiment...';
+      try {
+        const alertedSymbols = allAlerts.map(a => ({ symbol: a.symbol, type: a.type || 'crypto' }));
+        redditData = await fetchRedditSentiment(alertedSymbols);
+        // Add sentiment to each alert
+        allAlerts = allAlerts.map(a => {
+          const r = redditData[a.symbol];
+          if (r && r.posts > 0) {
+            a.sentiment = r.label + ' (' + r.posts + ' posts, ' + r.upvotes + ' upvotes)';
+            a.sentimentEmoji = r.emoji;
+          }
+          return a;
+        });
+      } catch(e) { console.log('Reddit error:', e); }
 
       document.getElementById('loadingStatus').textContent='Generating market summary...';
 
