@@ -500,41 +500,61 @@
   }
 
   function renderAlerts(alerts) {
-    const c=document.getElementById('alertsContainer');
-    c.innerHTML='';
-    if(alerts.length===0){
-      c.innerHTML='<div style="text-align:center;padding:40px;font-family:\'Share Tech Mono\',monospace;font-size:12px;color:var(--muted);">NO ALERTS FOR CURRENT FILTER</div>';
+    const c = document.getElementById('alertsContainer');
+    c.innerHTML = '';
+    if (alerts.length === 0) {
+      c.innerHTML = '<div style="text-align:center;padding:40px;font-family:Share Tech Mono,monospace;font-size:12px;color:var(--muted);">NO ALERTS FOR CURRENT FILTER</div>';
       return;
     }
-    alerts.forEach(a=>{
-      const isStrong=a.score>=3;
-      const card=document.createElement('div');
-      card.className=`alert-card ${isStrong?'strong':'moderate'}`;
-      card.dataset.type=a.type||'';
-      card.dataset.strength=isStrong?'strong':'moderate';
-      const signals=(a.signals||[]);
-      card.innerHTML=`
-        <div class="alert-top">
-          <div>
-            <div class="alert-symbol">${a.symbol}</div>
-            <div class="alert-market">${a.market||''} • ${(a.type||'').toUpperCase()}</div>
-          </div>
-          <div style="text-align:right">
-            <div class="alert-score ${isStrong?'':'moderate'}">${a.score}/${selectedInds.length}</div>
-            <div style="font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--muted);margin-top:2px;">${isStrong?'🔥 STRONG':'⚡ MODERATE'}</div>
-          </div>
-        </div>
-        <div class="alert-signals">${signals.map(s=>`<span class="signal-tag ${getSignalClass(s)}">${s}</span>`).join('')}</div>
-        <div class="alert-analysis">\${a.analysis||''}</div>
-        \${a.sentiment ? '<div style="margin-top:6px;font-family:Share Tech Mono,monospace;font-size:10px;padding:4px 10px;display:inline-block;border-radius:2px;border:1px solid;' + (a.sentimentEmoji==='green'?'color:#00ff88;border-color:rgba(0,255,136,0.4);background:rgba(0,255,136,0.06)':a.sentimentEmoji==='red'?'color:#ff3366;border-color:rgba(255,51,102,0.4);background:rgba(255,51,102,0.06)':'color:#ffb800;border-color:rgba(255,184,0,0.4);background:rgba(255,184,0,0.06)') + '">REDDIT: ' + a.sentiment + '</div>' : ''}
-        <div class="alert-values">
-          ${a.wt1!==undefined?`<div class="alert-val">WT1 <span>${a.wt1}</span></div>`:''}
-          ${a.rsi!==undefined?`<div class="alert-val">RSI <span>${a.rsi}</span></div>`:''}
-          ${a.timeframe?`<div class="alert-val">TF <span>${a.timeframe}</span></div>`:''}
-        </div>`;
+    alerts.forEach(function(a) {
+      const isStrong = a.score >= 3;
+      const card = document.createElement('div');
+      card.className = 'alert-card ' + (isStrong ? 'strong' : 'moderate');
+      card.dataset.type = a.type || '';
+      card.dataset.strength = isStrong ? 'strong' : 'moderate';
+      const signals = a.signals || [];
+
+      // Build signals HTML
+      let signalsHtml = '';
+      signals.forEach(function(s) {
+        signalsHtml += '<span class="signal-tag ' + getSignalClass(s) + '">' + s + '</span>';
+      });
+
+      // Build sentiment badge
+      let sentimentHtml = '';
+      if (a.sentiment) {
+        let sentColor = 'color:#ffb800;border-color:rgba(255,184,0,0.4);background:rgba(255,184,0,0.06)';
+        if (a.sentimentEmoji === 'green') sentColor = 'color:#00ff88;border-color:rgba(0,255,136,0.4);background:rgba(0,255,136,0.06)';
+        if (a.sentimentEmoji === 'red') sentColor = 'color:#ff3366;border-color:rgba(255,51,102,0.4);background:rgba(255,51,102,0.06)';
+        sentimentHtml = '<div style="margin-top:8px;font-family:Share Tech Mono,monospace;font-size:10px;padding:4px 10px;display:inline-block;border-radius:2px;border:1px solid;' + sentColor + '">REDDIT: ' + a.sentiment + '</div>';
+      }
+
+      // Build values
+      let valuesHtml = '';
+      if (a.wt1 !== undefined) valuesHtml += '<div class="alert-val">WT1 <span>' + a.wt1 + '</span></div>';
+      if (a.rsi !== undefined) valuesHtml += '<div class="alert-val">RSI <span>' + a.rsi + '</span></div>';
+      if (a.timeframe) valuesHtml += '<div class="alert-val">TF <span>' + a.timeframe + '</span></div>';
+
+      card.innerHTML =
+        '<div class="alert-top">' +
+          '<div>' +
+            '<div class="alert-symbol">' + (a.symbol || '') + '</div>' +
+            '<div class="alert-market">' + (a.market || '') + ' &bull; ' + ((a.type || '').toUpperCase()) + '</div>' +
+          '</div>' +
+          '<div style="text-align:right">' +
+            '<div class="alert-score ' + (isStrong ? '' : 'moderate') + '">' + a.score + '/' + selectedInds.length + '</div>' +
+            '<div style="font-family:Share Tech Mono,monospace;font-size:9px;color:var(--muted);margin-top:2px;">' + (isStrong ? '&#128293; STRONG' : '&#9889; MODERATE') + '</div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="alert-signals">' + signalsHtml + '</div>' +
+        '<div class="alert-analysis">' + (a.analysis || '') + '</div>' +
+        sentimentHtml +
+        '<div class="alert-values">' + valuesHtml + '</div>';
+
       c.appendChild(card);
     });
   }
+
 
   function filterAlerts(type,btn) {
     document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
@@ -651,13 +671,18 @@
 
     for (const chunk of chunks) {
       try {
+        const parsedChatId = isNaN(chatId) ? chatId : parseInt(chatId);
         const res = await fetch('https://api.telegram.org/bot' + token + '/sendMessage', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ chat_id: chatId, text: chunk })
+          body: JSON.stringify({ chat_id: parsedChatId, text: chunk })
         });
+        if (!res.ok) {
+          const errText = await res.text();
+          throw new Error('HTTP ' + res.status + ': ' + errText.substring(0, 100));
+        }
         const data = await res.json();
-        if (!data.ok) throw new Error(data.description || 'Telegram error');
+        if (!data.ok) throw new Error(data.description || 'Telegram rejected message');
       } catch(e) {
         showError('Telegram error: ' + e.message);
         return;
