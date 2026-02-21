@@ -613,17 +613,38 @@
         // Estimate liquidation zones:
         // Positive funding = longs dominant = long liq below, short liq above
         // Negative funding = shorts dominant = short liq below, long liq above
-        const leverage = 10; // assume avg 10x leverage
-        const longLiqZone = currentPrice * (1 - 1/leverage); // ~10% below
-        const shortLiqZone = currentPrice * (1 + 1/leverage); // ~10% above
+        // Estimate leverage from funding rate:
+        // High positive funding = longs very crowded = higher leverage = tighter liq zone
+        // High negative funding = shorts very crowded = higher leverage = tighter liq zone
+        const absFunding = Math.abs(fundingRate);
+        let estimatedLeverage;
+        if (absFunding > 0.003) estimatedLeverage = 25;       // extremely crowded = 25x
+        else if (absFunding > 0.001) estimatedLeverage = 15;  // very crowded = 15x
+        else if (absFunding > 0.0005) estimatedLeverage = 10; // moderately crowded = 10x
+        else if (absFunding > 0.0002) estimatedLeverage = 7;  // slightly crowded = 7x
+        else estimatedLeverage = 5;                            // neutral = 5x
+
+        // Longs get liquidated below, shorts above
+        // Positive funding = longs dominant = long liq is closer (tighter)
+        // Negative funding = shorts dominant = short liq is closer (tighter)
+        const longLiqDistance = fundingRate >= 0
+          ? (1 / estimatedLeverage)         // longs crowded = closer long liq
+          : (1 / (estimatedLeverage * 0.6)); // shorts crowded = farther long liq
+
+        const shortLiqDistance = fundingRate < 0
+          ? (1 / estimatedLeverage)          // shorts crowded = closer short liq
+          : (1 / (estimatedLeverage * 0.6)); // longs crowded = farther short liq
+
+        const longLiqZone = currentPrice * (1 - longLiqDistance);
+        const shortLiqZone = currentPrice * (1 + shortLiqDistance);
 
         // Calculate exact distance % to each liquidation zone
         const distToLongLiq = ((currentPrice - longLiqZone) / currentPrice * 100).toFixed(2);
         const distToShortLiq = ((shortLiqZone - currentPrice) / currentPrice * 100).toFixed(2);
 
-        // Check if price is within 10% of liquidation zone
-        const nearLongLiq = parseFloat(distToLongLiq) <= 10;
-        const nearShortLiq = parseFloat(distToShortLiq) <= 10;
+        // Alert if price is within 12% of either liquidation zone
+        const nearLongLiq = parseFloat(distToLongLiq) <= 12;
+        const nearShortLiq = parseFloat(distToShortLiq) <= 12;
 
         results[symbol] = {
           price: currentPrice,
