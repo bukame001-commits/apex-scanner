@@ -319,6 +319,10 @@
         </div>
       </div>
       <div class="api-note">Leave blank to skip Telegram. Alerts sent after scan completes.</div>
+      <button onclick="testTelegram()" style="margin-top:10px;background:transparent;border:1px solid var(--warn);color:var(--warn);font-family:Share Tech Mono,monospace;font-size:10px;padding:8px 16px;cursor:pointer;letter-spacing:2px;width:100%;">
+        &#9993; TEST TELEGRAM CONNECTION
+      </button>
+      <div id="tgTestResult" style="display:none;margin-top:8px;font-family:Share Tech Mono,monospace;font-size:10px;padding:8px;border-radius:2px;line-height:1.6;"></div>
     </div>
 
     <button class="scan-btn" id="scanBtn" onclick="runScan()">⚡ ANALYZE WITH AI</button>
@@ -414,23 +418,34 @@
 
   // ── Market / indicator toggles ────────────────────
   function toggleMarket(btn) {
-    btn.classList.toggle('active');
-    const m = btn.dataset.market;
-    selectedMarkets = selectedMarkets.includes(m) ? selectedMarkets.filter(x=>x!==m) : [...selectedMarkets,m];
+    try {
+      const m = btn.dataset.market;
+      if (!m) return;
+      if (selectedMarkets.includes(m)) {
+        selectedMarkets = selectedMarkets.filter(function(x) { return x !== m; });
+        btn.classList.remove('active');
+      } else {
+        selectedMarkets.push(m);
+        btn.classList.add('active');
+      }
+    } catch(e) { console.error('toggleMarket error:', e); }
   }
 
   function toggleInd(btn) {
-    const ind = btn.dataset.ind;
-    const check = btn.querySelector('.ind-check');
-    if (selectedInds.includes(ind)) {
-      selectedInds = selectedInds.filter(x => x !== ind);
-      btn.classList.remove('active');
-      check.textContent = '';
-    } else {
-      selectedInds.push(ind);
-      btn.classList.add('active');
-      check.textContent = '✓';
-    }
+    try {
+      const ind = btn.dataset.ind;
+      if (!ind) return;
+      const check = btn.querySelector('.ind-check');
+      if (selectedInds.includes(ind)) {
+        selectedInds = selectedInds.filter(function(x) { return x !== ind; });
+        btn.classList.remove('active');
+        if (check) check.textContent = '';
+      } else {
+        selectedInds.push(ind);
+        btn.classList.add('active');
+        if (check) check.textContent = '✓';
+      }
+    } catch(e) { console.error('toggleInd error:', e); }
   }
 
   function showToast(msg) {
@@ -439,11 +454,14 @@
   }
 
   function showError(msg) {
+    console.error('APEX ERROR:', msg);
     const box = document.getElementById('errorBox');
-    box.textContent = msg;
-    box.style.display = 'block';
-    document.getElementById('loading').classList.remove('visible');
-    document.getElementById('setupPanel').style.display = 'block';
+    if (box) { box.textContent = msg; box.style.display = 'block'; }
+    const loading = document.getElementById('loading');
+    if (loading) loading.classList.remove('visible');
+    const panel = document.getElementById('setupPanel');
+    if (panel) panel.style.display = 'block';
+    showToast(msg.substring(0, 60));
   }
 
   function newScan() {
@@ -735,6 +753,53 @@
       }
     }));
     return sentiment;
+  }
+
+  // ── Test Telegram ────────────────────────────────
+  async function testTelegram() {
+    const token = document.getElementById('tgToken').value.trim();
+    const chatId = document.getElementById('tgChatId').value.trim();
+    const result = document.getElementById('tgTestResult');
+    result.style.display = 'block';
+
+    if (!token) { result.style.color='#ff3366'; result.textContent='ERROR: Enter your bot token first'; return; }
+    if (!chatId) { result.style.color='#ff3366'; result.textContent='ERROR: Enter your chat ID first'; return; }
+
+    result.style.color='#ffb800';
+    result.textContent='Testing connection...';
+
+    try {
+      // First verify the bot token
+      const botRes = await fetch('https://api.telegram.org/bot' + token + '/getMe');
+      const botData = await botRes.json();
+      if (!botData.ok) {
+        result.style.color='#ff3366';
+        result.textContent='ERROR: Invalid bot token. Get it from @BotFather on Telegram.';
+        return;
+      }
+
+      const botName = botData.result.username;
+
+      // Now send a test message
+      const parsedChatId = isNaN(chatId) ? chatId : parseInt(chatId);
+      const msgRes = await fetch('https://api.telegram.org/bot' + token + '/sendMessage', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chat_id: parsedChatId, text: 'APEX SCANNER: Connection test successful! Your alerts are configured correctly.' })
+      });
+      const msgData = await msgRes.json();
+
+      if (msgData.ok) {
+        result.style.color='#00ff88';
+        result.textContent='SUCCESS: Bot @' + botName + ' connected! Check your Telegram for the test message.';
+      } else {
+        result.style.color='#ff3366';
+        result.textContent='ERROR: Bot token is valid but chat ID is wrong. Error: ' + msgData.description + '. Get your correct chat ID from @userinfobot on Telegram.';
+      }
+    } catch(e) {
+      result.style.color='#ff3366';
+      result.textContent='ERROR: ' + e.message + '. Make sure your internet connection is working.';
+    }
   }
 
   // ── Main scan ─────────────────────────────────────
