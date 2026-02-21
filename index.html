@@ -617,9 +617,13 @@
         const longLiqZone = currentPrice * (1 - 1/leverage); // ~10% below
         const shortLiqZone = currentPrice * (1 + 1/leverage); // ~10% above
 
+        // Calculate exact distance % to each liquidation zone
+        const distToLongLiq = ((currentPrice - longLiqZone) / currentPrice * 100).toFixed(2);
+        const distToShortLiq = ((shortLiqZone - currentPrice) / currentPrice * 100).toFixed(2);
+
         // Check if price is within 10% of liquidation zone
-        const nearLongLiq = Math.abs(currentPrice - longLiqZone) / currentPrice <= 0.10;
-        const nearShortLiq = Math.abs(currentPrice - shortLiqZone) / currentPrice <= 0.10;
+        const nearLongLiq = parseFloat(distToLongLiq) <= 10;
+        const nearShortLiq = parseFloat(distToShortLiq) <= 10;
 
         results[symbol] = {
           price: currentPrice,
@@ -627,6 +631,8 @@
           openInterest,
           longLiqZone: longLiqZone.toFixed(4),
           shortLiqZone: shortLiqZone.toFixed(4),
+          distToLongLiq,
+          distToShortLiq,
           nearLongLiq,
           nearShortLiq,
           fundingBias: fundingRate > 0.0005 ? 'LONGS_CROWDED' : fundingRate < -0.0005 ? 'SHORTS_CROWDED' : 'NEUTRAL',
@@ -674,8 +680,10 @@
         var sym = entry[0], d = entry[1];
         var type = d.alertType === 'NEAR_LONG_LIQ' ? 'Near LONG liq' : 'Near SHORT liq';
         lines.push('');
-        lines.push(sym + ' - ' + type);
-        lines.push('Price: $' + d.price + ' | Funding: ' + (d.fundingRate*100).toFixed(4) + '%');
+        var dist = d.alertType === 'NEAR_LONG_LIQ' ? d.distToLongLiq : d.distToShortLiq;
+        lines.push(sym + ' - ' + type + ' (' + dist + '% away)');
+        lines.push('Price: $' + d.price + ' | Liq Zone: $' + (d.alertType === 'NEAR_LONG_LIQ' ? d.longLiqZone : d.shortLiqZone));
+        lines.push('Funding: ' + (d.fundingRate*100).toFixed(4) + '% | ' + d.fundingBias);
       });
     }
 
@@ -889,9 +897,10 @@
         allAlerts = allAlerts.map(a => {
           const liq = liqData[a.symbol];
           if (liq && liq.alert) {
+            const dist = liq.alertType === 'NEAR_LONG_LIQ' ? liq.distToLongLiq : liq.distToShortLiq;
             const liqSignal = liq.alertType === 'NEAR_LONG_LIQ'
-              ? '🔴 Near Long Liq Zone'
-              : '🟢 Near Short Liq Zone';
+              ? '🔴 Long Liq Zone -' + dist + '%'
+              : '🟢 Short Liq Zone -' + dist + '%';
             a.signals = [...(a.signals||[]), liqSignal];
             a.score = a.score + 1;
             a.analysis += ` Funding rate: ${(liq.fundingRate*100).toFixed(4)}% (${liq.fundingBias}).`;
