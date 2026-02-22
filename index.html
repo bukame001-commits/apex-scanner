@@ -211,14 +211,7 @@
             GET FREE KEY →
           </a>
         </div>
-        <div class="api-note">Paste any of these keys — app detects automatically: Anthropic (sk-ant-...) from console.anthropic.com, OR OpenRouter (sk-or-...) from <a href="https://openrouter.ai/keys" target="_blank">openrouter.ai/keys</a></div>
-      </div>
-
-      <div class="api-field visible">
-        <div class="api-label">STOCK DATA KEY (TWELVE DATA) — FREE REAL STOCK DATA</div>
-        <input type="password" class="api-input" id="tdKey" placeholder="your-twelvedata-key"
-               oninput="saveKey('tdKey', this.value)" />
-        <div class="api-note">800 free calls/min — real weekly OHLCV. Get free key at <a href="https://twelvedata.com" target="_blank">twelvedata.com</a>. Leave blank to use AI estimates for stocks.</div>
+        <div class="api-note">Use the same OpenRouter key for both engines! Get it at <a href="https://openrouter.ai/keys" target="_blank">openrouter.ai/keys</a></div>
       </div>
     </div>
 
@@ -389,8 +382,6 @@
       const gk = localStorage.getItem('apex_key_gemini');
       if (ck) document.getElementById('claudeKey').value = ck;
       if (gk) document.getElementById('geminiKey').value = gk;
-      const tdk=localStorage.getItem('apex_key_tdKey');
-      if(tdk&&document.getElementById('tdKey')) document.getElementById('tdKey').value=tdk;
     } catch(e) {}
   }
 
@@ -458,7 +449,7 @@
       return data.content[0].text;
     }
 
-    // OpenRouter (sk-or-...)
+    // OpenRouter fallback (sk-or-...)
     const model = selectedEngine === 'claude'
       ? 'anthropic/claude-haiku-4-5'
       : 'google/gemini-2.0-flash-exp:free';
@@ -477,7 +468,6 @@
         messages: [{ role: 'user', content: prompt }]
       })
     });
-
     const rawText = await response.text();
     let data;
     try { data = JSON.parse(rawText); } catch(e) { throw new Error('Invalid response: ' + rawText.substring(0,200)); }
@@ -575,30 +565,7 @@
       const marketsList=selectedMarkets.map(m=>MARKET_TICKERS[m]?.label).join(', ');
 
       // ── Real data functions ───────────────────────────
-      function calcRSI(closes, period) {
-        if (!closes || closes.length < period+1) return null;
-        let gains=0, losses=0;
-        for (let i=closes.length-period; i<closes.length; i++) {
-          const d=closes[i]-closes[i-1];
-          if(d>0) gains+=d; else losses+=Math.abs(d);
-        }
-        const rs=gains/(losses||0.0001);
-        return parseFloat((100-100/(1+rs)).toFixed(1));
-      }
-
-      function calcEMA(closes, period) {
-        if (!closes || closes.length<period) return null;
-        const k=2/(period+1);
-        let ema=closes.slice(0,period).reduce((a,b)=>a+b,0)/period;
-        for (let i=period; i<closes.length; i++) ema=closes[i]*k+ema*(1-k);
-        return parseFloat(ema.toFixed(4));
-      }
-
-      function calcVolSpike(volumes) {
-        if (!volumes || volumes.length<20) return null;
-        const avg=volumes.slice(-20,-1).reduce((a,b)=>a+b,0)/19;
-        return avg>0 ? parseFloat((volumes[volumes.length-1]/avg).toFixed(2)) : null;
-      }
+      const BACKEND = 'https://apex-scanner-backend.onrender.com';
 
       async function fetchCryptoData(symbol) {
         try {
@@ -609,36 +576,57 @@
           if(!candles||candles.length<20) return null;
           const closes=candles.map(c=>parseFloat(c[4]));
           const volumes=candles.map(c=>parseFloat(c[5]));
-          return {closes, volumes, price:closes[closes.length-1]};
+          const price=closes[closes.length-1];
+          // Calculate indicators
+          function calcRSI(cls, p) {
+            if(cls.length<p+1) return null;
+            let g=0,l=0;
+            for(let i=cls.length-p;i<cls.length;i++){const d=cls[i]-cls[i-1];if(d>0)g+=d;else l+=Math.abs(d);}
+            return parseFloat((100-100/(1+(g/(l||0.0001)))).toFixed(1));
+          }
+          function calcEMA(cls, p) {
+            if(cls.length<p) return null;
+            const k=2/(p+1);
+            let e=cls.slice(0,p).reduce((a,b)=>a+b,0)/p;
+            for(let i=p;i<cls.length;i++) e=cls[i]*k+e*(1-k);
+            return parseFloat(e.toFixed(4));
+          }
+          function calcVolSpike(vols) {
+            if(vols.length<20) return null;
+            const avg=vols.slice(-20,-1).reduce((a,b)=>a+b,0)/19;
+            return avg>0?parseFloat((vols[vols.length-1]/avg).toFixed(2)):null;
+          }
+          const rsi=calcRSI(closes,14);
+          const ema200=calcEMA(closes,200);
+          const ema50=calcEMA(closes,50);
+          const volSpike=calcVolSpike(volumes);
+          return {
+            price,rsi,ema200,ema50,volSpike,
+            vsEma200:ema200?parseFloat(((price/ema200-1)*100).toFixed(2)):null,
+            vsEma50:ema50?parseFloat(((price/ema50-1)*100).toFixed(2)):null,
+            type:'crypto'
+          };
         } catch(e) { return null; }
       }
 
-      async function fetchStockData(symbol) {
-        const tdEl=document.getElementById('tdKey');
-        const tdKey=tdEl?tdEl.value.trim():'';
-        if(!tdKey) return null;
+      async function fetchStocksBatch(symbols) {
         try {
-          // Twelve Data weekly time series - 1 credit per symbol, 800/min free
-          const url='https://api.twelvedata.com/time_series?symbol='+encodeURIComponent(symbol)+'&interval=1week&outputsize=220&apikey='+tdKey;
+          const url=BACKEND+'/stocks?symbols='+symbols.join(',');
           const res=await fetch(url);
-          if(!res.ok) return null;
+          if(!res.ok) return {};
           const data=await res.json();
-          if(!data||data.status==='error'||!data.values||data.values.length<20) return null;
-          // Twelve Data returns newest first - reverse to oldest first
-          const rows=data.values.reverse();
-          const closes=rows.map(r=>parseFloat(r.close));
-          const volumes=rows.map(r=>parseFloat(r.volume||0));
-          return {closes, volumes, price:closes[closes.length-1]};
+          // Add type field
+          Object.keys(data).forEach(k=>{ data[k].type='stock'; });
+          return data;
         } catch(e) {
-          console.log('TwelveData error for',symbol,':',e.message);
-          return null;
+          console.log('Backend error:',e.message);
+          return {};
         }
       }
 
       const realData={};
       const cryptoTickers=allTickers.filter(t=>t.type==='crypto');
       const stockTickers=allTickers.filter(t=>t.type==='stock');
-      const tdKey=document.getElementById('tdKey')?document.getElementById('tdKey').value.trim():'';
 
       // Fetch crypto in parallel batches of 10
       for(let i=0;i<cryptoTickers.length;i+=10){
@@ -646,45 +634,50 @@
         document.getElementById('loadingStatus').textContent='Fetching crypto data '+(i+1)+'-'+Math.min(i+10,cryptoTickers.length)+' of '+cryptoTickers.length+'...';
         await Promise.all(batch.map(async t=>{
           const d=await fetchCryptoData(t.symbol);
-          if(!d) return;
-          realData[t.symbol]={price:d.price,rsi:calcRSI(d.closes,14),ema200:calcEMA(d.closes,200),volSpike:calcVolSpike(d.volumes),type:'crypto'};
+          if(d) realData[t.symbol]=d;
         }));
         await new Promise(r=>setTimeout(r,100));
       }
 
-      // Fetch stocks via Twelve Data (800 credits/min free = ~13 per second)
-      if(tdKey){
-        for(let i=0;i<stockTickers.length;i+=10){
-          const batch=stockTickers.slice(i,i+10);
-          document.getElementById('loadingStatus').textContent='Fetching stock data '+(i+1)+'-'+Math.min(i+10,stockTickers.length)+' of '+stockTickers.length+'...';
-          await Promise.all(batch.map(async t=>{
-            const d=await fetchStockData(t.symbol);
-            if(!d) return;
-            realData[t.symbol]={price:d.price,rsi:calcRSI(d.closes,14),ema200:calcEMA(d.closes,200),volSpike:calcVolSpike(d.volumes),type:'stock'};
-          }));
+      // Fetch stocks via backend in batches of 20
+      if(stockTickers.length>0){
+        document.getElementById('loadingStatus').textContent='Waking up stock data server (first time may take 30s)...';
+        // Wake up server first
+        try { await fetch(BACKEND+'/health'); } catch(e) {}
+        await new Promise(r=>setTimeout(r,2000));
+
+        for(let i=0;i<stockTickers.length;i+=20){
+          const batch=stockTickers.slice(i,i+20).map(t=>t.symbol);
+          document.getElementById('loadingStatus').textContent='Fetching stock data '+(i+1)+'-'+Math.min(i+20,stockTickers.length)+' of '+stockTickers.length+'...';
+          const batchData=await fetchStocksBatch(batch);
+          Object.assign(realData,batchData);
           await new Promise(r=>setTimeout(r,500));
         }
       }
 
-      // Pre-filter with real data
+      // Pre-filter with real data — detect both oversold AND overbought
       const qualified=[];
       allTickers.forEach(t=>{
         const d=realData[t.symbol];
         if(!d) return;
         const sigs=[];
+        // Oversold signals
         if(d.rsi!==null&&d.rsi<parseFloat(rsiT)) sigs.push('RSI oversold ('+d.rsi+')');
         if(d.volSpike!==null&&d.volSpike>=parseFloat(volT)) sigs.push('Volume Spike '+d.volSpike+'x');
-        if(d.ema200!==null&&Math.abs((d.price/d.ema200-1)*100)<=5) sigs.push('Near 200 EMA');
+        if(d.vsEma200!==null&&Math.abs(d.vsEma200)<=5) sigs.push('Near 200 EMA ('+d.vsEma200+'%)');
+        // Bull retracement signals (overbought/extended)
+        if(d.rsi!==null&&d.rsi>70) sigs.push('RSI overbought ('+d.rsi+') — retracement risk');
+        if(d.vsEma200!==null&&d.vsEma200>20) sigs.push('Extended above 200 EMA ('+d.vsEma200+'%)');
+        if(d.vsHigh52!==null&&d.vsHigh52>-5) sigs.push('Near 52W High ('+d.vsHigh52+'%)');
         if(sigs.length>=parseInt(minT)) qualified.push({...t,sigs,d});
       });
 
       const realCount=Object.keys(realData).length;
-      document.getElementById('loadingStatus').textContent=realCount+' assets scanned with real data. '+qualified.length+' qualify. Sending to AI...';
+      document.getElementById('loadingStatus').textContent=realCount+' assets scanned with REAL data. '+qualified.length+' qualify. Sending to AI...';
       await new Promise(r=>setTimeout(r,300));
 
-      // Build ticker list for AI
       const aiTickers=(qualified.length>0)
-        ? qualified.map(q=>`${q.symbol}(RSI:${q.d.rsi},VolSpike:${q.d.volSpike}x,EMA200:${q.d.ema200?((q.d.price/q.d.ema200-1)*100).toFixed(1)+'%':'N/A'})`).join(',')
+        ? qualified.map(q=>`${q.symbol}(RSI:${q.d.rsi},vsEMA200:${q.d.vsEma200}%,VolSpike:${q.d.volSpike}x,vs52wHigh:${q.d.vsHigh52}%,vs52wLow:${q.d.vsLow52}%)`).join(',')
         : allTickers.map(t=>`${t.symbol}(${t.market})`).join(',');
 
       const tickerList=aiTickers;
