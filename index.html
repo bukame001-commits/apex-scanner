@@ -213,18 +213,14 @@
         </div>
         <div class="api-note">Paste your OpenRouter key (sk-or-...) from <a href="https://openrouter.ai/keys" target="_blank">openrouter.ai/keys</a> — free tier available for Gemini Flash.</div>
       </div>
-      <div class="api-field visible" style="margin-top:12px;">
-        <div class="api-label">STOCK DATA KEY (FINNHUB) — OPTIONAL</div>
-        <input type="password" class="api-input" id="fhKey" placeholder="your-finnhub-key" oninput="saveKey('fhKey',this.value)" />
-        <div class="api-note">Free real stock data. Get key at <a href="https://finnhub.io" target="_blank">finnhub.io</a>. Leave blank to use AI estimates for stocks.</div>
-      </div>
+
     </div>
 
     <!-- Markets -->
     <div class="section-label">02 — SELECT MARKETS</div>
     <div class="card">
       <div class="market-grid">
-        <button class="market-btn active" data-market="crypto_top5000" onclick="toggleMarket(this)">
+        <button class="market-btn active" data-market="crypto_top500" onclick="toggleMarket(this)">
           <span class="icon">₿</span><div class="name">CRYPTO TOP 500</div><div class="desc">By market cap</div>
         </button>
         <button class="market-btn" data-market="crypto_top1000" onclick="toggleMarket(this)">
@@ -401,10 +397,8 @@
     try {
       const ck = localStorage.getItem('apex_key_claude');
       const gk = localStorage.getItem('apex_key_gemini');
-      const fk = localStorage.getItem('apex_key_fhKey');
       if (ck) document.getElementById('claudeKey').value = ck;
       if (gk) document.getElementById('geminiKey').value = gk;
-      if (fk && document.getElementById('fhKey')) document.getElementById('fhKey').value = fk;
       const tgt=localStorage.getItem('apex_key_tgToken');
       const tgc=localStorage.getItem('apex_key_tgChatId');
       if(tgt&&document.getElementById('tgToken')) document.getElementById('tgToken').value=tgt;
@@ -600,7 +594,7 @@
             '<div class="alert-market">'+(a.market||'')+' &bull; '+((a.type||'').toUpperCase())+'</div>'+
           '</div>'+
           '<div style="text-align:right">'+
-            '<div class="alert-score '+(isStrong?'':'moderate')+'">'+a.score+'/'+selectedInds.length+'</div>'+
+            '<div class="alert-score '+(isStrong?'':'moderate')+'">'+Math.min(a.score,selectedInds.length)+'/'+selectedInds.length+'</div>'+
             '<div style="font-family:Share Tech Mono,monospace;font-size:9px;color:var(--muted);margin-top:2px;">'+(isStrong?'🔥 STRONG':'⚡ MODERATE')+'</div>'+
           '</div>'+
         '</div>'+
@@ -731,12 +725,37 @@
       // ── Fetch stocks from Render backend ─────────────
       async function fetchStocksBatch(symbols){
         try{
-          const res=await fetch(BACKEND+'/stocks?symbols='+symbols.join(','));
+          const res=await fetch(BACKEND+'/stocks?symbols='+symbols.join(','),{signal:AbortSignal.timeout(20000)});
           if(!res.ok) return {};
           const data=await res.json();
           Object.keys(data).forEach(k=>{data[k].type='stock';});
           return data;
         }catch(e){console.log('Backend error:',e.message);return{};}
+      }
+
+      // ── Wake up Render backend (free tier sleeps after inactivity) ──
+      async function wakeBackend(){
+        const maxWait=75000; // 75 seconds max
+        const interval=5000; // retry every 5 seconds
+        const start=Date.now();
+        let attempt=0;
+        while(Date.now()-start<maxWait){
+          attempt++;
+          const elapsed=Math.round((Date.now()-start)/1000);
+          document.getElementById('loadingStatus').textContent=
+            attempt===1
+              ? 'Waking stock data server (Render free tier sleeps — please wait up to 60s)...'
+              : `Still waking server... (${elapsed}s elapsed, retrying)`;
+          try{
+            const res=await fetch(BACKEND+'/health',{signal:AbortSignal.timeout(interval)});
+            if(res.ok){
+              document.getElementById('loadingStatus').textContent='Stock server is online! Fetching data...';
+              return true;
+            }
+          }catch(e){}
+          await new Promise(r=>setTimeout(r,1000));
+        }
+        return false;
       }
 
       // ── Fetch Reddit sentiment ────────────────────────
@@ -787,17 +806,23 @@
         await new Promise(r=>setTimeout(r,150));
       }
 
-      // Stocks from Render backend
+      // Stocks from Render backend (with wake-up for free tier)
       if(stockTickers.length>0){
-        document.getElementById('loadingStatus').textContent='Connecting to stock data server...';
-        try{await fetch(BACKEND+'/health');}catch(e){}
-        await new Promise(r=>setTimeout(r,2000));
-        for(let i=0;i<stockTickers.length;i+=20){
-          const batch=stockTickers.slice(i,i+20).map(t=>t.symbol);
-          document.getElementById('loadingStatus').textContent='Fetching stock data '+(i+1)+'-'+Math.min(i+20,stockTickers.length)+' of '+stockTickers.length+'...';
-          const batchData=await fetchStocksBatch(batch);
-          Object.assign(realData,batchData);
-          await new Promise(r=>setTimeout(r,500));
+        const isAwake=await wakeBackend();
+        if(isAwake){
+          for(let i=0;i<stockTickers.length;i+=20){
+            const batch=stockTickers.slice(i,i+20).map(t=>t.symbol);
+            document.getElementById('loadingStatus').textContent='Fetching stock data '+(i+1)+'-'+Math.min(i+20,stockTickers.length)+' of '+stockTickers.length+'...';
+            const batchData=await fetchStocksBatch(batch);
+            Object.assign(realData,batchData);
+            await new Promise(r=>setTimeout(r,300));
+          }
+          const stocksLoaded=stockTickers.filter(t=>realData[t.symbol]).length;
+          document.getElementById('loadingStatus').textContent=stocksLoaded+' of '+stockTickers.length+' stocks loaded with real data.';
+          await new Promise(r=>setTimeout(r,800));
+        } else {
+          document.getElementById('loadingStatus').textContent='⚠ Stock server timed out. AI will estimate from training data — results may not reflect current prices.';
+          await new Promise(r=>setTimeout(r,3000));
         }
       }
 
@@ -845,17 +870,19 @@
       await new Promise(r=>setTimeout(r,300));
 
       // Build AI prompt with real data
-      const aiTickers=qualified.length>0
+      const hasRealData=qualified.length>0;
+      const aiTickers=hasRealData
         ? qualified.map(q=>`${q.symbol}(RSI:${q.d.rsi},vsEMA200:${q.d.vsEma200}%,VolSpike:${q.d.volSpike}x${q.liq?',LiqZone:'+q.liq.distLong+'%away':''})`).join(',')
         : allTickers.slice(0,50).map(t=>t.symbol).join(',');
 
-      const tickerList=aiTickers;
+      const dataNote=hasRealData
+        ? `The following assets have REAL live data (from Binance/Finnhub) and pre-qualify based on the criteria above:`
+        : `WARNING: No live data was retrieved. These are ${marketsList} tickers. Use your training knowledge to estimate which are most likely oversold on weekly charts as of today. Be explicit that these are estimates.`;
 
       document.getElementById('loadingStatus').textContent=`Analyzing ${allTickers.length} assets across ${selectedMarkets.length} market(s)...`;
 
       const prompt=`You are an expert technical analyst. Today is ${new Date().toDateString()}.
-
-Analyze these ${allTickers.length} assets on their WEEKLY charts: ${tickerList}
+Market scope: ${marketsList}
 
 SCREENING CRITERIA:
 - Indicators: ${selectedInds.join(', ')}
@@ -864,17 +891,20 @@ SCREENING CRITERIA:
 - Volume spike: ${volT} above average
 - Minimum signals to qualify: ${minT} of ${selectedInds.length}
 
-Identify assets MOST LIKELY showing oversold weekly conditions and potential reversal setups based on current market conditions as of ${new Date().toDateString()}.
+${dataNote}
+${aiTickers}
+
+Identify assets from ${marketsList} MOST LIKELY showing oversold weekly conditions and potential reversal setups.
 
 IMPORTANT: Respond with ONLY a raw JSON array. No markdown. No backticks. No explanation. Start your response with [ and end with ]. Nothing else.
-[{"symbol":"BTC","market":"Crypto Top 50","type":"crypto","score":3,"signals":["WaveTrend Oversold","RSI Divergence","Volume Spike"],"wt1":-58.2,"rsi":31.4,"timeframe":"1W","analysis":"1 sentence max"}]
+[{"symbol":"AAPL","market":"${marketsList}","type":"stock","score":3,"signals":["WaveTrend Oversold","RSI Divergence","Volume Spike"],"wt1":-45.2,"rsi":32.1,"timeframe":"1W","analysis":"1 sentence max"}]
 
 Rules:
-- Only include assets meeting at least ${minT} criteria
+- Only include assets from ${marketsList} meeting at least ${minT} criteria
 - Maximum 8 results only, sorted by score descending
-- Be selective and realistic based on current ${new Date().toDateString()} market conditions
 - Return [] if nothing qualifies
-- Score = number of triggered indicators (max ${selectedInds.length})`;
+- Score = number of triggered indicators (max ${selectedInds.length})
+- DO NOT return crypto assets if the market is stocks, and vice versa`;
 
       document.getElementById('loadingStatus').textContent='Analyzing chart patterns...';
       const response=await callAI(prompt);
@@ -931,7 +961,16 @@ Be direct, specific, no disclaimers.`;
       document.getElementById('statStrong').textContent=strong;
       document.getElementById('statMod').textContent=allAlerts.length-strong;
       document.getElementById('statEngine').textContent=engineName;
-      document.getElementById('aiSummaryText').textContent=summary;
+      // Simple markdown renderer for the summary
+      function renderMarkdown(text) {
+        return text
+          .replace(/^#{1,3}\s+(.+)$/gm, '<strong style="font-family:Orbitron,monospace;font-size:11px;color:var(--accent);letter-spacing:1px;">$1</strong>')
+          .replace(/\*\*(.+?)\*\*/g, '<strong style="color:var(--strong);">$1</strong>')
+          .replace(/\*(.+?)\*/g, '<em>$1</em>')
+          .replace(/\n\n/g, '<br><br>')
+          .replace(/\n/g, '<br>');
+      }
+      document.getElementById('aiSummaryText').innerHTML = renderMarkdown(summary);
       document.getElementById('aiSummary').classList.add('visible');
 
       allAlerts.sort((a,b)=>b.score-a.score);
