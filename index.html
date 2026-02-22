@@ -481,7 +481,7 @@
         },
         body: JSON.stringify({
           model: 'claude-haiku-4-5',
-          max_tokens: 1024,
+          max_tokens: 4096,
           messages: [{ role: 'user', content: prompt }]
         })
       });
@@ -502,7 +502,7 @@
         'HTTP-Referer': 'https://apex-scanner.app',
         'X-Title': 'APEX SCANNER'
       },
-      body: JSON.stringify({ model, max_tokens: 1024, messages: [{ role: 'user', content: prompt }] })
+      body: JSON.stringify({ model, max_tokens: 4096, messages: [{ role: 'user', content: prompt }] })
     });
     const rawText = await response.text();
     let data;
@@ -1069,12 +1069,12 @@ ${aiTickers}
 
 Identify assets from ${marketsList} MOST LIKELY showing oversold weekly conditions and potential reversal setups.
 
-IMPORTANT: Respond with ONLY a raw JSON array. No markdown. No backticks. No explanation. Start your response with [ and end with ]. Nothing else.
-[{"symbol":"AAPL","market":"${marketsList}","type":"stock","score":3,"signals":["WaveTrend Oversold","RSI Divergence","Volume Spike"],"wt1":-45.2,"rsi":32.1,"timeframe":"1W","analysis":"1 sentence max"}]
+IMPORTANT: Respond with ONLY a raw JSON array. No markdown. No backticks. No explanation. Start with [ end with ]. Keep "analysis" under 12 words.
+[{"symbol":"AAPL","market":"${marketsList}","type":"stock","score":3,"signals":["WaveTrend Oversold","RSI Divergence","Volume Spike"],"wt1":-45.2,"wt2":-48.1,"rsi":32.1,"timeframe":"1W","analysis":"12 words max"}]
 
 Rules:
 - Only include assets from ${marketsList} meeting at least ${minT} criteria
-- Maximum 8 results only, sorted by score descending
+- Maximum 6 results only, sorted by score descending
 - Return [] if nothing qualifies
 - Score = number of triggered indicators (max ${selectedInds.length})
 - DO NOT return crypto assets if the market is stocks, and vice versa`;
@@ -1086,17 +1086,41 @@ Rules:
       console.log('Raw AI response:', response);
       try {
         let clean=response.replace(/```json|```/gi,'').trim();
-        const s=clean.indexOf('['), e=clean.lastIndexOf(']');
-        if(s!==-1&&e!==-1){
-          clean=clean.slice(s,e+1);
-          parsed=JSON.parse(clean);
-        } else {
-          // No array found — show raw response to user for debugging
-            showError('DEBUG - No JSON array found in response. Raw: ' + response.substring(0,400));
+        const s=clean.indexOf('[');
+        let e=clean.lastIndexOf(']');
+        if(s===-1){ showError('No JSON array found in response. Raw: '+response.substring(0,400)); }
+        else {
+          // If no closing ] (truncated), try to salvage complete objects
+          if(e===-1||e<s){
+            // Find last complete object — last occurrence of '}' before truncation
+            const lastBrace=clean.lastIndexOf('}');
+            if(lastBrace>s){
+              clean=clean.slice(s,lastBrace+1)+']';
+              e=clean.length-1;
+            }
+          } else {
+            clean=clean.slice(s,e+1);
+          }
+          try{
+            parsed=JSON.parse(clean);
+          } catch(e2){
+            // Last resort: extract each {...} object individually
+            const objMatches=clean.match(/\{[^{}]*\}/g)||[];
+            const recovered=[];
+            objMatches.forEach(obj=>{
+              try{ recovered.push(JSON.parse(obj)); }catch(e3){}
+            });
+            if(recovered.length>0){
+              parsed=recovered;
+              console.warn('Recovered '+recovered.length+' objects from malformed JSON');
+            } else {
+              showError('Parse error: '+e2.message+' | Raw: '+response.substring(0,400));
+            }
+          }
         }
       } catch(err){
         console.error('Parse error:',err);
-        showError('DEBUG - Parse error: ' + err.message + ' | Raw response: ' + response.substring(0,400));
+        showError('Parse error: '+err.message+' | Raw: '+response.substring(0,400));
         parsed=[];
       }
 
