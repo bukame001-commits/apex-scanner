@@ -301,6 +301,20 @@
       </div>
     </div>
 
+    <!-- Market Cap Filter -->
+    <div class="section-label">04b — STOCK MARKET CAP FILTER</div>
+    <div class="card">
+      <div style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--muted);margin-bottom:10px;">Only applies to stock markets. Crypto is unaffected.</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;" id="mcapBtns">
+        <button class="filter-btn active" data-mcap="0" onclick="selectMcap(this)">ALL</button>
+        <button class="filter-btn" data-mcap="200" onclick="selectMcap(this)">&lt; $200B</button>
+        <button class="filter-btn" data-mcap="50" onclick="selectMcap(this)">&lt; $50B</button>
+        <button class="filter-btn" data-mcap="10" onclick="selectMcap(this)">&lt; $10B</button>
+        <button class="filter-btn" data-mcap="5" onclick="selectMcap(this)">&lt; $5B</button>
+        <button class="filter-btn" data-mcap="1" onclick="selectMcap(this)">&lt; $1B</button>
+      </div>
+    </div>
+
     <!-- Telegram -->
   <div class="section-label">05 — TELEGRAM ALERTS (OPTIONAL)</div>
   <div class="api-card">
@@ -361,6 +375,13 @@
   let selectedMarkets = [];
   let selectedInds = ['WaveTrend','RSI Divergence','Bollinger Band Lower Touch','Volume Spike'];
   let allAlerts = [];
+  let selectedMcap = 0; // 0 = no filter, otherwise max billion USD
+
+  function selectMcap(btn) {
+    document.querySelectorAll('#mcapBtns .filter-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    selectedMcap = parseFloat(btn.dataset.mcap);
+  }
 
   const MARKET_TICKERS = {
     crypto_top500:{label:'Crypto Top 500',type:'crypto',tickers:['BTC', 'ETH', 'BNB', 'XRP', 'SOL', 'ADA', 'DOGE', 'TRX', 'DOT', 'MATIC', 'LTC', 'SHIB', 'AVAX', 'LINK', 'ATOM', 'UNI', 'XMR', 'ETC', 'XLM', 'BCH', 'ALGO', 'VET', 'FIL', 'ICP', 'HBAR', 'APT', 'ARB', 'NEAR', 'QNT', 'GRT', 'AAVE', 'SAND', 'MANA', 'AXS', 'THETA', 'EOS', 'NEO', 'MKR', 'SNX', 'COMP', 'CRV', 'YFI', 'SUSHI', 'ENJ', 'CHZ', 'ZIL', 'BAT', 'HOT', 'ONT', 'DASH', 'ZEC', 'WAVES', 'IOTA', 'SC', 'DGB', 'ICX', 'LSK', 'RVN', 'BTG', 'XVG', 'DCR', 'KMD', 'ARK', 'ZRX', 'REP', 'SNT', 'GNO', 'RLC', 'STORJ', 'FUN', 'ANT', 'SALT', 'PAY', 'MTL', 'LRC', 'ENG', 'AST', 'SAN', 'ADX', 'MLN', 'NMR', 'BNT', 'KNC', 'POWR', 'OMG', 'PPT', 'REQ', 'SUB', 'CVC', 'POE', 'WPR', 'EVX', 'OST', 'AMB', 'RDN', 'ELF', 'INS', 'IOTX', 'MOD', 'NULS', 'QSP', 'VIB', 'VIBE', 'WABI', 'WTC', 'AION', 'BLZ', 'BTS', 'CDT', 'CMT', 'DLT', 'EDO', 'GAS', 'GNT', 'GTO', 'GVT', 'GXS', 'NANO', 'NEBL', 'POLY', 'QTUM', 'RAY', 'REN', 'RSR', 'SKL', 'SLP', 'SRM', 'STMX', 'STX', 'SUN', 'SUPER', 'SXP', 'TKO', 'TLM', 'TRB', 'TVK', 'UMA', 'UNFI', 'UTK', 'VITE', 'WRX', 'XTZ', 'XVS', 'YFII', '1INCH', 'ACH', 'AKRO', 'ALPHA', 'ATA', 'AUDIO', 'BAKE', 'BETA', 'BNX', 'BOND', 'BTT', 'CLV', 'CTXC', 'DAR', 'DEXE', 'DODO', 'DUSK', 'EGLD', 'FARM', 'FLOW', 'FOR', 'FRONT', 'GTC', 'HIGH', 'HIVE', 'LINA', 'LOKA', 'MASK', 'MDT', 'MFT', 'MBOX', 'NEXO', 'OM', 'POLS', 'POND', 'PYR', 'QUICK', 'RARE', 'REEF', 'REI', 'ROSE', 'SPELL', 'SSV', 'STPT', 'SYN', 'TFUEL', 'TOMO', 'TRIBE', 'TRU', 'TWT', 'UFT', 'VOXEL', 'WAXP', 'WIN', 'XNO', 'ACE', 'AGIX', 'AGLD', 'AKT', 'ALT', 'AMP', 'ANKR', 'APE', 'API3', 'ARPA', 'ASTR', 'AUCTION', 'BADGER', 'BAL', 'BAND', 'BEAM', 'BICO', 'BIT', 'BLUR', 'BOME', 'BSW', 'CELO', 'CFX', 'COMBO', 'CRO', 'CVX', 'EDU', 'ENS', 'FLOKI', 'FLUX', 'GAL', 'GALA', 'GLM', 'GMT', 'GMX', 'GNS', 'HFT', 'HOOK', 'ID', 'IMX', 'INJ', 'JASMY', 'JOE', 'JTO', 'JUP', 'KAS', 'KAVA', 'KDA', 'KLAY', 'LDO', 'LQTY', 'LUNA', 'LUNC', 'MAGIC', 'MANTA', 'MAVIA', 'MEME', 'META', 'MINA', 'MNT', 'MOB', 'MOVR', 'MULTI', 'NFP', 'NKN', 'OCEAN', 'OGN', 'OP', 'ORBS', 'ORDI', 'PENDLE', 'PEOPLE', 'PERP', 'PIXEL', 'PROM', 'PYTH', 'RDNT', 'RNDR', 'RPL', 'RUNE', 'SAGA', 'SEI', 'SFP', 'STG', 'STRK', 'SUI', 'TIA', 'TNSR', 'TON', 'TUSD', 'VANRY', 'W', 'WIF', 'WLD', 'WOO', 'XAI', 'XEC', 'ZK', 'AEVO', 'AIXBT', 'ANIME', 'AXL', 'BABY', 'BIGTIME', 'BLAST', 'BONK', 'BORA', 'CATI', 'CYBER', 'DEEP', 'DYM', 'EIGEN', 'ENA', 'ETHFI', 'FIDA', 'FTT', 'GIGA', 'GRASS', 'HNT', 'ILV', 'IO', 'IOT', 'JITO', 'KAITO', 'LAYER', 'LISTA', 'LPT', 'MOCA', 'MODE', 'MOODENG', 'MORPHO', 'MOVE', 'NEIRO', 'NEON', 'OMNI', 'ORCA', 'PENGU', 'PNUT', 'POL', 'PONKE', 'POPCAT', 'PORTAL', 'PRIME', 'PYUSD', 'RDNT', 'RENDER', 'REZ', 'SAHM', 'SCR', 'SHIB', 'SIGNA', 'SLERF', 'SOLV', 'SONIC', 'SPX', 'STACKS', 'STRK', 'SUNDOG', 'SWARMS', 'SYRUP', 'TAO', 'TERMINAL', 'TOSHI', 'TRUMP', 'TST', 'UNIBOT', 'USDC', 'USDD', 'VADER', 'VRTX', 'WBTC', 'WELL', 'WETH', 'WIF', 'XDC', 'ZERO', 'ZETA', 'ZRO']},
@@ -619,6 +640,7 @@
         sentHtml+liqHtml+
         '<div class="alert-values">'+
           (a.price!==undefined?'<div class="alert-val">PRICE <span>$'+parseFloat(a.price).toPrecision(5)+'</span></div>':'')+
+          (a.marketCap?'<div class="alert-val">MCAP <span>'+(a.marketCap>=1e9?(a.marketCap/1e9).toFixed(2)+'B':(a.marketCap/1e6).toFixed(0)+'M')+'</span></div>':'')+
           (a.vsEma200!==undefined&&a.vsEma200!==null?'<div class="alert-val" title="% above/below 200 EMA">EMA200 <span style="color:'+(a.vsEma200<0?'#00ff88':'#ff6b35')+';">'+(a.vsEma200>0?'+':'')+a.vsEma200+'%</span></div>':'')+
           (a.wt1!==undefined?'<div class="alert-val">WT1 <span>'+a.wt1+'</span></div>':'')+
           (a.rsi!==undefined?'<div class="alert-val">RSI <span>'+a.rsi+'</span></div>':'')+
@@ -751,7 +773,21 @@
         }catch(e){console.log('Backend error:',e.message);return{};}
       }
 
-      // ── Wake up Render backend (free tier sleeps after inactivity) ──
+      // ── Fetch market cap from Yahoo Finance (free, no key) ──
+      async function fetchMarketCaps(symbols){
+        const caps={};
+        await Promise.all(symbols.map(async sym=>{
+          try{
+            const url='https://query2.finance.yahoo.com/v8/finance/chart/'+sym+'?interval=1d&range=1d';
+            const res=await fetch(url,{signal:AbortSignal.timeout(8000)});
+            if(!res.ok) return;
+            const data=await res.json();
+            const mc=data?.chart?.result?.[0]?.meta?.marketCap;
+            if(mc) caps[sym]=mc;
+          }catch(e){}
+        }));
+        return caps;
+      }
       async function wakeBackend(){
         const maxWait=75000; // 75 seconds max
         const interval=5000; // retry every 5 seconds
@@ -844,6 +880,27 @@
         }
       }
 
+      // Market cap fetch & filter for stocks
+      const marketCapData={};
+      if(stockTickers.length>0 && selectedMcap>0){
+        const stocksWithData=stockTickers.filter(t=>realData[t.symbol]);
+        document.getElementById('loadingStatus').textContent='Fetching market caps for '+stocksWithData.length+' stocks...';
+        // Batch in groups of 10 to avoid hammering Yahoo
+        for(let i=0;i<stocksWithData.length;i+=10){
+          const batch=stocksWithData.slice(i,i+10).map(t=>t.symbol);
+          const caps=await fetchMarketCaps(batch);
+          Object.assign(marketCapData,caps);
+          await new Promise(r=>setTimeout(r,200));
+        }
+        const filtered=stocksWithData.filter(t=>{
+          const cap=marketCapData[t.symbol];
+          if(!cap) return true; // include if we couldn't fetch cap
+          return cap<selectedMcap*1e9;
+        });
+        document.getElementById('loadingStatus').textContent=filtered.length+' stocks pass <$'+selectedMcap+'B market cap filter.';
+        await new Promise(r=>setTimeout(r,600));
+      }
+
       // Liquidation data for crypto
       document.getElementById('loadingStatus').textContent='Fetching liquidation zone data...';
       const liqData={};
@@ -862,6 +919,11 @@
       allTickers.forEach(t=>{
         const d=realData[t.symbol];
         if(!d) return;
+        // Market cap filter for stocks
+        if(selectedMcap>0 && t.type==='stock'){
+          const cap=marketCapData[t.symbol];
+          if(cap && cap>=selectedMcap*1e9) return; // skip if over cap limit
+        }
         const sigs=[];
         if(d.rsi!==null&&d.rsi<parseFloat(rsiT)) sigs.push('RSI oversold ('+d.rsi+')');
         if(d.volSpike!==null&&d.volSpike>=parseFloat(volT)) sigs.push('Volume Spike '+d.volSpike+'x');
@@ -874,7 +936,7 @@
           const dist=liq.alertType==='NEAR_LONG_LIQ'?liq.distLong:liq.distShort;
           sigs.push((liq.alertType==='NEAR_LONG_LIQ'?'🔴 Long Liq Zone':'🟢 Short Liq Zone')+' '+dist+'% away');
         }
-        if(sigs.length>=parseInt(minT)) qualified.push({...t,sigs,d,liq:liq||null});
+        if(sigs.length>=parseInt(minT)) qualified.push({...t,sigs,d,liq:liq||null,marketCap:marketCapData[t.symbol]||null});
       });
 
       // Reddit sentiment for qualified assets
@@ -953,8 +1015,10 @@ Rules:
           a.dataSource='live';
           a.price=rd.price;
           a.vsEma200=rd.vsEma200;
-          // override RSI with real value if AI hallucinated it
           if(rd.rsi!==null) a.rsi=rd.rsi;
+          // attach market cap if we fetched it
+          const qMatch=qualified.find(q=>q.symbol===a.symbol);
+          if(qMatch&&qMatch.marketCap) a.marketCap=qMatch.marketCap;
         } else {
           a.dataSource='ai';
         }
