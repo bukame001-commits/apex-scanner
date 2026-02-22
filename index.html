@@ -595,18 +595,32 @@
       }
 
       async function fetchStockData(symbol) {
-        const fhKey=document.getElementById('fhKey')?document.getElementById('fhKey').value.trim():'';
-        if(!fhKey) return null;
+        const fhEl=document.getElementById('fhKey');
+        const fhKey=fhEl?fhEl.value.trim():'';
+        if(!fhKey||fhKey.length<5) {
+          console.log('Finnhub key missing for',symbol);
+          return null;
+        }
         try {
-          const from=1645617895;
-          const to=1771761895;
-          const url='https://finnhub.io/api/v1/stock/candle?symbol='+symbol+'&resolution=W&from='+from+'&to='+to+'&token='+fhKey;
-          const res=await fetch(url);
-          if(!res.ok) return null;
-          const data=await res.json();
+          const now=Math.floor(Date.now()/1000);
+          const from=now-(4*365*24*3600);
+          const url='https://finnhub.io/api/v1/stock/candle?symbol='+encodeURIComponent(symbol)+'&resolution=W&from='+from+'&to='+now+'&token='+encodeURIComponent(fhKey);
+          console.log('Fetching Finnhub for',symbol,'key length:',fhKey.length);
+          const res=await fetch(url,{
+            headers:{'X-Finnhub-Token':fhKey}
+          });
+          const text=await res.text();
+          if(!res.ok){
+            console.log('Finnhub error for',symbol,':',text.substring(0,100));
+            return null;
+          }
+          const data=JSON.parse(text);
           if(!data||data.s==='no_data'||!data.c||data.c.length<20) return null;
           return {closes:data.c, volumes:data.v, price:data.c[data.c.length-1]};
-        } catch(e) { return null; }
+        } catch(e) {
+          console.log('Finnhub exception for',symbol,':',e.message);
+          return null;
+        }
       }
 
       const realData={};
