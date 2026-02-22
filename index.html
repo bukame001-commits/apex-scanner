@@ -214,13 +214,11 @@
         <div class="api-note">Use the same OpenRouter key for both engines! Get it at <a href="https://openrouter.ai/keys" target="_blank">openrouter.ai/keys</a></div>
       </div>
 
-      <!-- FMP Key for stocks -->
-      <div class="api-field" id="fmpField">
-        <div class="api-label">STOCK DATA API KEY (FMP) — FOR STOCK SCANNING</div>
-        <input type="password" class="api-input" id="fmpKey"
-               placeholder="your-fmp-key-here"
-               oninput="saveKey('fmpKey', this.value)" />
-        <div class="api-note">Free key for real stock data. Get it at <a href="https://financialmodelingprep.com/developer/docs" target="_blank">financialmodelingprep.com</a> — free tier: 250 calls/day.</div>
+      <div class="api-field">
+        <div class="api-label">STOCK DATA KEY (FINNHUB) — FOR REAL STOCK DATA</div>
+        <input type="password" class="api-input" id="fhKey" placeholder="your-finnhub-key"
+               oninput="saveKey('fhKey', this.value)" />
+        <div class="api-note">Free real stock data — 60 calls/min. Get free key at <a href="https://finnhub.io" target="_blank">finnhub.io</a>. Leave blank to use AI estimates for stocks.</div>
       </div>
     </div>
 
@@ -228,11 +226,11 @@
     <div class="section-label">02 — SELECT MARKETS</div>
     <div class="card">
       <div class="market-grid">
-        <button class="market-btn active" data-market="crypto_top500" onclick="toggleMarket(this)">
-          <span class="icon">₿</span><div class="name">CRYPTO TOP 500</div><div class="desc">By market cap</div>
+        <button class="market-btn active" data-market="crypto_top50" onclick="toggleMarket(this)">
+          <span class="icon">₿</span><div class="name">CRYPTO TOP 50</div><div class="desc">By market cap</div>
         </button>
-        <button class="market-btn" data-market="crypto_top1000" onclick="toggleMarket(this)">
-          <span class="icon">🪙</span><div class="name">CRYPTO TOP 1000</div><div class="desc">By market cap</div>
+        <button class="market-btn" data-market="crypto_top100" onclick="toggleMarket(this)">
+          <span class="icon">🪙</span><div class="name">CRYPTO TOP 100</div><div class="desc">By market cap</div>
         </button>
         <button class="market-btn" data-market="sp500" onclick="toggleMarket(this)">
           <span class="icon">📈</span><div class="name">S&amp;P 500</div><div class="desc">US large cap</div>
@@ -283,9 +281,6 @@
         <button class="ind-btn" data-ind="OBV Rising" onclick="toggleInd(this)">
           <div class="ind-name">OBV</div><div class="ind-desc">Accumulation signal</div><div class="ind-check"></div>
         </button>
-        <button class="ind-btn active" data-ind="Liquidation Zone" onclick="toggleInd(this)">
-          <div class="ind-name">LIQUIDATION MAP</div><div class="ind-desc">Price near long/short liq zone</div><div class="ind-check">✓</div>
-        </button>
       </div>
     </div>
 
@@ -310,28 +305,6 @@
           <input type="range" min="1" max="5" value="2" step="1" oninput="document.getElementById('minVal').textContent=this.value" id="minT">
         </div>
       </div>
-    </div>
-
-    <!-- Telegram Settings -->
-    <div class="section-label">05 — TELEGRAM ALERTS (OPTIONAL)</div>
-    <div class="card">
-      <div class="slider-grid">
-        <div>
-          <div class="api-label">BOT TOKEN</div>
-          <input type="password" class="api-input" id="tgToken" placeholder="123456:ABC-..." 
-                 oninput="saveKey('tgToken', this.value)" style="margin-bottom:8px;" />
-        </div>
-        <div>
-          <div class="api-label">CHAT ID</div>
-          <input type="text" class="api-input" id="tgChatId" placeholder="-1001234567890"
-                 oninput="saveKey('tgChatId', this.value)" style="margin-bottom:8px;" />
-        </div>
-      </div>
-      <div class="api-note">Leave blank to skip Telegram. Alerts sent after scan completes.</div>
-      <button onclick="testTelegram()" style="margin-top:10px;background:transparent;border:1px solid var(--warn);color:var(--warn);font-family:Share Tech Mono,monospace;font-size:10px;padding:8px 16px;cursor:pointer;letter-spacing:2px;width:100%;">
-        &#9993; TEST TELEGRAM CONNECTION
-      </button>
-      <div id="tgTestResult" style="display:none;margin-top:8px;font-family:Share Tech Mono,monospace;font-size:10px;padding:8px;border-radius:2px;line-height:1.6;"></div>
     </div>
 
     <button class="scan-btn" id="scanBtn" onclick="runScan()">⚡ ANALYZE WITH AI</button>
@@ -375,13 +348,13 @@
 
 <script>
   let selectedEngine = 'gemini';
-  let selectedMarkets = ['crypto_top500'];
-  let selectedInds = ['WaveTrend','RSI Divergence','Bollinger Band Lower Touch','Volume Spike','Liquidation Zone'];
+  let selectedMarkets = ['crypto_top50'];
+  let selectedInds = ['WaveTrend','RSI Divergence','Bollinger Band Lower Touch','Volume Spike'];
   let allAlerts = [];
 
   const MARKET_TICKERS = {
-    crypto_top500:{label:'Crypto Top 500',type:'crypto',tickers:['BTC','ETH','BNB','XRP','SOL','ADA','DOGE','TRX','DOT','MATIC','LTC','SHIB','AVAX','LINK','ATOM','UNI','XMR','ETC','XLM','BCH','ALGO','VET','FIL','ICP','HBAR','APT','ARB','NEAR','QNT','GRT','AAVE','SAND','MANA','AXS','THETA','EOS','NEO','MKR','SNX','COMP','CRV','YFI','SUSHI','ENJ','CHZ','ZIL','BAT','HOT','ONT','DASH','ZEC','IOTA','XTZ','EGLD','FTM','ONE','KAVA','CELO','FLOW','ROSE','SKL','ANKR','OGN','SLP','ALICE','REEF','TLM','DENT','WIN','SC','DGB','RVN','SYS','ARDR','NXT','STEEM','LSK','PIVX','QTUM','WAN','ICX','IOST','ARK','NULS','WTC','WAVES','RUNE','LDO','FXS','CVX','GMX','DYDX','GNS','JOE','PERP','STX','IMX','OP','INJ','SUI','SEI','TIA','PYTH','JUP','WIF','BONK','PEPE','FLOKI','TURBO','ORDI','SATS','RATS','MEME','BOME','SLERF','WEN','MYRO','POPCAT','MEW','BRETT','MOG','PONKE','RETARDIO','GIGA','PNUT','ACT','GOAT','MOODENG','NEIRO','EIGEN','DRIFT','CLOUD','IO','ZK','STRK','ALT','DYM','PIXEL','PORTAL','MANTA','AEVO','SAGA','OMNI','REZ','BB','NOT','DOGS','CATI','HMSTR','MAJOR','BLUM','BCUT','PAWS','GRAM','X','AGENT','GAME','TAO','RENDER','FET','AGIX','OCEAN','NMR','RLC','GRT','LPT','API3','BAND','TRB','LINK','UMA','ARKM','ONDO','PYUSD','FDUSD','TUSD','USDP','GUSD','USDD','FRAX','LUSD','CRVUSD','GHO','ALUSD','SUSD','DOLA','MIM','MAI','USDR','CUSD','BUSD','USDJ','ZUSD','USDX','HUSD','USDK','USDQ','USDT','USDC','DAI','USDN','TRIBE','FEI','FLOAT','BEAN','USDAP','USDL','USDM','USDV','USD0','USDY','USDZ','USDEX','USDW','USDH','USDF','USDG','USDB','USDA','USDE','SUSDX','AVT','TRAC','NKN','CTXC','LAMB','MTN','OGO','BLTV','BTCST','CHESS','TORN','CFX','EFI','MULTI','SPOOL','DODO','BURGER','XVS','ALPACA','BIFI','AUTO','CAKE','BELT','BUNNY','EPS','HARD','BOR','UNFI','SFP','AUCTION','BADGER','DIGG','FARM','PICKLE','COVER','ROOK','KEEP','NU','T','ALCX','TOKE','IDLE','BOND','POLS','API3','BETA','OOKI','MBL','AKRO','DF','IRIS','YFII','SRM','FIDA','KIN','MAPS','OXY','MEDIA','COPE','RAY','MER','STEP','SNY','PORT','SAIL','SLRS','MNGO','ABR','LIQ','TULIP','SUNNY','LARIX','KURO','SBR','ORCA','SABER','GOFX','SERUM']},
-    crypto_top1000:{label:'Crypto Top 1000',type:'crypto',tickers:['BTC','ETH','BNB','XRP','SOL','ADA','DOGE','TRX','DOT','MATIC','LTC','SHIB','AVAX','LINK','ATOM','UNI','XMR','ETC','XLM','BCH','ALGO','VET','FIL','ICP','HBAR','APT','ARB','NEAR','QNT','GRT','AAVE','SAND','MANA','AXS','THETA','EOS','NEO','MKR','SNX','COMP','CRV','YFI','SUSHI','ENJ','CHZ','ZIL','BAT','HOT','ONT','DASH','ZEC','IOTA','XTZ','EGLD','FTM','ONE','KAVA','CELO','FLOW','ROSE','SKL','ANKR','OGN','SLP','ALICE','REEF','TLM','DENT','WIN','SC','DGB','RVN','SYS','ARDR','NXT','STEEM','LSK','PIVX','QTUM','WAN','ICX','IOST','ARK','NULS','WTC','WAVES','RUNE','LDO','FXS','CVX','GMX','DYDX','GNS','JOE','PERP','STX','IMX','OP','INJ','SUI','SEI','TIA','PYTH','JUP','WIF','BONK','PEPE','FLOKI','TURBO','ORDI','MEME','BOME','POPCAT','MEW','BRETT','MOG','PONKE','GIGA','PNUT','ACT','GOAT','MOODENG','NEIRO','EIGEN','DRIFT','CLOUD','IO','ZK','STRK','ALT','DYM','PIXEL','PORTAL','MANTA','AEVO','SAGA','OMNI','REZ','BB','NOT','DOGS','CATI','HMSTR','MAJOR','TAO','RENDER','FET','AGIX','OCEAN','NMR','RLC','LPT','API3','BAND','TRB','UMA','ARKM','ONDO','CFX','DODO','XVS','ALPACA','BIFI','CAKE','BELT','BUNNY','EPS','HARD','UNFI','SFP','AUCTION','BADGER','DIGG','FARM','PICKLE','COVER','KEEP','NU','T','ALCX','TOKE','IDLE','BOND','POLS','BETA','OOKI','MBL','AKRO','DF','IRIS','YFII','RAY','SNY','MNGO','ORCA','SABER','ACH','ADX','AERGO','AGLD','AMP','ARPA','ATM','AVA','AVAX','AXS','BADGER','BAKE','BALANCER','BAND','BAR','BCH','BEAM','BETA','BICO','BLUR','BLZ','BNT','BOBA','BOND','BSW','BTG','BTS','BTT','C98','CELR','CFX','CHR','CITY','CLV','COCOS','COMBO','CORE','COT','CTK','CTSI','CYBER','DEGO','DENT','DIA','DOCK','DUSK','DYDX','EDU','ELF','EPX','ERN','ETCX','FARM','FOR','FORTH','FTT','FUN','GAL','GALA','GAS','GBP','GHST','GLM','GLMR','GMT','GNO','GNS','HARD','HFT','HIGH','HOOK','ID','IDEX','ILV','IOST','IQ','JASMY','JOE','JST','KAVA','KDA','KEY','KLAY','KMD','KP3R','KSM','LAZIO','LEND','LEVER','LINA','LISTA','LOKA','LOOM','LQTY','LUNC','MAGIC','MASK','MC','MDAO','MDT','MINA','MIR','MLN','MOVR','MTL','MULTI','MVL','MXC','NEXO','NFP','NMR','NTRN','OAX','OG','OGN','OMG','ONE','ONT','OOKI','ORC','OXT','PAXG','PEOPLE','PERP','PHA','PIVX','PLA','PLN','POLY','POND','PORTO','PROM','PROS','PSG','PYR','QI','QKC','QNT','QUICK','RAD','RDNT','REEF','REI','REN','REP','REQ','REVOLT','RIF','RNDR','RONIN','RPL','RUNE','SANTOS','SC','SCRT','SFP','SKL','SLPX','SNT','SOL','SPARTA','SPELL','STEEM','STMX','STORJ','STX','SUI','SUPER','SUSHI','SXP','SYS','TOMO','TORN','TRB','TRIBE','TROY','TRU','TWT','UFT','UNIBOT','USDT','UTK','VELO','VERSE','VIDT','VITE','VOXEL','VTHO','WAN','WING','WNCG','WOO','XEC','XEM','XNO','XVG','XVS','YGG','ZEC','ZEN','ZIL','ZRX','DOGE','SHIB','FLOKI','LUNC','ELON','BABY','SAMO','HOGE','PIG','LEASH','KISHU','SAITAMA','AKITA','DOGELON','VOLT','PITBULL','JACY','FLOKINOMICS','FLOKI','SAFEMOON','ELONGATE','HOKK','PIG','SHINJA','MOONSHOT','TFLOKI','FLOKIM']},
+    crypto_top50:{label:'Crypto Top 50',type:'crypto',tickers:['BTC','ETH','BNB','XRP','SOL','ADA','DOGE','TRX','DOT','MATIC','LTC','SHIB','AVAX','LINK','ATOM','UNI','XMR','ETC','XLM','BCH','ALGO','VET','FIL','ICP','HBAR','APT','ARB','NEAR','QNT','GRT','AAVE','SAND','MANA','AXS','THETA','EOS','NEO','MKR','SNX','COMP','CRV','YFI','SUSHI','ENJ','CHZ','ZIL','BAT','HOT','ONT','DASH']},
+    crypto_top100:{label:'Crypto Top 100',type:'crypto',tickers:['BTC','ETH','BNB','XRP','SOL','ADA','DOGE','TRX','DOT','MATIC','LTC','SHIB','AVAX','LINK','ATOM','UNI','XMR','ETC','XLM','BCH','ALGO','VET','FIL','ICP','HBAR','APT','ARB','NEAR','QNT','GRT','AAVE','SAND','MANA','AXS','THETA','EOS','NEO','MKR','SNX','COMP','CRV','YFI','SUSHI','ENJ','CHZ','ZIL','BAT','HOT','ONT','DASH','ZEC','IOTA','XTZ','EGLD','FTM','ONE','KAVA','CELO','FLOW','ROSE','SKL','ANKR','OGN','SLP','ALICE','REEF','TLM','DENT','WIN','SC','DGB','RVN','SYS','ARDR','NXT','STEEM','LSK','PIVX','QTUM','WAN','ICX','IOST','ARK','NULS','WTC','STORM','WABI','CMT','WAVES','RUNE','LDO','FXS','CVX','GMX','DYDX','GNS','JOE','PERP']},
     sp500:{label:'S&P 500',type:'stock',tickers:['AAPL','MSFT','AMZN','NVDA','GOOGL','META','TSLA','BRK-B','UNH','LLY','JPM','V','XOM','MA','PG','JNJ','HD','AVGO','MRK','CVX','PEP','ABBV','COST','KO','WMT','ADBE','CRM','BAC','MCD','PFE','TMO','CSCO','ABT','ACN','NKE','DHR','LIN','CMCSA','TXN','VZ','PM','NEE','RTX','HON','AMGN','IBM','UNP','INTC','QCOM','INTU','SBUX','GE','LOW','AMD','CAT','DE','SPGI','MS','GS','BLK']},
     nasdaq100:{label:'Nasdaq 100',type:'stock',tickers:['AAPL','MSFT','AMZN','NVDA','GOOGL','GOOG','META','TSLA','AVGO','ADBE','CSCO','CMCSA','INTC','AMD','INTU','QCOM','HON','AMAT','SBUX','MDLZ','GILD','REGN','VRTX','ISRG','KLAC','LRCX','SNPS','CDNS','MRVL','PANW','CRWD','NFLX','PYPL','ADP','MELI','ASML','COST','PDD','KDP','ORLY','PCAR','CTAS','FTNT','FAST','CPRT','MNST','DDOG','ROST','PAYX','ODFL']},
     russell2000:{label:'Russell 2000',type:'stock',tickers:['SMCI','SAIA','GTLS','CHRD','RMBS','HALO','MGNI','CSWI','UFPI','PLXS','ITRI','ESAB','AAON','SPSC','ACLS','SFBS','CABO','ALRM','KTOS','AEIS','CPRX','MSGS','IRTC','MGPI','HTLF','PTCT','FORM','NSIT','TGTX','IDEX','AGIO','CARG','PRGS','DFIN','NEOG','HLIO','DNOW','BOOT','REPX','ARCH','AORT','INVA','DXPE','LQDT','MYRG','CNXN','PAHC','RELY','HTLD','PZZA']},
@@ -414,14 +387,10 @@
     try {
       const ck = localStorage.getItem('apex_key_claude');
       const gk = localStorage.getItem('apex_key_gemini');
-      const tt = localStorage.getItem('apex_key_tgToken');
-      const tc = localStorage.getItem('apex_key_tgChatId');
       if (ck) document.getElementById('claudeKey').value = ck;
       if (gk) document.getElementById('geminiKey').value = gk;
-      if (tt) document.getElementById('tgToken').value = tt;
-      const fk = localStorage.getItem('apex_key_fmpKey');
-      if (fk && document.getElementById('fmpKey')) document.getElementById('fmpKey').value = fk;
-      if (tc) document.getElementById('tgChatId').value = tc;
+      const fhk=localStorage.getItem('apex_key_fhKey');
+      if(fhk&&document.getElementById('fhKey')) document.getElementById('fhKey').value=fhk;
     } catch(e) {}
   }
 
@@ -429,34 +398,17 @@
 
   // ── Market / indicator toggles ────────────────────
   function toggleMarket(btn) {
-    try {
-      const m = btn.dataset.market;
-      if (!m) return;
-      if (selectedMarkets.includes(m)) {
-        selectedMarkets = selectedMarkets.filter(function(x) { return x !== m; });
-        btn.classList.remove('active');
-      } else {
-        selectedMarkets.push(m);
-        btn.classList.add('active');
-      }
-    } catch(e) { console.error('toggleMarket error:', e); }
+    btn.classList.toggle('active');
+    const m = btn.dataset.market;
+    selectedMarkets = selectedMarkets.includes(m) ? selectedMarkets.filter(x=>x!==m) : [...selectedMarkets,m];
   }
 
   function toggleInd(btn) {
-    try {
-      const ind = btn.dataset.ind;
-      if (!ind) return;
-      const check = btn.querySelector('.ind-check');
-      if (selectedInds.includes(ind)) {
-        selectedInds = selectedInds.filter(function(x) { return x !== ind; });
-        btn.classList.remove('active');
-        if (check) check.textContent = '';
-      } else {
-        selectedInds.push(ind);
-        btn.classList.add('active');
-        if (check) check.textContent = '✓';
-      }
-    } catch(e) { console.error('toggleInd error:', e); }
+    btn.classList.toggle('active');
+    const ind = btn.dataset.ind;
+    const check = btn.querySelector('.ind-check');
+    if (selectedInds.includes(ind)) { selectedInds=selectedInds.filter(x=>x!==ind); check.textContent=''; }
+    else { selectedInds.push(ind); check.textContent='✓'; }
   }
 
   function showToast(msg) {
@@ -465,14 +417,11 @@
   }
 
   function showError(msg) {
-    console.error('APEX ERROR:', msg);
     const box = document.getElementById('errorBox');
-    if (box) { box.textContent = msg; box.style.display = 'block'; }
-    const loading = document.getElementById('loading');
-    if (loading) loading.classList.remove('visible');
-    const panel = document.getElementById('setupPanel');
-    if (panel) panel.style.display = 'block';
-    showToast(msg.substring(0, 60));
+    box.textContent = msg;
+    box.style.display = 'block';
+    document.getElementById('loading').classList.remove('visible');
+    document.getElementById('setupPanel').style.display = 'block';
   }
 
   function newScan() {
@@ -501,7 +450,7 @@
       },
       body: JSON.stringify({
         model: model,
-        max_tokens: 1024,
+        max_tokens: 4096,
         messages: [{ role: 'user', content: prompt }]
       })
     });
@@ -529,61 +478,40 @@
   }
 
   function renderAlerts(alerts) {
-    const c = document.getElementById('alertsContainer');
-    c.innerHTML = '';
-    if (alerts.length === 0) {
-      c.innerHTML = '<div style="text-align:center;padding:40px;font-family:Share Tech Mono,monospace;font-size:12px;color:var(--muted);">NO ALERTS FOR CURRENT FILTER</div>';
+    const c=document.getElementById('alertsContainer');
+    c.innerHTML='';
+    if(alerts.length===0){
+      c.innerHTML='<div style="text-align:center;padding:40px;font-family:\'Share Tech Mono\',monospace;font-size:12px;color:var(--muted);">NO ALERTS FOR CURRENT FILTER</div>';
       return;
     }
-    alerts.forEach(function(a) {
-      const isStrong = a.score >= 3;
-      const card = document.createElement('div');
-      card.className = 'alert-card ' + (isStrong ? 'strong' : 'moderate');
-      card.dataset.type = a.type || '';
-      card.dataset.strength = isStrong ? 'strong' : 'moderate';
-      const signals = a.signals || [];
-
-      // Build signals HTML
-      let signalsHtml = '';
-      signals.forEach(function(s) {
-        signalsHtml += '<span class="signal-tag ' + getSignalClass(s) + '">' + s + '</span>';
-      });
-
-      // Build sentiment badge
-      let sentimentHtml = '';
-      if (a.sentiment) {
-        let sentColor = 'color:#ffb800;border-color:rgba(255,184,0,0.4);background:rgba(255,184,0,0.06)';
-        if (a.sentimentEmoji === 'green') sentColor = 'color:#00ff88;border-color:rgba(0,255,136,0.4);background:rgba(0,255,136,0.06)';
-        if (a.sentimentEmoji === 'red') sentColor = 'color:#ff3366;border-color:rgba(255,51,102,0.4);background:rgba(255,51,102,0.06)';
-        sentimentHtml = '<div style="margin-top:8px;font-family:Share Tech Mono,monospace;font-size:10px;padding:4px 10px;display:inline-block;border-radius:2px;border:1px solid;' + sentColor + '">REDDIT: ' + a.sentiment + '</div>';
-      }
-
-      // Build values
-      let valuesHtml = '';
-      if (a.wt1 !== undefined) valuesHtml += '<div class="alert-val">WT1 <span>' + a.wt1 + '</span></div>';
-      if (a.rsi !== undefined) valuesHtml += '<div class="alert-val">RSI <span>' + a.rsi + '</span></div>';
-      if (a.timeframe) valuesHtml += '<div class="alert-val">TF <span>' + a.timeframe + '</span></div>';
-
-      card.innerHTML =
-        '<div class="alert-top">' +
-          '<div>' +
-            '<div class="alert-symbol">' + (a.symbol || '') + '</div>' +
-            '<div class="alert-market">' + (a.market || '') + ' &bull; ' + ((a.type || '').toUpperCase()) + '</div>' +
-          '</div>' +
-          '<div style="text-align:right">' +
-            '<div class="alert-score ' + (isStrong ? '' : 'moderate') + '">' + a.score + '/' + selectedInds.length + '</div>' +
-            '<div style="font-family:Share Tech Mono,monospace;font-size:9px;color:var(--muted);margin-top:2px;">' + (isStrong ? '&#128293; STRONG' : '&#9889; MODERATE') + '</div>' +
-          '</div>' +
-        '</div>' +
-        '<div class="alert-signals">' + signalsHtml + '</div>' +
-        '<div class="alert-analysis">' + (a.analysis || '') + '</div>' +
-        sentimentHtml +
-        '<div class="alert-values">' + valuesHtml + '</div>';
-
+    alerts.forEach(a=>{
+      const isStrong=a.score>=3;
+      const card=document.createElement('div');
+      card.className=`alert-card ${isStrong?'strong':'moderate'}`;
+      card.dataset.type=a.type||'';
+      card.dataset.strength=isStrong?'strong':'moderate';
+      const signals=(a.signals||[]);
+      card.innerHTML=`
+        <div class="alert-top">
+          <div>
+            <div class="alert-symbol">${a.symbol}</div>
+            <div class="alert-market">${a.market||''} • ${(a.type||'').toUpperCase()}</div>
+          </div>
+          <div style="text-align:right">
+            <div class="alert-score ${isStrong?'':'moderate'}">${a.score}/${selectedInds.length}</div>
+            <div style="font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--muted);margin-top:2px;">${isStrong?'🔥 STRONG':'⚡ MODERATE'}</div>
+          </div>
+        </div>
+        <div class="alert-signals">${signals.map(s=>`<span class="signal-tag ${getSignalClass(s)}">${s}</span>`).join('')}</div>
+        <div class="alert-analysis">${a.analysis||''}</div>
+        <div class="alert-values">
+          ${a.wt1!==undefined?`<div class="alert-val">WT1 <span>${a.wt1}</span></div>`:''}
+          ${a.rsi!==undefined?`<div class="alert-val">RSI <span>${a.rsi}</span></div>`:''}
+          ${a.timeframe?`<div class="alert-val">TF <span>${a.timeframe}</span></div>`:''}
+        </div>`;
       c.appendChild(card);
     });
   }
-
 
   function filterAlerts(type,btn) {
     document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
@@ -594,252 +522,6 @@
     else if(type==='crypto') f=allAlerts.filter(a=>a.type==='crypto');
     else if(type==='stocks') f=allAlerts.filter(a=>a.type==='stock');
     renderAlerts(f);
-  }
-
-  // ── Binance liquidation zone fetch ───────────────────
-  async function fetchLiquidationData(symbols) {
-    const results = {};
-    const binanceSymbols = symbols
-      .filter(t => t.type === 'crypto')
-      .map(t => ({ symbol: t.symbol, pair: t.symbol + 'USDT' }));
-
-    await Promise.all(binanceSymbols.map(async ({ symbol, pair }) => {
-      try {
-        const [oiRes, frRes, priceRes] = await Promise.all([
-          fetch(`https://fapi.binance.com/fapi/v1/openInterest?symbol=${pair}`),
-          fetch(`https://fapi.binance.com/fapi/v1/fundingRate?symbol=${pair}&limit=1`),
-          fetch(`https://fapi.binance.com/fapi/v1/ticker/price?symbol=${pair}`)
-        ]);
-
-        if (!oiRes.ok || !frRes.ok || !priceRes.ok) return;
-
-        const oi = await oiRes.json();
-        const fr = await frRes.json();
-        const price = await priceRes.json();
-
-        const currentPrice = parseFloat(price.price);
-        const fundingRate = parseFloat(fr[0]?.fundingRate || 0);
-        const openInterest = parseFloat(oi.openInterest);
-
-        // Estimate liquidation zones:
-        // Positive funding = longs dominant = long liq below, short liq above
-        // Negative funding = shorts dominant = short liq below, long liq above
-        // Estimate leverage from funding rate:
-        // High positive funding = longs very crowded = higher leverage = tighter liq zone
-        // High negative funding = shorts very crowded = higher leverage = tighter liq zone
-        const absFunding = Math.abs(fundingRate);
-        let estimatedLeverage;
-        if (absFunding > 0.003) estimatedLeverage = 25;       // extremely crowded = 25x
-        else if (absFunding > 0.001) estimatedLeverage = 15;  // very crowded = 15x
-        else if (absFunding > 0.0005) estimatedLeverage = 10; // moderately crowded = 10x
-        else if (absFunding > 0.0002) estimatedLeverage = 7;  // slightly crowded = 7x
-        else estimatedLeverage = 5;                            // neutral = 5x
-
-        // Longs get liquidated below, shorts above
-        // Positive funding = longs dominant = long liq is closer (tighter)
-        // Negative funding = shorts dominant = short liq is closer (tighter)
-        const longLiqDistance = fundingRate >= 0
-          ? (1 / estimatedLeverage)         // longs crowded = closer long liq
-          : (1 / (estimatedLeverage * 0.6)); // shorts crowded = farther long liq
-
-        const shortLiqDistance = fundingRate < 0
-          ? (1 / estimatedLeverage)          // shorts crowded = closer short liq
-          : (1 / (estimatedLeverage * 0.6)); // longs crowded = farther short liq
-
-        const longLiqZone = currentPrice * (1 - longLiqDistance);
-        const shortLiqZone = currentPrice * (1 + shortLiqDistance);
-
-        // Calculate exact distance % to each liquidation zone
-        const distToLongLiq = ((currentPrice - longLiqZone) / currentPrice * 100).toFixed(2);
-        const distToShortLiq = ((shortLiqZone - currentPrice) / currentPrice * 100).toFixed(2);
-
-        // Alert if price is within 12% of either liquidation zone
-        const nearLongLiq = parseFloat(distToLongLiq) <= 12;
-        const nearShortLiq = parseFloat(distToShortLiq) <= 12;
-
-        results[symbol] = {
-          price: currentPrice,
-          fundingRate,
-          openInterest,
-          longLiqZone: longLiqZone.toFixed(4),
-          shortLiqZone: shortLiqZone.toFixed(4),
-          distToLongLiq,
-          distToShortLiq,
-          nearLongLiq,
-          nearShortLiq,
-          fundingBias: fundingRate > 0.0005 ? 'LONGS_CROWDED' : fundingRate < -0.0005 ? 'SHORTS_CROWDED' : 'NEUTRAL',
-          alert: nearLongLiq || nearShortLiq,
-          alertType: nearLongLiq ? 'NEAR_LONG_LIQ' : nearShortLiq ? 'NEAR_SHORT_LIQ' : null
-        };
-      } catch(e) {
-        // Symbol not on Binance futures, skip
-      }
-    }));
-    return results;
-  }
-
-  // ── Telegram sender ───────────────────────────────────
-  async function sendTelegram(alerts, liqData) {
-    const token = document.getElementById('tgToken').value.trim();
-    const chatId = document.getElementById('tgChatId').value.trim();
-    if (!token || !chatId) return;
-
-    const strong = alerts.filter(a => a.score >= 3);
-    const liqAlerts = Object.entries(liqData).filter(([,d]) => d && d.alert);
-
-    let lines = [];
-    lines.push('APEX SCANNER RESULTS');
-    lines.push(new Date().toDateString());
-    lines.push('');
-
-    if (strong.length > 0) {
-      lines.push('STRONG SIGNALS (' + strong.length + ')');
-      strong.forEach(a => {
-        lines.push('');
-        lines.push(a.symbol + ' - Score: ' + a.score + '/' + selectedInds.length);
-        lines.push('Signals: ' + (a.signals||[]).join(', '));
-        lines.push(a.analysis || '');
-        if (a.sentiment) lines.push('Sentiment: ' + a.sentiment);
-      });
-    } else {
-      lines.push('No strong signals found.');
-    }
-
-    if (liqAlerts.length > 0) {
-      lines.push('');
-      lines.push('LIQUIDATION ZONE ALERTS (' + liqAlerts.length + ')');
-      liqAlerts.forEach(function(entry) {
-        var sym = entry[0], d = entry[1];
-        var type = d.alertType === 'NEAR_LONG_LIQ' ? 'Near LONG liq' : 'Near SHORT liq';
-        lines.push('');
-        var dist = d.alertType === 'NEAR_LONG_LIQ' ? d.distToLongLiq : d.distToShortLiq;
-        lines.push(sym + ' - ' + type + ' (' + dist + '% away)');
-        lines.push('Price: $' + d.price + ' | Liq Zone: $' + (d.alertType === 'NEAR_LONG_LIQ' ? d.longLiqZone : d.shortLiqZone));
-        lines.push('Funding: ' + (d.fundingRate*100).toFixed(4) + '% | ' + d.fundingBias);
-      });
-    }
-
-    const msg = lines.join('\n');
-
-    // Split into 4000 char chunks
-    const chunks = [];
-    for (let i = 0; i < msg.length; i += 4000) {
-      chunks.push(msg.slice(i, i + 4000));
-    }
-
-    for (const chunk of chunks) {
-      try {
-        const parsedChatId = isNaN(chatId) ? chatId : parseInt(chatId);
-        const res = await fetch('https://api.telegram.org/bot' + token + '/sendMessage', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ chat_id: parsedChatId, text: chunk })
-        });
-        if (!res.ok) {
-          const errText = await res.text();
-          throw new Error('HTTP ' + res.status + ': ' + errText.substring(0, 100));
-        }
-        const data = await res.json();
-        if (!data.ok) throw new Error(data.description || 'Telegram rejected message');
-      } catch(e) {
-        showError('Telegram error: ' + e.message);
-        return;
-      }
-    }
-  }
-
-  // ── Reddit sentiment fetch ────────────────────────
-  async function fetchRedditSentiment(symbols) {
-    const sentiment = {};
-    const allSymbols = symbols.slice(0, 20); // limit to top 20 alerts
-
-    await Promise.all(allSymbols.map(async ({ symbol, type }) => {
-      try {
-        const isCrypto = type === 'crypto';
-        const query = isCrypto
-          ? encodeURIComponent(symbol + ' crypto')
-          : encodeURIComponent(symbol + ' stock');
-        const url = 'https://www.reddit.com/search.json?q=' + query + '&sort=hot&limit=10&t=day';
-
-        const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
-        if (!res.ok) return;
-        const data = await res.json();
-
-        const posts = data.data?.children || [];
-        if (posts.length === 0) { sentiment[symbol] = { score: 0, posts: 0, label: 'NO DATA' }; return; }
-
-        let bullish = 0, bearish = 0, totalUpvotes = 0;
-        posts.forEach(p => {
-          const title = (p.data.title || '').toLowerCase();
-          const ups = p.data.ups || 0;
-          totalUpvotes += ups;
-          const bullWords = ['moon', 'pump', 'bullish', 'buy', 'long', 'breakout', 'surge', 'rally', 'up', 'gain', 'beat', 'earnings beat', 'upgrade', 'outperform', 'oversold', 'accumulate', 'undervalued', 'strong'];
-          const bearWords = ['dump', 'bearish', 'sell', 'short', 'crash', 'drop', 'down', 'fall', 'loss', 'rug', 'miss', 'earnings miss', 'downgrade', 'overbought', 'overvalued', 'weak', 'avoid', 'layoffs'];
-          bullWords.forEach(w => { if (title.includes(w)) bullish++; });
-          bearWords.forEach(w => { if (title.includes(w)) bearish++; });
-        });
-
-        const sentScore = bullish - bearish;
-        const label = sentScore > 1 ? 'BULLISH' : sentScore < -1 ? 'BEARISH' : 'NEUTRAL';
-        sentiment[symbol] = {
-          score: sentScore,
-          posts: posts.length,
-          upvotes: totalUpvotes,
-          label,
-          emoji: sentScore > 1 ? 'green' : sentScore < -1 ? 'red' : 'yellow'
-        };
-      } catch(e) {
-        sentiment[symbol] = { score: 0, posts: 0, label: 'ERROR' };
-      }
-    }));
-    return sentiment;
-  }
-
-  // ── Test Telegram ────────────────────────────────
-  async function testTelegram() {
-    const token = document.getElementById('tgToken').value.trim();
-    const chatId = document.getElementById('tgChatId').value.trim();
-    const result = document.getElementById('tgTestResult');
-    result.style.display = 'block';
-
-    if (!token) { result.style.color='#ff3366'; result.textContent='ERROR: Enter your bot token first'; return; }
-    if (!chatId) { result.style.color='#ff3366'; result.textContent='ERROR: Enter your chat ID first'; return; }
-
-    result.style.color='#ffb800';
-    result.textContent='Testing connection...';
-
-    try {
-      // First verify the bot token
-      const botRes = await fetch('https://api.telegram.org/bot' + token + '/getMe');
-      const botData = await botRes.json();
-      if (!botData.ok) {
-        result.style.color='#ff3366';
-        result.textContent='ERROR: Invalid bot token. Get it from @BotFather on Telegram.';
-        return;
-      }
-
-      const botName = botData.result.username;
-
-      // Now send a test message
-      const parsedChatId = isNaN(chatId) ? chatId : parseInt(chatId);
-      const msgRes = await fetch('https://api.telegram.org/bot' + token + '/sendMessage', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ chat_id: parsedChatId, text: 'APEX SCANNER: Connection test successful! Your alerts are configured correctly.' })
-      });
-      const msgData = await msgRes.json();
-
-      if (msgData.ok) {
-        result.style.color='#00ff88';
-        result.textContent='SUCCESS: Bot @' + botName + ' connected! Check your Telegram for the test message.';
-      } else {
-        result.style.color='#ff3366';
-        result.textContent='ERROR: Bot token is valid but chat ID is wrong. Error: ' + msgData.description + '. Get your correct chat ID from @userinfobot on Telegram.';
-      }
-    } catch(e) {
-      result.style.color='#ff3366';
-      result.textContent='ERROR: ' + e.message + '. Make sure your internet connection is working.';
-    }
   }
 
   // ── Main scan ─────────────────────────────────────
@@ -873,282 +555,161 @@
 
       const marketsList=selectedMarkets.map(m=>MARKET_TICKERS[m]?.label).join(', ');
 
-      // Split into batches of 50 to avoid prompt size limits
-      // ── Fetch real market data ──────────────────────────
-      async function fetchBinanceCandles(symbol) {
+      // ── Real data functions ───────────────────────────
+      function calcRSI(closes, period) {
+        if (!closes || closes.length < period+1) return null;
+        let gains=0, losses=0;
+        for (let i=closes.length-period; i<closes.length; i++) {
+          const d=closes[i]-closes[i-1];
+          if(d>0) gains+=d; else losses+=Math.abs(d);
+        }
+        const rs=gains/(losses||0.0001);
+        return parseFloat((100-100/(1+rs)).toFixed(1));
+      }
+
+      function calcEMA(closes, period) {
+        if (!closes || closes.length<period) return null;
+        const k=2/(period+1);
+        let ema=closes.slice(0,period).reduce((a,b)=>a+b,0)/period;
+        for (let i=period; i<closes.length; i++) ema=closes[i]*k+ema*(1-k);
+        return parseFloat(ema.toFixed(4));
+      }
+
+      function calcVolSpike(volumes) {
+        if (!volumes || volumes.length<20) return null;
+        const avg=volumes.slice(-20,-1).reduce((a,b)=>a+b,0)/19;
+        return avg>0 ? parseFloat((volumes[volumes.length-1]/avg).toFixed(2)) : null;
+      }
+
+      async function fetchCryptoData(symbol) {
         try {
-          const url = 'https://fapi.binance.com/fapi/v1/klines?symbol=' + symbol + 'USDT&interval=1w&limit=210';
-          const res = await fetch(url);
-          if (!res.ok) return null;
-          return await res.json();
+          const url='https://fapi.binance.com/fapi/v1/klines?symbol='+symbol+'USDT&interval=1w&limit=210';
+          const res=await fetch(url);
+          if(!res.ok) return null;
+          const candles=await res.json();
+          if(!candles||candles.length<20) return null;
+          const closes=candles.map(c=>parseFloat(c[4]));
+          const volumes=candles.map(c=>parseFloat(c[5]));
+          return {closes, volumes, price:closes[closes.length-1]};
         } catch(e) { return null; }
       }
 
       async function fetchStockData(symbol) {
-        const fmpKey = document.getElementById('fmpKey') ? document.getElementById('fmpKey').value.trim() : '';
-        if (!fmpKey) return null; // Skip if no FMP key
-
+        const fhKey=document.getElementById('fhKey')?document.getElementById('fhKey').value.trim():'';
+        if(!fhKey) return null;
         try {
-          // FMP weekly historical data - works directly from browser
-          const url = 'https://financialmodelingprep.com/api/v3/historical-price-full/' + symbol + '?apikey=' + fmpKey + '&timeseries=250';
-          const res = await fetch(url);
-          if (!res.ok) return null;
-          const data = await res.json();
-          if (!data.historical || data.historical.length < 20) return null;
-
-          // FMP returns daily data - aggregate to weekly (take every 5th candle)
-          const daily = data.historical.reverse(); // oldest first
-          const weekly = [];
-          for (let i = 0; i < daily.length; i += 5) {
-            const week = daily.slice(i, i+5);
-            if (week.length === 0) continue;
-            weekly.push({
-              close: week[week.length-1].close,
-              volume: week.reduce(function(s,d) { return s + (d.volume||0); }, 0)
-            });
-          }
-
-          if (weekly.length < 20) return null;
-          const closes = weekly.map(function(w) { return w.close; });
-          const volumes = weekly.map(function(w) { return w.volume; });
-          return { closes, volumes };
-        } catch(e) {
-          console.log('FMP error for ' + symbol + ':', e.message);
-          return null;
-        }
+          const from=1645617895;
+          const to=1771761895;
+          const url='https://finnhub.io/api/v1/stock/candle?symbol='+symbol+'&resolution=W&from='+from+'&to='+to+'&token='+fhKey;
+          const res=await fetch(url);
+          if(!res.ok) return null;
+          const data=await res.json();
+          if(!data||data.s==='no_data'||!data.c||data.c.length<20) return null;
+          return {closes:data.c, volumes:data.v, price:data.c[data.c.length-1]};
+        } catch(e) { return null; }
       }
 
-      function calcRSI(closes, period) {
-        if (closes.length < period + 1) return null;
-        let gains = 0, losses = 0;
-        for (let i = closes.length - period; i < closes.length; i++) {
-          const diff = closes[i] - closes[i-1];
-          if (diff > 0) gains += diff; else losses += Math.abs(diff);
-        }
-        const rs = gains / (losses || 0.0001);
-        return parseFloat((100 - 100/(1+rs)).toFixed(2));
-      }
+      const realData={};
+      const cryptoTickers=allTickers.filter(t=>t.type==='crypto');
+      const stockTickers=allTickers.filter(t=>t.type==='stock');
+      const fhKey=document.getElementById('fhKey')?document.getElementById('fhKey').value.trim():'';
 
-      function calcEMA(closes, period) {
-        if (closes.length < period) return null;
-        const k = 2/(period+1);
-        let ema = closes.slice(0, period).reduce((a,b)=>a+b,0) / period;
-        for (let i = period; i < closes.length; i++) ema = closes[i]*k + ema*(1-k);
-        return parseFloat(ema.toFixed(4));
-      }
-
-      function calcWaveTrend(closes, n1, n2) {
-        if (closes.length < n2 + 4) return null;
-        const hlc3 = closes; // weekly close approximation
-        const esa = calcEMA(hlc3, n1);
-        const d = hlc3.map((v, i) => Math.abs(v - (calcEMA(hlc3.slice(0, i+1), n1) || v)));
-        const de = calcEMA(d, n1);
-        const ci = de ? (closes[closes.length-1] - esa) / (0.015 * de) : 0;
-        return parseFloat(ci.toFixed(2));
-      }
-
-      function calcVolumeSpike(volumes) {
-        if (volumes.length < 20) return null;
-        const avg = volumes.slice(-20, -1).reduce((a,b)=>a+b,0) / 19;
-        const current = volumes[volumes.length-1];
-        return parseFloat((current / avg).toFixed(2));
-      }
-
-      // Fetch real data for all tickers in parallel (batches of 10 to avoid rate limits)
-      const DATA_BATCH = 10;
-      const realDataMap = {};
-      const cryptoTickers = allTickers.filter(t => t.type === 'crypto');
-      const stockTickers = allTickers.filter(t => t.type === 'stock');
-
-      document.getElementById('loadingStatus').textContent = 'Fetching real market data for ' + allTickers.length + ' assets...';
-
-      // Fetch crypto data from Binance
-      for (let i = 0; i < cryptoTickers.length; i += DATA_BATCH) {
-        const batch = cryptoTickers.slice(i, i + DATA_BATCH);
-        document.getElementById('loadingStatus').textContent = 'Fetching crypto data ' + (i+1) + '-' + Math.min(i+DATA_BATCH, cryptoTickers.length) + ' of ' + cryptoTickers.length + '...';
-        await Promise.all(batch.map(async function(t) {
-          const candles = await fetchBinanceCandles(t.symbol);
-          if (!candles || candles.length < 20) return;
-          const closes = candles.map(function(c) { return parseFloat(c[4]); });
-          const volumes = candles.map(function(c) { return parseFloat(c[5]); });
-          const rsi = calcRSI(closes, 14);
-          const ema200 = calcEMA(closes, 200);
-          const ema50 = calcEMA(closes, 50);
-          const wt1 = calcWaveTrend(closes, 10, 21);
-          const volSpike = calcVolumeSpike(volumes);
-          const price = closes[closes.length-1];
-          realDataMap[t.symbol] = {
-            price, rsi, ema200, ema50, wt1, volSpike,
-            priceVsEma200: ema200 ? parseFloat(((price/ema200-1)*100).toFixed(2)) : null,
-            priceVsEma50: ema50 ? parseFloat(((price/ema50-1)*100).toFixed(2)) : null,
-            type: 'crypto'
-          };
+      // Fetch crypto in parallel batches of 10
+      for(let i=0;i<cryptoTickers.length;i+=10){
+        const batch=cryptoTickers.slice(i,i+10);
+        document.getElementById('loadingStatus').textContent='Fetching crypto data '+(i+1)+'-'+Math.min(i+10,cryptoTickers.length)+' of '+cryptoTickers.length+'...';
+        await Promise.all(batch.map(async t=>{
+          const d=await fetchCryptoData(t.symbol);
+          if(!d) return;
+          realData[t.symbol]={price:d.price,rsi:calcRSI(d.closes,14),ema200:calcEMA(d.closes,200),volSpike:calcVolSpike(d.volumes),type:'crypto'};
         }));
-        if (i + DATA_BATCH < cryptoTickers.length) await new Promise(function(r) { setTimeout(r, 200); });
+        await new Promise(r=>setTimeout(r,100));
       }
 
-      // Fetch stock data from Yahoo Finance
-      let stockDataCount = 0;
-      for (let i = 0; i < stockTickers.length; i += DATA_BATCH) {
-        const batch = stockTickers.slice(i, i + DATA_BATCH);
-        document.getElementById('loadingStatus').textContent = 'Fetching stock data ' + (i+1) + '-' + Math.min(i+DATA_BATCH, stockTickers.length) + ' of ' + stockTickers.length + ' (got data for ' + stockDataCount + ' so far)...';
-        await Promise.all(batch.map(async function(t) {
-          const data = await fetchStockData(t.symbol);
-          if (!data) return;
-          const { closes, volumes } = data;
-          const rsi = calcRSI(closes, 14);
-          const ema200 = calcEMA(closes, 200);
-          const ema50 = calcEMA(closes, 50);
-          const wt1 = calcWaveTrend(closes, 10, 21);
-          const volSpike = calcVolumeSpike(volumes);
-          const price = closes[closes.length-1];
-          realDataMap[t.symbol] = {
-            price, rsi, ema200, ema50, wt1, volSpike,
-            priceVsEma200: ema200 ? parseFloat(((price/ema200-1)*100).toFixed(2)) : null,
-            priceVsEma50: ema50 ? parseFloat(((price/ema50-1)*100).toFixed(2)) : null,
-            type: 'stock'
-          };
-          stockDataCount++;
-        }));
-        if (i + DATA_BATCH < stockTickers.length) await new Promise(function(r) { setTimeout(r, 200); });
-      }
-
-      document.getElementById('loadingStatus').textContent = 'Real data fetched for ' + Object.keys(realDataMap).length + ' assets. Running AI analysis...';
-
-      // Pre-filter using real data before sending to AI
-      const qualified = [];
-      Object.entries(realDataMap).forEach(function(entry) {
-        const sym = entry[0], d = entry[1];
-        let signals = [];
-        if (d.wt1 !== null && d.wt1 < parseFloat(wtT)) signals.push('WaveTrend oversold (' + d.wt1 + ')');
-        if (d.rsi !== null && d.rsi < parseFloat(rsiT)) signals.push('RSI oversold (' + d.rsi + ')');
-        if (d.volSpike !== null && d.volSpike >= parseFloat(volT)) signals.push('Volume Spike ' + d.volSpike + 'x');
-        if (d.ema200 !== null && d.priceVsEma200 !== null && Math.abs(d.priceVsEma200) <= 5) signals.push('Near 200 EMA (' + d.priceVsEma200 + '%)');
-        if (signals.length >= parseInt(minT)) {
-          qualified.push({ symbol: sym, data: d, signals });
+      // Fetch stocks via Finnhub (60 calls/min free = batch of 10 per second)
+      if(fhKey){
+        for(let i=0;i<stockTickers.length;i+=10){
+          const batch=stockTickers.slice(i,i+10);
+          document.getElementById('loadingStatus').textContent='Fetching stock data '+(i+1)+'-'+Math.min(i+10,stockTickers.length)+' of '+stockTickers.length+'...';
+          await Promise.all(batch.map(async t=>{
+            const d=await fetchStockData(t.symbol);
+            if(!d) return;
+            realData[t.symbol]={price:d.price,rsi:calcRSI(d.closes,14),ema200:calcEMA(d.closes,200),volSpike:calcVolSpike(d.volumes),type:'stock'};
+          }));
+          await new Promise(r=>setTimeout(r,1000)); // 1s between batches = 10 calls/sec = 600/min (within 60/min per batch limit)
         }
+      }
+
+      // Pre-filter with real data
+      const qualified=[];
+      allTickers.forEach(t=>{
+        const d=realData[t.symbol];
+        if(!d) return;
+        const sigs=[];
+        if(d.rsi!==null&&d.rsi<parseFloat(rsiT)) sigs.push('RSI oversold ('+d.rsi+')');
+        if(d.volSpike!==null&&d.volSpike>=parseFloat(volT)) sigs.push('Volume Spike '+d.volSpike+'x');
+        if(d.ema200!==null&&Math.abs((d.price/d.ema200-1)*100)<=5) sigs.push('Near 200 EMA');
+        if(sigs.length>=parseInt(minT)) qualified.push({...t,sigs,d});
       });
 
-      document.getElementById('loadingStatus').textContent = Object.keys(realDataMap).length + ' assets scanned. ' + qualified.length + ' qualify. Sending to AI for analysis...';
+      const realCount=Object.keys(realData).length;
+      document.getElementById('loadingStatus').textContent=realCount+' assets fetched. '+qualified.length+' qualify. Sending to AI...';
+      await new Promise(r=>setTimeout(r,300));
 
-      // Send only qualified assets to AI with real data for interpretation
-      const AI_BATCH = 15;
-      let parsed = [];
-      const mktLabel = marketsList;
+      // Build ticker list for AI - use real qualified data if available, else all tickers
+      const aiTickers=(qualified.length>0)
+        ? qualified.map(q=>`${q.symbol}(RSI:${q.d.rsi},VolSpike:${q.d.volSpike}x,EMA200:${q.d.ema200?((q.d.price/q.d.ema200-1)*100).toFixed(1)+'%':'N/A'})`).join(',')
+        : allTickers.map(t=>`${t.symbol}(${t.market})`).join(',');
 
-      for (let b = 0; b < qualified.length; b += AI_BATCH) {
-        const batch = qualified.slice(b, b + AI_BATCH);
-        document.getElementById('loadingStatus').textContent = 'AI analysing batch ' + (Math.floor(b/AI_BATCH)+1) + ' of ' + Math.ceil(qualified.length/AI_BATCH) + '...';
+      const tickerList=aiTickers;
 
-        const dataLines = batch.map(function(q) {
-          const d = q.data;
-          return q.symbol + ': price=' + d.price + ', RSI=' + d.rsi + ', WT1=' + d.wt1 + ', VolSpike=' + d.volSpike + 'x, vs200EMA=' + d.priceVsEma200 + '%, signals=[' + q.signals.join(', ') + ']';
-        }).join(' | ');
+      document.getElementById('loadingStatus').textContent=`Analyzing ${allTickers.length} assets across ${selectedMarkets.length} market(s)...`;
 
-        const promptParts = [
-          'You are a technical analyst. Today is ' + new Date().toDateString() + '.',
-          'These assets have been pre-screened with REAL weekly data and qualify based on indicators.',
-          'Real data: ' + dataLines,
-          'For each asset write a 1-sentence analysis explaining WHY it is a setup based on the real numbers above.',
-          'Return ONLY a raw JSON array. Format: [{"symbol":"BTC","market":"' + mktLabel + '","type":"crypto","score":' + parseInt(minT) + ',"signals":["RSI oversold (28)"],"wt1":-45.2,"rsi":28.1,"timeframe":"1W","analysis":"One sentence based on real data above."}]',
-          'Include all ' + batch.length + ' assets. Do not skip any.'
-        ];
+      const prompt=`You are an expert technical analyst. Today is ${new Date().toDateString()}.
 
-        try {
-          const response = await callAI(promptParts.join(' '));
-          const clean = response.replace(/```json|```/gi,'').trim();
-          const s = clean.indexOf('['), e = clean.lastIndexOf(']');
-          if (s !== -1 && e !== -1) {
-            const batchParsed = JSON.parse(clean.slice(s, e+1));
-            // Override with real data values
-            batchParsed.forEach(function(item) {
-              const realD = realDataMap[item.symbol];
-              if (realD) {
-                item.wt1 = realD.wt1;
-                item.rsi = realD.rsi;
-                item.volSpike = realD.volSpike;
-                item.price = realD.price;
-              }
-            });
-            parsed = parsed.concat(batchParsed);
-          }
-        } catch(be) { console.log('AI batch error:', be); }
+Analyze these ${allTickers.length} assets on their WEEKLY charts: ${tickerList}
 
-        if (b + AI_BATCH < qualified.length) await new Promise(function(r) { setTimeout(r, 300); });
-      }
+SCREENING CRITERIA:
+- Indicators: ${selectedInds.join(', ')}
+- WaveTrend oversold threshold: ${wtT}
+- RSI oversold threshold: ${rsiT}
+- Volume spike: ${volT} above average
+- Minimum signals to qualify: ${minT} of ${selectedInds.length}
 
-      // If no AI results but we have qualified assets, use them directly
-      if (parsed.length === 0 && qualified.length > 0) {
-        parsed = qualified.map(function(q) {
-          return {
-            symbol: q.symbol,
-            market: mktLabel,
-            type: q.data.type,
-            score: q.signals.length,
-            signals: q.signals,
-            wt1: q.data.wt1,
-            rsi: q.data.rsi,
-            timeframe: '1W',
-            analysis: 'Real data signals: ' + q.signals.join(', ') + '. Price: $' + q.data.price
-          };
-        });
-      }
+Identify assets MOST LIKELY showing oversold weekly conditions and potential reversal setups based on current market conditions as of ${new Date().toDateString()}.
 
-      // Fetch liquidation data from Binance if indicator selected
-      let liqData = {};
-      if (selectedInds.includes('Liquidation Zone')) {
-        document.getElementById('loadingStatus').textContent='Fetching Binance liquidation data...';
-        liqData = await fetchLiquidationData(allTickers);
+IMPORTANT: Respond with ONLY a raw JSON array. No markdown. No backticks. No explanation. Start your response with [ and end with ]. Nothing else.
+[{"symbol":"BTC","market":"Crypto Top 50","type":"crypto","score":3,"signals":["WaveTrend Oversold","RSI Divergence","Volume Spike"],"wt1":-58.2,"rsi":31.4,"timeframe":"1W","analysis":"1 sentence max"}]
 
-        // Add liquidation signal to matching alerts
-        allAlerts = allAlerts.map(a => {
-          const liq = liqData[a.symbol];
-          if (liq && liq.alert) {
-            const dist = liq.alertType === 'NEAR_LONG_LIQ' ? liq.distToLongLiq : liq.distToShortLiq;
-            const liqSignal = liq.alertType === 'NEAR_LONG_LIQ'
-              ? '🔴 Long Liq Zone -' + dist + '%'
-              : '🟢 Short Liq Zone -' + dist + '%';
-            a.signals = [...(a.signals||[]), liqSignal];
-            a.score = a.score + 1;
-            a.analysis += ` Funding rate: ${(liq.fundingRate*100).toFixed(4)}% (${liq.fundingBias}).`;
-          }
-          return a;
-        });
+Rules:
+- Only include assets meeting at least ${minT} criteria
+- Maximum 8 results only, sorted by score descending
+- Be selective and realistic based on current ${new Date().toDateString()} market conditions
+- Return [] if nothing qualifies
+- Score = number of triggered indicators (max ${selectedInds.length})`;
 
-        // Add standalone liquidation alerts (not in AI results)
-        Object.entries(liqData).forEach(([sym, d]) => {
-          if (d.alert && !allAlerts.find(a => a.symbol === sym)) {
-            allAlerts.push({
-              symbol: sym,
-              market: 'Crypto',
-              type: 'crypto',
-              score: 1,
-              signals: [d.alertType === 'NEAR_LONG_LIQ' ? '🔴 Near Long Liq Zone' : '🟢 Near Short Liq Zone'],
-              rsi: undefined,
-              wt1: undefined,
-              timeframe: '1W',
-              analysis: `Price $${d.price} is near ${d.alertType === 'NEAR_LONG_LIQ' ? 'long' : 'short'} liquidation zone ($${d.alertType === 'NEAR_LONG_LIQ' ? d.longLiqZone : d.shortLiqZone}). Funding rate: ${(d.fundingRate*100).toFixed(4)}% — ${d.fundingBias}.`
-            });
-          }
-        });
-      }
+      document.getElementById('loadingStatus').textContent='Analyzing chart patterns...';
+      const response=await callAI(prompt);
 
-      // Fetch Reddit sentiment for alerted symbols
-      let redditData = {};
-      document.getElementById('loadingStatus').textContent='Fetching Reddit sentiment...';
+      let parsed=[];
+      console.log('Raw AI response:', response);
       try {
-        const alertedSymbols = allAlerts.map(a => ({ symbol: a.symbol, type: a.type || 'crypto' }));
-        redditData = await fetchRedditSentiment(alertedSymbols);
-        // Add sentiment to each alert
-        allAlerts = allAlerts.map(a => {
-          const r = redditData[a.symbol];
-          if (r && r.posts > 0) {
-            a.sentiment = r.label + ' (' + r.posts + ' posts, ' + r.upvotes + ' upvotes)';
-            a.sentimentEmoji = r.emoji;
-          }
-          return a;
-        });
-      } catch(e) { console.log('Reddit error:', e); }
+        let clean=response.replace(/```json|```/gi,'').trim();
+        const s=clean.indexOf('['), e=clean.lastIndexOf(']');
+        if(s!==-1&&e!==-1){
+          clean=clean.slice(s,e+1);
+          parsed=JSON.parse(clean);
+        } else {
+          // No array found — show raw response to user for debugging
+            showError('DEBUG - No JSON array found in response. Raw: ' + response.substring(0,400));
+        }
+      } catch(err){
+        console.error('Parse error:',err);
+        showError('DEBUG - Parse error: ' + err.message + ' | Raw response: ' + response.substring(0,400));
+        parsed=[];
+      }
+
+      allAlerts=parsed;
 
       document.getElementById('loadingStatus').textContent='Generating market summary...';
 
@@ -1173,17 +734,6 @@ Be direct, specific, no disclaimers.`;
 
       allAlerts.sort((a,b)=>b.score-a.score);
       renderAlerts(allAlerts);
-
-      // Send Telegram alerts
-      if (document.getElementById('tgToken').value.trim()) {
-        document.getElementById('loadingStatus').textContent='Sending Telegram alerts...';
-        try {
-          await sendTelegram(allAlerts, liqData);
-          showToast('TELEGRAM ALERTS SENT ✓');
-        } catch(e) {
-          showToast('TELEGRAM ERROR: ' + e.message.substring(0,40));
-        }
-      }
 
     } catch(err) {
       showError('ERROR: ' + err.message);
