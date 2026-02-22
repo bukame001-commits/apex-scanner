@@ -863,50 +863,203 @@
       const marketsList=selectedMarkets.map(m=>MARKET_TICKERS[m]?.label).join(', ');
 
       // Split into batches of 50 to avoid prompt size limits
-      const BATCH_SIZE = 50;
-      const batches = [];
-      for (let i = 0; i < allTickers.length; i += BATCH_SIZE) {
-        batches.push(allTickers.slice(i, i + BATCH_SIZE));
+      // ── Fetch real market data ──────────────────────────
+      async function fetchBinanceCandles(symbol) {
+        try {
+          const url = 'https://fapi.binance.com/fapi/v1/klines?symbol=' + symbol + 'USDT&interval=1w&limit=210';
+          const res = await fetch(url);
+          if (!res.ok) return null;
+          return await res.json();
+        } catch(e) { return null; }
       }
 
-      document.getElementById('loadingStatus').textContent='Analyzing ' + allTickers.length + ' assets in ' + batches.length + ' batches...';
+      async function fetchStockData(symbol) {
+        try {
+          const url = 'https://query1.finance.yahoo.com/v8/finance/chart/' + symbol + '?interval=1wk&range=4y&cors=true';
+          const res = await fetch(url);
+          if (!res.ok) return null;
+          const data = await res.json();
+          const q = data.chart?.result?.[0];
+          if (!q) return null;
+          const closes = q.indicators.quote[0].close;
+          const volumes = q.indicators.quote[0].volume;
+          return { closes: closes.filter(Boolean), volumes: volumes.filter(Boolean) };
+        } catch(e) { return null; }
+      }
 
+      function calcRSI(closes, period) {
+        if (closes.length < period + 1) return null;
+        let gains = 0, losses = 0;
+        for (let i = closes.length - period; i < closes.length; i++) {
+          const diff = closes[i] - closes[i-1];
+          if (diff > 0) gains += diff; else losses += Math.abs(diff);
+        }
+        const rs = gains / (losses || 0.0001);
+        return parseFloat((100 - 100/(1+rs)).toFixed(2));
+      }
+
+      function calcEMA(closes, period) {
+        if (closes.length < period) return null;
+        const k = 2/(period+1);
+        let ema = closes.slice(0, period).reduce((a,b)=>a+b,0) / period;
+        for (let i = period; i < closes.length; i++) ema = closes[i]*k + ema*(1-k);
+        return parseFloat(ema.toFixed(4));
+      }
+
+      function calcWaveTrend(closes, n1, n2) {
+        if (closes.length < n2 + 4) return null;
+        const hlc3 = closes; // weekly close approximation
+        const esa = calcEMA(hlc3, n1);
+        const d = hlc3.map((v, i) => Math.abs(v - (calcEMA(hlc3.slice(0, i+1), n1) || v)));
+        const de = calcEMA(d, n1);
+        const ci = de ? (closes[closes.length-1] - esa) / (0.015 * de) : 0;
+        return parseFloat(ci.toFixed(2));
+      }
+
+      function calcVolumeSpike(volumes) {
+        if (volumes.length < 20) return null;
+        const avg = volumes.slice(-20, -1).reduce((a,b)=>a+b,0) / 19;
+        const current = volumes[volumes.length-1];
+        return parseFloat((current / avg).toFixed(2));
+      }
+
+      // Fetch real data for all tickers in parallel (batches of 10 to avoid rate limits)
+      const DATA_BATCH = 10;
+      const realDataMap = {};
+      const cryptoTickers = allTickers.filter(t => t.type === 'crypto');
+      const stockTickers = allTickers.filter(t => t.type === 'stock');
+
+      document.getElementById('loadingStatus').textContent = 'Fetching real market data for ' + allTickers.length + ' assets...';
+
+      // Fetch crypto data from Binance
+      for (let i = 0; i < cryptoTickers.length; i += DATA_BATCH) {
+        const batch = cryptoTickers.slice(i, i + DATA_BATCH);
+        document.getElementById('loadingStatus').textContent = 'Fetching crypto data ' + (i+1) + '-' + Math.min(i+DATA_BATCH, cryptoTickers.length) + ' of ' + cryptoTickers.length + '...';
+        await Promise.all(batch.map(async function(t) {
+          const candles = await fetchBinanceCandles(t.symbol);
+          if (!candles || candles.length < 20) return;
+          const closes = candles.map(function(c) { return parseFloat(c[4]); });
+          const volumes = candles.map(function(c) { return parseFloat(c[5]); });
+          const rsi = calcRSI(closes, 14);
+          const ema200 = calcEMA(closes, 200);
+          const ema50 = calcEMA(closes, 50);
+          const wt1 = calcWaveTrend(closes, 10, 21);
+          const volSpike = calcVolumeSpike(volumes);
+          const price = closes[closes.length-1];
+          realDataMap[t.symbol] = {
+            price, rsi, ema200, ema50, wt1, volSpike,
+            priceVsEma200: ema200 ? parseFloat(((price/ema200-1)*100).toFixed(2)) : null,
+            priceVsEma50: ema50 ? parseFloat(((price/ema50-1)*100).toFixed(2)) : null,
+            type: 'crypto'
+          };
+        }));
+        if (i + DATA_BATCH < cryptoTickers.length) await new Promise(function(r) { setTimeout(r, 200); });
+      }
+
+      // Fetch stock data from Yahoo Finance
+      for (let i = 0; i < stockTickers.length; i += DATA_BATCH) {
+        const batch = stockTickers.slice(i, i + DATA_BATCH);
+        document.getElementById('loadingStatus').textContent = 'Fetching stock data ' + (i+1) + '-' + Math.min(i+DATA_BATCH, stockTickers.length) + ' of ' + stockTickers.length + '...';
+        await Promise.all(batch.map(async function(t) {
+          const data = await fetchStockData(t.symbol);
+          if (!data) return;
+          const { closes, volumes } = data;
+          const rsi = calcRSI(closes, 14);
+          const ema200 = calcEMA(closes, 200);
+          const ema50 = calcEMA(closes, 50);
+          const wt1 = calcWaveTrend(closes, 10, 21);
+          const volSpike = calcVolumeSpike(volumes);
+          const price = closes[closes.length-1];
+          realDataMap[t.symbol] = {
+            price, rsi, ema200, ema50, wt1, volSpike,
+            priceVsEma200: ema200 ? parseFloat(((price/ema200-1)*100).toFixed(2)) : null,
+            priceVsEma50: ema50 ? parseFloat(((price/ema50-1)*100).toFixed(2)) : null,
+            type: 'stock'
+          };
+        }));
+        if (i + DATA_BATCH < stockTickers.length) await new Promise(function(r) { setTimeout(r, 200); });
+      }
+
+      document.getElementById('loadingStatus').textContent = 'Real data fetched for ' + Object.keys(realDataMap).length + ' assets. Running AI analysis...';
+
+      // Pre-filter using real data before sending to AI
+      const qualified = [];
+      Object.entries(realDataMap).forEach(function(entry) {
+        const sym = entry[0], d = entry[1];
+        let signals = [];
+        if (d.wt1 !== null && d.wt1 < parseFloat(wtT)) signals.push('WaveTrend oversold (' + d.wt1 + ')');
+        if (d.rsi !== null && d.rsi < parseFloat(rsiT)) signals.push('RSI oversold (' + d.rsi + ')');
+        if (d.volSpike !== null && d.volSpike >= parseFloat(volT)) signals.push('Volume Spike ' + d.volSpike + 'x');
+        if (d.ema200 !== null && d.priceVsEma200 !== null && Math.abs(d.priceVsEma200) <= 5) signals.push('Near 200 EMA (' + d.priceVsEma200 + '%)');
+        if (signals.length >= parseInt(minT)) {
+          qualified.push({ symbol: sym, data: d, signals });
+        }
+      });
+
+      document.getElementById('loadingStatus').textContent = Object.keys(realDataMap).length + ' assets scanned. ' + qualified.length + ' qualify. Sending to AI for analysis...';
+
+      // Send only qualified assets to AI with real data for interpretation
+      const AI_BATCH = 15;
       let parsed = [];
-      for (let b = 0; b < batches.length; b++) {
-        const batch = batches[b];
-        const tickerList = batch.map(t => t.symbol).join(', ');
-        document.getElementById('loadingStatus').textContent='Batch ' + (b+1) + ' of ' + batches.length + ': ' + tickerList.substring(0,50) + '...';
+      const mktLabel = marketsList;
+
+      for (let b = 0; b < qualified.length; b += AI_BATCH) {
+        const batch = qualified.slice(b, b + AI_BATCH);
+        document.getElementById('loadingStatus').textContent = 'AI analysing batch ' + (Math.floor(b/AI_BATCH)+1) + ' of ' + Math.ceil(qualified.length/AI_BATCH) + '...';
+
+        const dataLines = batch.map(function(q) {
+          const d = q.data;
+          return q.symbol + ': price=' + d.price + ', RSI=' + d.rsi + ', WT1=' + d.wt1 + ', VolSpike=' + d.volSpike + 'x, vs200EMA=' + d.priceVsEma200 + '%, signals=[' + q.signals.join(', ') + ']';
+        }).join(' | ');
 
         const promptParts = [
-          'You are a crypto technical analyst. Today is ' + new Date().toDateString() + '.',
-          'Analyze these assets on WEEKLY charts: ' + tickerList,
-          'Indicators: ' + selectedInds.join(', '),
-          'WaveTrend oversold below ' + wtT + ', RSI oversold below ' + rsiT,
-          'Volume spike ' + volT + ' above avg. Min signals: ' + minT,
-          'Return ONLY a raw JSON array starting with [ and ending with ].',
-          'Format each item: symbol, market, type, score, signals array, wt1, rsi, timeframe, analysis (1 sentence).',
-          'market value should be: ' + marketsList,
-          'type should be: crypto',
-          'Only include assets meeting ' + minT + '+ criteria. Max 5 results. Return [] if none qualify.'
+          'You are a technical analyst. Today is ' + new Date().toDateString() + '.',
+          'These assets have been pre-screened with REAL weekly data and qualify based on indicators.',
+          'Real data: ' + dataLines,
+          'For each asset write a 1-sentence analysis explaining WHY it is a setup based on the real numbers above.',
+          'Return ONLY a raw JSON array. Format: [{"symbol":"BTC","market":"' + mktLabel + '","type":"crypto","score":' + parseInt(minT) + ',"signals":["RSI oversold (28)"],"wt1":-45.2,"rsi":28.1,"timeframe":"1W","analysis":"One sentence based on real data above."}]',
+          'Include all ' + batch.length + ' assets. Do not skip any.'
         ];
-        const prompt = promptParts.join(' ');
 
         try {
-          const response = await callAI(prompt);
-          try {
-            const clean = response.replace(/```json|```/gi,'').trim();
-            const s = clean.indexOf('['), e = clean.lastIndexOf(']');
-            if (s !== -1 && e !== -1) {
-              const batchParsed = JSON.parse(clean.slice(s, e+1));
-              parsed = [...parsed, ...batchParsed];
-            }
-          } catch(pe) { console.log('Batch ' + b + ' parse error:', pe); }
-        } catch(be) { console.log('Batch ' + b + ' error:', be); }
+          const response = await callAI(promptParts.join(' '));
+          const clean = response.replace(/```json|```/gi,'').trim();
+          const s = clean.indexOf('['), e = clean.lastIndexOf(']');
+          if (s !== -1 && e !== -1) {
+            const batchParsed = JSON.parse(clean.slice(s, e+1));
+            // Override with real data values
+            batchParsed.forEach(function(item) {
+              const realD = realDataMap[item.symbol];
+              if (realD) {
+                item.wt1 = realD.wt1;
+                item.rsi = realD.rsi;
+                item.volSpike = realD.volSpike;
+                item.price = realD.price;
+              }
+            });
+            parsed = parsed.concat(batchParsed);
+          }
+        } catch(be) { console.log('AI batch error:', be); }
 
-        if (b < batches.length - 1) await new Promise(r => setTimeout(r, 300));
+        if (b + AI_BATCH < qualified.length) await new Promise(function(r) { setTimeout(r, 300); });
       }
 
-      allAlerts=parsed;
+      // If no AI results but we have qualified assets, use them directly
+      if (parsed.length === 0 && qualified.length > 0) {
+        parsed = qualified.map(function(q) {
+          return {
+            symbol: q.symbol,
+            market: mktLabel,
+            type: q.data.type,
+            score: q.signals.length,
+            signals: q.signals,
+            wt1: q.data.wt1,
+            rsi: q.data.rsi,
+            timeframe: '1W',
+            analysis: 'Real data signals: ' + q.signals.join(', ') + '. Price: $' + q.data.price
+          };
+        });
+      }
 
       // Fetch liquidation data from Binance if indicator selected
       let liqData = {};
