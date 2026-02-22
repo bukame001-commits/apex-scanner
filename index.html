@@ -200,7 +200,7 @@
 
       <!-- Gemini Key -->
       <div class="api-field visible" id="geminiField">
-        <div class="api-label">AI API KEY</div>
+        <div class="api-label">GEMINI API KEY</div>
         <input type="password" class="api-input" id="geminiKey"
                placeholder="sk-or-v1-..."
                oninput="saveKey('gemini', this.value)" />
@@ -211,7 +211,12 @@
             GET FREE KEY →
           </a>
         </div>
-        <div class="api-note">Use the same OpenRouter key for both engines! Get it at <a href="https://openrouter.ai/keys" target="_blank">openrouter.ai/keys</a></div>
+        <div class="api-note">Paste Anthropic key (sk-ant-...) from console.anthropic.com OR OpenRouter key (sk-or-...) from openrouter.ai/keys</div>
+      </div>
+      <div class="api-field visible" style="margin-top:12px;">
+        <div class="api-label">STOCK DATA KEY (FINNHUB) — OPTIONAL</div>
+        <input type="password" class="api-input" id="fhKey" placeholder="your-finnhub-key" oninput="saveKey('fhKey',this.value)" />
+        <div class="api-note">Free real stock data. Get key at <a href="https://finnhub.io" target="_blank">finnhub.io</a>. Leave blank to use AI estimates for stocks.</div>
       </div>
     </div>
 
@@ -219,11 +224,11 @@
     <div class="section-label">02 — SELECT MARKETS</div>
     <div class="card">
       <div class="market-grid">
-        <button class="market-btn active" data-market="crypto_top50" onclick="toggleMarket(this)">
-          <span class="icon">₿</span><div class="name">CRYPTO TOP 50</div><div class="desc">By market cap</div>
+        <button class="market-btn active" data-market="crypto_top5000" onclick="toggleMarket(this)">
+          <span class="icon">₿</span><div class="name">CRYPTO TOP 500</div><div class="desc">By market cap</div>
         </button>
-        <button class="market-btn" data-market="crypto_top100" onclick="toggleMarket(this)">
-          <span class="icon">🪙</span><div class="name">CRYPTO TOP 100</div><div class="desc">By market cap</div>
+        <button class="market-btn" data-market="crypto_top1000" onclick="toggleMarket(this)">
+          <span class="icon">🪙</span><div class="name">CRYPTO TOP 1000</div><div class="desc">By market cap</div>
         </button>
         <button class="market-btn" data-market="sp500" onclick="toggleMarket(this)">
           <span class="icon">📈</span><div class="name">S&amp;P 500</div><div class="desc">US large cap</div>
@@ -300,7 +305,23 @@
       </div>
     </div>
 
-    <button class="scan-btn" id="scanBtn" onclick="runScan()">⚡ ANALYZE WITH AI</button>
+    <!-- Telegram -->
+  <div class="section-label">05 — TELEGRAM ALERTS (OPTIONAL)</div>
+  <div class="api-card">
+    <div class="api-field visible">
+      <div class="api-label">BOT TOKEN</div>
+      <input type="password" class="api-input" id="tgToken" placeholder="123456789:ABCdef..." oninput="saveKey('tgToken',this.value)" />
+    </div>
+    <div class="api-field visible" style="margin-top:8px;">
+      <div class="api-label">CHAT ID</div>
+      <input type="text" class="api-input" id="tgChatId" placeholder="Your chat ID from @userinfobot" oninput="saveKey('tgChatId',this.value)" />
+    </div>
+    <div class="api-note" style="margin-top:6px;">Leave blank to skip. Get bot from @BotFather, chat ID from @userinfobot.</div>
+    <button onclick="testTelegram()" style="margin-top:8px;background:transparent;border:1px solid #ffb800;color:#ffb800;font-family:Share Tech Mono,monospace;font-size:10px;padding:8px 16px;cursor:pointer;letter-spacing:2px;width:100%;">✉ TEST TELEGRAM</button>
+    <div id="tgTestResult" style="display:none;margin-top:6px;font-family:Share Tech Mono,monospace;font-size:10px;padding:6px;"></div>
+  </div>
+
+  <button class="scan-btn" id="scanBtn" onclick="runScan()">⚡ ANALYZE WITH AI</button>
   </div>
 
   <!-- Loading -->
@@ -341,13 +362,13 @@
 
 <script>
   let selectedEngine = 'gemini';
-  let selectedMarkets = ['crypto_top50'];
+  let selectedMarkets = ['crypto_top500'];
   let selectedInds = ['WaveTrend','RSI Divergence','Bollinger Band Lower Touch','Volume Spike'];
   let allAlerts = [];
 
   const MARKET_TICKERS = {
-    crypto_top50:{label:'Crypto Top 50',type:'crypto',tickers:['BTC','ETH','BNB','XRP','SOL','ADA','DOGE','TRX','DOT','MATIC','LTC','SHIB','AVAX','LINK','ATOM','UNI','XMR','ETC','XLM','BCH','ALGO','VET','FIL','ICP','HBAR','APT','ARB','NEAR','QNT','GRT','AAVE','SAND','MANA','AXS','THETA','EOS','NEO','MKR','SNX','COMP','CRV','YFI','SUSHI','ENJ','CHZ','ZIL','BAT','HOT','ONT','DASH']},
-    crypto_top100:{label:'Crypto Top 100',type:'crypto',tickers:['BTC','ETH','BNB','XRP','SOL','ADA','DOGE','TRX','DOT','MATIC','LTC','SHIB','AVAX','LINK','ATOM','UNI','XMR','ETC','XLM','BCH','ALGO','VET','FIL','ICP','HBAR','APT','ARB','NEAR','QNT','GRT','AAVE','SAND','MANA','AXS','THETA','EOS','NEO','MKR','SNX','COMP','CRV','YFI','SUSHI','ENJ','CHZ','ZIL','BAT','HOT','ONT','DASH','ZEC','IOTA','XTZ','EGLD','FTM','ONE','KAVA','CELO','FLOW','ROSE','SKL','ANKR','OGN','SLP','ALICE','REEF','TLM','DENT','WIN','SC','DGB','RVN','SYS','ARDR','NXT','STEEM','LSK','PIVX','QTUM','WAN','ICX','IOST','ARK','NULS','WTC','STORM','WABI','CMT','WAVES','RUNE','LDO','FXS','CVX','GMX','DYDX','GNS','JOE','PERP']},
+    crypto_top5000:{label:'Crypto Top 500',type:'crypto',tickers:['BTC', 'ETH', 'BNB', 'XRP', 'SOL', 'ADA', 'DOGE', 'TRX', 'DOT', 'MATIC', 'LTC', 'SHIB', 'AVAX', 'LINK', 'ATOM', 'UNI', 'XMR', 'ETC', 'XLM', 'BCH', 'ALGO', 'VET', 'FIL', 'ICP', 'HBAR', 'APT', 'ARB', 'NEAR', 'QNT', 'GRT', 'AAVE', 'SAND', 'MANA', 'AXS', 'THETA', 'EOS', 'NEO', 'MKR', 'SNX', 'COMP', 'CRV', 'YFI', 'SUSHI', 'ENJ', 'CHZ', 'ZIL', 'BAT', 'HOT', 'ONT', 'DASH', 'ZEC', 'WAVES', 'IOTA', 'SC', 'DGB', 'ICX', 'LSK', 'RVN', 'BTG', 'XVG', 'DCR', 'KMD', 'ARK', 'ZRX', 'REP', 'SNT', 'GNO', 'RLC', 'STORJ', 'FUN', 'ANT', 'SALT', 'PAY', 'MTL', 'LRC', 'ENG', 'AST', 'SAN', 'ADX', 'MLN', 'NMR', 'BNT', 'KNC', 'POWR', 'OMG', 'PPT', 'REQ', 'SUB', 'CVC', 'POE', 'WPR', 'EVX', 'OST', 'AMB', 'RDN', 'ELF', 'INS', 'IOTX', 'MOD', 'NULS', 'QSP', 'VIB', 'VIBE', 'WABI', 'WTC', 'AION', 'BLZ', 'BTS', 'CDT', 'CMT', 'DLT', 'EDO', 'GAS', 'GNT', 'GTO', 'GVT', 'GXS', 'NANO', 'NEBL', 'POLY', 'QTUM', 'RAY', 'REN', 'RSR', 'SKL', 'SLP', 'SRM', 'STMX', 'STX', 'SUN', 'SUPER', 'SXP', 'TKO', 'TLM', 'TRB', 'TVK', 'UMA', 'UNFI', 'UTK', 'VITE', 'WRX', 'XTZ', 'XVS', 'YFII', '1INCH', 'ACH', 'AKRO', 'ALPHA', 'ATA', 'AUDIO', 'BAKE', 'BETA', 'BNX', 'BOND', 'BTT', 'CLV', 'CTXC', 'DAR', 'DEXE', 'DODO', 'DUSK', 'EGLD', 'FARM', 'FLOW', 'FOR', 'FRONT', 'GTC', 'HIGH', 'HIVE', 'LINA', 'LOKA', 'MASK', 'MDT', 'MFT', 'MBOX', 'NEXO', 'OM', 'POLS', 'POND', 'PYR', 'QUICK', 'RARE', 'REEF', 'REI', 'ROSE', 'SPELL', 'SSV', 'STPT', 'SYN', 'TFUEL', 'TOMO', 'TRIBE', 'TRU', 'TWT', 'UFT', 'VOXEL', 'WAXP', 'WIN', 'XNO', 'ACE', 'AGIX', 'AGLD', 'AKT', 'ALT', 'AMP', 'ANKR', 'APE', 'API3', 'ARPA', 'ASTR', 'AUCTION', 'BADGER', 'BAL', 'BAND', 'BEAM', 'BICO', 'BIT', 'BLUR', 'BOME', 'BSW', 'CELO', 'CFX', 'COMBO', 'CRO', 'CVX', 'EDU', 'ENS', 'FLOKI', 'FLUX', 'GAL', 'GALA', 'GLM', 'GMT', 'GMX', 'GNS', 'HFT', 'HOOK', 'ID', 'IMX', 'INJ', 'JASMY', 'JOE', 'JTO', 'JUP', 'KAS', 'KAVA', 'KDA', 'KLAY', 'LDO', 'LQTY', 'LUNA', 'LUNC', 'MAGIC', 'MANTA', 'MAVIA', 'MEME', 'META', 'MINA', 'MNT', 'MOB', 'MOVR', 'MULTI', 'NFP', 'NKN', 'OCEAN', 'OGN', 'OP', 'ORBS', 'ORDI', 'PENDLE', 'PEOPLE', 'PERP', 'PIXEL', 'PROM', 'PYTH', 'RDNT', 'RNDR', 'RPL', 'RUNE', 'SAGA', 'SEI', 'SFP', 'STG', 'STRK', 'SUI', 'TIA', 'TNSR', 'TON', 'TUSD', 'VANRY', 'W', 'WIF', 'WLD', 'WOO', 'XAI', 'XEC', 'ZK', 'AEVO', 'AIXBT', 'ANIME', 'AXL', 'BABY', 'BIGTIME', 'BLAST', 'BONK', 'BORA', 'CATI', 'CYBER', 'DEEP', 'DYM', 'EIGEN', 'ENA', 'ETHFI', 'FIDA', 'FTT', 'GIGA', 'GRASS', 'HNT', 'ILV', 'IO', 'IOT', 'JITO', 'KAITO', 'LAYER', 'LISTA', 'LPT', 'MOCA', 'MODE', 'MOODENG', 'MORPHO', 'MOVE', 'NEIRO', 'NEON', 'OMNI', 'ORCA', 'PENGU', 'PNUT', 'POL', 'PONKE', 'POPCAT', 'PORTAL', 'PRIME', 'PYUSD', 'RDNT', 'RENDER', 'REZ', 'SAHM', 'SCR', 'SHIB', 'SIGNA', 'SLERF', 'SOLV', 'SONIC', 'SPX', 'STACKS', 'STRK', 'SUNDOG', 'SWARMS', 'SYRUP', 'TAO', 'TERMINAL', 'TOSHI', 'TRUMP', 'TST', 'UNIBOT', 'USDC', 'USDD', 'VADER', 'VRTX', 'WBTC', 'WELL', 'WETH', 'WIF', 'XDC', 'ZERO', 'ZETA', 'ZRO']},
+    crypto_top1000:{label:'Crypto Top 1000',type:'crypto',tickers:['BTC', 'ETH', 'BNB', 'XRP', 'SOL', 'ADA', 'DOGE', 'TRX', 'DOT', 'MATIC', 'LTC', 'SHIB', 'AVAX', 'LINK', 'ATOM', 'UNI', 'XMR', 'ETC', 'XLM', 'BCH', 'ALGO', 'VET', 'FIL', 'ICP', 'HBAR', 'APT', 'ARB', 'NEAR', 'QNT', 'GRT', 'AAVE', 'SAND', 'MANA', 'AXS', 'THETA', 'EOS', 'NEO', 'MKR', 'SNX', 'COMP', 'CRV', 'YFI', 'SUSHI', 'ENJ', 'CHZ', 'ZIL', 'BAT', 'HOT', 'ONT', 'DASH', 'ZEC', 'WAVES', 'IOTA', 'SC', 'DGB', 'ICX', 'LSK', 'RVN', 'BTG', 'XVG', 'DCR', 'KMD', 'ARK', 'ZRX', 'REP', 'SNT', 'GNO', 'RLC', 'STORJ', 'FUN', 'ANT', 'SALT', 'PAY', 'MTL', 'LRC', 'ENG', 'AST', 'SAN', 'ADX', 'MLN', 'NMR', 'BNT', 'KNC', 'POWR', 'OMG', 'PPT', 'REQ', 'SUB', 'CVC', 'POE', 'WPR', 'EVX', 'OST', 'AMB', 'RDN', 'ELF', 'INS', 'IOTX', 'MOD', 'NULS', 'QSP', 'VIB', 'VIBE', 'WABI', 'WTC', 'AION', 'BLZ', 'BTS', 'CDT', 'CMT', 'DLT', 'EDO', 'GAS', 'GNT', 'GTO', 'GVT', 'GXS', 'NANO', 'NEBL', 'POLY', 'QTUM', 'RAY', 'REN', 'RSR', 'SKL', 'SLP', 'SRM', 'STMX', 'STX', 'SUN', 'SUPER', 'SXP', 'TKO', 'TLM', 'TRB', 'TVK', 'UMA', 'UNFI', 'UTK', 'VITE', 'WRX', 'XTZ', 'XVS', 'YFII', '1INCH', 'ACH', 'AKRO', 'ALPHA', 'ATA', 'AUDIO', 'BAKE', 'BETA', 'BNX', 'BOND', 'BTT', 'CLV', 'CTXC', 'DAR', 'DEXE', 'DODO', 'DUSK', 'EGLD', 'FARM', 'FLOW', 'FOR', 'FRONT', 'GTC', 'HIGH', 'HIVE', 'LINA', 'LOKA', 'MASK', 'MDT', 'MFT', 'MBOX', 'NEXO', 'OM', 'POLS', 'POND', 'PYR', 'QUICK', 'RARE', 'REEF', 'REI', 'ROSE', 'SPELL', 'SSV', 'STPT', 'SYN', 'TFUEL', 'TOMO', 'TRIBE', 'TRU', 'TWT', 'UFT', 'VOXEL', 'WAXP', 'WIN', 'XNO', 'ACE', 'AGIX', 'AGLD', 'AKT', 'ALT', 'AMP', 'ANKR', 'APE', 'API3', 'ARPA', 'ASTR', 'AUCTION', 'BADGER', 'BAL', 'BAND', 'BEAM', 'BICO', 'BIT', 'BLUR', 'BOME', 'BSW', 'CELO', 'CFX', 'COMBO', 'CRO', 'CVX', 'EDU', 'ENS', 'FLOKI', 'FLUX', 'GAL', 'GALA', 'GLM', 'GMT', 'GMX', 'GNS', 'HFT', 'HOOK', 'ID', 'IMX', 'INJ', 'JASMY', 'JOE', 'JTO', 'JUP', 'KAS', 'KAVA', 'KDA', 'KLAY', 'LDO', 'LQTY', 'LUNA', 'LUNC', 'MAGIC', 'MANTA', 'MAVIA', 'MEME', 'META', 'MINA', 'MNT', 'MOB', 'MOVR', 'MULTI', 'NFP', 'NKN', 'OCEAN', 'OGN', 'OP', 'ORBS', 'ORDI', 'PENDLE', 'PEOPLE', 'PERP', 'PIXEL', 'PROM', 'PYTH', 'RDNT', 'RNDR', 'RPL', 'RUNE', 'SAGA', 'SEI', 'SFP', 'STG', 'STRK', 'SUI', 'TIA', 'TNSR', 'TON', 'TUSD', 'VANRY', 'W', 'WIF', 'WLD', 'WOO', 'XAI', 'XEC', 'ZK', 'AEVO', 'AIXBT', 'ANIME', 'AXL', 'BABY', 'BIGTIME', 'BLAST', 'BONK', 'BORA', 'CATI', 'CYBER', 'DEEP', 'DYM', 'EIGEN', 'ENA', 'ETHFI', 'FIDA', 'FTT', 'GIGA', 'GRASS', 'HNT', 'ILV', 'IO', 'IOT', 'JITO', 'KAITO', 'LAYER', 'LISTA', 'LPT', 'MOCA', 'MODE', 'MOODENG', 'MORPHO', 'MOVE', 'NEIRO', 'NEON', 'OMNI', 'ORCA', 'PENGU', 'PNUT', 'POL', 'PONKE', 'POPCAT', 'PORTAL', 'PRIME', 'PYUSD', 'RENDER', 'REZ', 'SAHM', 'SCR', 'SIGNA', 'SLERF', 'SOLV', 'SONIC', 'SPX', 'STACKS', 'SUNDOG', 'SWARMS', 'SYRUP', 'TAO', 'TERMINAL', 'TOSHI', 'TRUMP', 'TST', 'UNIBOT', 'USDC', 'USDD', 'VADER', 'VRTX', 'WBTC', 'WELL', 'WETH', 'XDC', 'ZERO', 'ZETA', 'ZRO', 'ACHI', 'ACOIN', 'ACS', 'ACT', 'ADE', 'ADEL', 'ADF', 'ADI', 'ADMC', 'ADOT', 'ADPAI', 'ADPAD', 'ADSG', 'ADT', 'AEGT', 'AEI', 'AEK', 'AELIN', 'AEON', 'AERGO', 'AERO', 'AEUR', 'AFG', 'AFIN', 'AFL', 'AFRI', 'AFT', 'AGEUR', 'AGR', 'AGRS', 'AGT', 'AGVC', 'AHT', 'AIDI', 'AIM', 'AIPAD', 'AIRI', 'AIT', 'AITECH', 'AITX', 'AIX', 'AIXI', 'AJNA', 'AKTA', 'AKU', 'ALBT', 'ALCH', 'ALCX', 'ALEO', 'ALF', 'ALGE', 'ALGT', 'ALPH', 'ALPS', 'ALQO', 'ALTB', 'ALTS', 'ALUS', 'ALUX', 'ALVIN', 'ALY', 'AMKT', 'AMOR', 'AMPL', 'AMT', 'AMZE', 'ANA', 'ANON', 'ANTR', 'ANY', 'AOG', 'AOSL', 'APAY', 'APES', 'APEX', 'APFC', 'APL', 'APRS', 'APTX', 'ARAI', 'ARCX', 'ARD', 'ARDR', 'AREN', 'ARES', 'ARGON', 'ARIA', 'ARITH', 'ARKER', 'ARKM', 'ARTH', 'ARTII', 'ARTM', 'ARTY', 'ARUN', 'ARX', 'ARYS', 'ASAP', 'ASDEX', 'ASH', 'ASK', 'ASL', 'ASMB', 'ASNT', 'ASP', 'ASPY', 'ASSIX', 'ASTL', 'ASTRA', 'ASWAP', 'ATCH', 'ATLO', 'ATMS', 'ATO', 'ATON', 'ATPC', 'ATRI', 'ATROM', 'ATTE', 'ATTR', 'AUDT', 'AUGUR', 'AUMI', 'AUNIT', 'AURY', 'AUTO', 'AUTON', 'AVAIL', 'AVAM', 'AVAT', 'AVIVE', 'AVME', 'AVXT', 'AWAX', 'AWOO', 'AXE', 'AXGT', 'AXIS', 'AYFI', 'AZIT', 'AZRA', 'B21', 'B2M', 'BABB', 'BABI', 'BACK', 'BADA', 'BADGE', 'BAIL', 'BAKT', 'BALI', 'BAMP', 'BANCA', 'BANJO', 'BANK', 'BAPE', 'BARN', 'BARS', 'BASE', 'BASH', 'BASK', 'BASX', 'BATCH', 'BATU', 'BAVA', 'BAX', 'BAXS', 'BAYS', 'BAZE', 'BBF', 'BBGC', 'BBI', 'BBIC', 'BBOO', 'BBSQ', 'BBT', 'BCAT', 'BCB', 'BCC', 'BCE', 'BCF', 'BCHK', 'BCK', 'BCM', 'BCN', 'BCO', 'BCP', 'BCPT', 'BCR', 'BCS', 'BCV', 'BCVT', 'BDT']},
     sp500:{label:'S&P 500',type:'stock',tickers:['AAPL','MSFT','AMZN','NVDA','GOOGL','META','TSLA','BRK-B','UNH','LLY','JPM','V','XOM','MA','PG','JNJ','HD','AVGO','MRK','CVX','PEP','ABBV','COST','KO','WMT','ADBE','CRM','BAC','MCD','PFE','TMO','CSCO','ABT','ACN','NKE','DHR','LIN','CMCSA','TXN','VZ','PM','NEE','RTX','HON','AMGN','IBM','UNP','INTC','QCOM','INTU','SBUX','GE','LOW','AMD','CAT','DE','SPGI','MS','GS','BLK']},
     nasdaq100:{label:'Nasdaq 100',type:'stock',tickers:['AAPL','MSFT','AMZN','NVDA','GOOGL','GOOG','META','TSLA','AVGO','ADBE','CSCO','CMCSA','INTC','AMD','INTU','QCOM','HON','AMAT','SBUX','MDLZ','GILD','REGN','VRTX','ISRG','KLAC','LRCX','SNPS','CDNS','MRVL','PANW','CRWD','NFLX','PYPL','ADP','MELI','ASML','COST','PDD','KDP','ORLY','PCAR','CTAS','FTNT','FAST','CPRT','MNST','DDOG','ROST','PAYX','ODFL']},
     russell2000:{label:'Russell 2000',type:'stock',tickers:['SMCI','SAIA','GTLS','CHRD','RMBS','HALO','MGNI','CSWI','UFPI','PLXS','ITRI','ESAB','AAON','SPSC','ACLS','SFBS','CABO','ALRM','KTOS','AEIS','CPRX','MSGS','IRTC','MGPI','HTLF','PTCT','FORM','NSIT','TGTX','IDEX','AGIO','CARG','PRGS','DFIN','NEOG','HLIO','DNOW','BOOT','REPX','ARCH','AORT','INVA','DXPE','LQDT','MYRG','CNXN','PAHC','RELY','HTLD','PZZA']},
@@ -382,6 +403,10 @@
       const gk = localStorage.getItem('apex_key_gemini');
       if (ck) document.getElementById('claudeKey').value = ck;
       if (gk) document.getElementById('geminiKey').value = gk;
+      const tgt=localStorage.getItem('apex_key_tgToken');
+      const tgc=localStorage.getItem('apex_key_tgChatId');
+      if(tgt&&document.getElementById('tgToken')) document.getElementById('tgToken').value=tgt;
+      if(tgc&&document.getElementById('tgChatId')) document.getElementById('tgChatId').value=tgc;
     } catch(e) {}
   }
 
@@ -450,10 +475,7 @@
     }
 
     // OpenRouter fallback (sk-or-...)
-    const model = selectedEngine === 'claude'
-      ? 'anthropic/claude-haiku-4-5'
-      : 'google/gemini-2.0-flash-exp:free';
-
+    const model = selectedEngine === 'claude' ? 'anthropic/claude-haiku-4-5' : 'google/gemini-2.0-flash-exp:free';
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -462,17 +484,67 @@
         'HTTP-Referer': 'https://apex-scanner.app',
         'X-Title': 'APEX SCANNER'
       },
-      body: JSON.stringify({
-        model: model,
-        max_tokens: 1024,
-        messages: [{ role: 'user', content: prompt }]
-      })
+      body: JSON.stringify({ model, max_tokens: 1024, messages: [{ role: 'user', content: prompt }] })
     });
     const rawText = await response.text();
     let data;
     try { data = JSON.parse(rawText); } catch(e) { throw new Error('Invalid response: ' + rawText.substring(0,200)); }
     if (!response.ok || data.error) throw new Error(data.error?.message || JSON.stringify(data.error) || 'API error');
     return data.choices[0].message.content;
+  }
+
+  // ── Telegram functions ────────────────────────────────
+  async function testTelegram() {
+    const token=document.getElementById('tgToken').value.trim();
+    const chatId=document.getElementById('tgChatId').value.trim();
+    const result=document.getElementById('tgTestResult');
+    result.style.display='block';
+    if(!token){result.style.color='#ff3366';result.textContent='ERROR: Enter bot token first';return;}
+    if(!chatId){result.style.color='#ff3366';result.textContent='ERROR: Enter chat ID first';return;}
+    result.style.color='#ffb800';result.textContent='Testing...';
+    try{
+      const botRes=await fetch('https://api.telegram.org/bot'+token+'/getMe');
+      const botData=await botRes.json();
+      if(!botData.ok){result.style.color='#ff3366';result.textContent='ERROR: Invalid bot token. Get from @BotFather';return;}
+      const parsedId=isNaN(chatId)?chatId:parseInt(chatId);
+      const msgRes=await fetch('https://api.telegram.org/bot'+token+'/sendMessage',{
+        method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({chat_id:parsedId,text:'APEX SCANNER: Connection test successful!'})
+      });
+      const msgData=await msgRes.json();
+      if(msgData.ok){result.style.color='#00ff88';result.textContent='SUCCESS! Check your Telegram for the test message.';}
+      else{result.style.color='#ff3366';result.textContent='ERROR: '+msgData.description+' — Check your Chat ID';}
+    }catch(e){result.style.color='#ff3366';result.textContent='ERROR: '+e.message;}
+  }
+
+  async function sendTelegram(alerts,sentimentMap,liqData){
+    const token=document.getElementById('tgToken').value.trim();
+    const chatId=document.getElementById('tgChatId').value.trim();
+    if(!token||!chatId) return;
+    const parsedId=isNaN(chatId)?chatId:parseInt(chatId);
+    const strong=alerts.filter(a=>a.score>=3);
+    if(strong.length===0) return;
+    let msg='APEX SCANNER RESULTS\n'+new Date().toLocaleString()+'\n\nSTRONG SIGNALS ('+strong.length+'):\n\n';
+    strong.forEach(a=>{
+      msg+=a.symbol+' - '+a.score+' signals\n';
+      msg+='Signals: '+(a.signals||[]).join(', ')+'\n';
+      if(sentimentMap&&sentimentMap[a.symbol]) msg+='Reddit: '+sentimentMap[a.symbol].label+' ('+sentimentMap[a.symbol].posts+' posts)\n';
+      const liq=liqData&&liqData[a.symbol];
+      if(liq&&liq.alert) msg+='LIQ ZONE: '+(liq.alertType==='NEAR_LONG_LIQ'?'Long':'Short')+' '+(liq.alertType==='NEAR_LONG_LIQ'?liq.distLong:liq.distShort)+'% away | Funding: '+liq.bias+'\n';
+      msg+='\n';
+    });
+    // Split into chunks
+    const chunks=[];
+    while(msg.length>4000){chunks.push(msg.substring(0,4000));msg=msg.substring(4000);}
+    chunks.push(msg);
+    for(const chunk of chunks){
+      try{
+        await fetch('https://api.telegram.org/bot'+token+'/sendMessage',{
+          method:'POST',headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({chat_id:parsedId,text:chunk})
+        });
+      }catch(e){console.log('Telegram error:',e);}
+    }
   }
 
   // ── Render ────────────────────────────────────────
@@ -490,34 +562,53 @@
     const c=document.getElementById('alertsContainer');
     c.innerHTML='';
     if(alerts.length===0){
-      c.innerHTML='<div style="text-align:center;padding:40px;font-family:\'Share Tech Mono\',monospace;font-size:12px;color:var(--muted);">NO ALERTS FOR CURRENT FILTER</div>';
+      c.innerHTML='<div style="text-align:center;padding:40px;font-family:Share Tech Mono,monospace;font-size:12px;color:var(--muted);">NO ALERTS FOR CURRENT FILTER</div>';
       return;
     }
-    alerts.forEach(a=>{
+    alerts.forEach(function(a){
       const isStrong=a.score>=3;
       const card=document.createElement('div');
-      card.className=`alert-card ${isStrong?'strong':'moderate'}`;
+      card.className='alert-card '+(isStrong?'strong':'moderate');
       card.dataset.type=a.type||'';
       card.dataset.strength=isStrong?'strong':'moderate';
-      const signals=(a.signals||[]);
-      card.innerHTML=`
-        <div class="alert-top">
-          <div>
-            <div class="alert-symbol">${a.symbol}</div>
-            <div class="alert-market">${a.market||''} • ${(a.type||'').toUpperCase()}</div>
-          </div>
-          <div style="text-align:right">
-            <div class="alert-score ${isStrong?'':'moderate'}">${a.score}/${selectedInds.length}</div>
-            <div style="font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--muted);margin-top:2px;">${isStrong?'🔥 STRONG':'⚡ MODERATE'}</div>
-          </div>
-        </div>
-        <div class="alert-signals">${signals.map(s=>`<span class="signal-tag ${getSignalClass(s)}">${s}</span>`).join('')}</div>
-        <div class="alert-analysis">${a.analysis||''}</div>
-        <div class="alert-values">
-          ${a.wt1!==undefined?`<div class="alert-val">WT1 <span>${a.wt1}</span></div>`:''}
-          ${a.rsi!==undefined?`<div class="alert-val">RSI <span>${a.rsi}</span></div>`:''}
-          ${a.timeframe?`<div class="alert-val">TF <span>${a.timeframe}</span></div>`:''}
-        </div>`;
+      const signals=a.signals||[];
+      let sigsHtml='';
+      signals.forEach(function(s){ sigsHtml+='<span class="signal-tag '+getSignalClass(s)+'">'+s+'</span>'; });
+
+      // Reddit sentiment badge
+      let sentHtml='';
+      if(a.sentiment){
+        const clr=a.sentimentEmoji==='green'?'color:#00ff88;border-color:rgba(0,255,136,0.4);background:rgba(0,255,136,0.06)':
+                  a.sentimentEmoji==='red'?'color:#ff3366;border-color:rgba(255,51,102,0.4);background:rgba(255,51,102,0.06)':
+                  'color:#ffb800;border-color:rgba(255,184,0,0.4);background:rgba(255,184,0,0.06)';
+        sentHtml='<div style="margin-top:8px;font-family:Share Tech Mono,monospace;font-size:10px;padding:4px 10px;display:inline-block;border-radius:2px;border:1px solid;'+clr+'">REDDIT: '+a.sentiment+'</div>';
+      }
+
+      // Liquidation badge
+      let liqHtml='';
+      if(a.liqAlert){
+        liqHtml='<div style="margin-top:6px;font-family:Share Tech Mono,monospace;font-size:10px;padding:4px 10px;display:inline-block;border-radius:2px;border:1px solid;color:#ff3366;border-color:rgba(255,51,102,0.4);background:rgba(255,51,102,0.06);">'+a.liqAlert+'</div>';
+      }
+
+      card.innerHTML=
+        '<div class="alert-top">'+
+          '<div>'+
+            '<div class="alert-symbol">'+a.symbol+'</div>'+
+            '<div class="alert-market">'+(a.market||'')+' &bull; '+((a.type||'').toUpperCase())+'</div>'+
+          '</div>'+
+          '<div style="text-align:right">'+
+            '<div class="alert-score '+(isStrong?'':'moderate')+'">'+a.score+'/'+selectedInds.length+'</div>'+
+            '<div style="font-family:Share Tech Mono,monospace;font-size:9px;color:var(--muted);margin-top:2px;">'+(isStrong?'🔥 STRONG':'⚡ MODERATE')+'</div>'+
+          '</div>'+
+        '</div>'+
+        '<div class="alert-signals">'+sigsHtml+'</div>'+
+        '<div class="alert-analysis">'+(a.analysis||'')+'</div>'+
+        sentHtml+liqHtml+
+        '<div class="alert-values">'+
+          (a.wt1!==undefined?'<div class="alert-val">WT1 <span>'+a.wt1+'</span></div>':'')+
+          (a.rsi!==undefined?'<div class="alert-val">RSI <span>'+a.rsi+'</span></div>':'')+
+          (a.timeframe?'<div class="alert-val">TF <span>'+a.timeframe+'</span></div>':'')+
+        '</div>';
       c.appendChild(card);
     });
   }
@@ -563,72 +654,126 @@
       allTickers=allTickers.filter(t=>{if(seen.has(t.symbol))return false;seen.add(t.symbol);return true;});
 
       const marketsList=selectedMarkets.map(m=>MARKET_TICKERS[m]?.label).join(', ');
+      const BACKEND='https://apex-backend-k8kw.onrender.com';
 
-      // ── Real data functions ───────────────────────────
-      const BACKEND = 'https://apex-scanner-backend.onrender.com';
+      // ── Helper calculations ──────────────────────────
+      function calcRSI(closes,period){
+        if(!closes||closes.length<period+1) return null;
+        let g=0,l=0;
+        for(let i=closes.length-period;i<closes.length;i++){const d=closes[i]-closes[i-1];if(d>0)g+=d;else l+=Math.abs(d);}
+        return parseFloat((100-100/(1+(g/(l||0.0001)))).toFixed(1));
+      }
+      function calcEMA(closes,period){
+        if(!closes||closes.length<period) return null;
+        const k=2/(period+1);
+        let e=closes.slice(0,period).reduce((a,b)=>a+b,0)/period;
+        for(let i=period;i<closes.length;i++) e=closes[i]*k+e*(1-k);
+        return parseFloat(e.toFixed(4));
+      }
+      function calcVolSpike(vols){
+        if(!vols||vols.length<20) return null;
+        const avg=vols.slice(-20,-1).reduce((a,b)=>a+b,0)/19;
+        return avg>0?parseFloat((vols[vols.length-1]/avg).toFixed(2)):null;
+      }
 
-      async function fetchCryptoData(symbol) {
-        try {
-          const url='https://fapi.binance.com/fapi/v1/klines?symbol='+symbol+'USDT&interval=1w&limit=210';
-          const res=await fetch(url);
+      // ── Fetch crypto from Binance ────────────────────
+      async function fetchCryptoData(symbol){
+        try{
+          const res=await fetch('https://fapi.binance.com/fapi/v1/klines?symbol='+symbol+'USDT&interval=1w&limit=210');
           if(!res.ok) return null;
-          const candles=await res.json();
-          if(!candles||candles.length<20) return null;
-          const closes=candles.map(c=>parseFloat(c[4]));
-          const volumes=candles.map(c=>parseFloat(c[5]));
+          const c=await res.json();
+          if(!c||c.length<20) return null;
+          const closes=c.map(x=>parseFloat(x[4]));
+          const volumes=c.map(x=>parseFloat(x[5]));
           const price=closes[closes.length-1];
-          // Calculate indicators
-          function calcRSI(cls, p) {
-            if(cls.length<p+1) return null;
-            let g=0,l=0;
-            for(let i=cls.length-p;i<cls.length;i++){const d=cls[i]-cls[i-1];if(d>0)g+=d;else l+=Math.abs(d);}
-            return parseFloat((100-100/(1+(g/(l||0.0001)))).toFixed(1));
-          }
-          function calcEMA(cls, p) {
-            if(cls.length<p) return null;
-            const k=2/(p+1);
-            let e=cls.slice(0,p).reduce((a,b)=>a+b,0)/p;
-            for(let i=p;i<cls.length;i++) e=cls[i]*k+e*(1-k);
-            return parseFloat(e.toFixed(4));
-          }
-          function calcVolSpike(vols) {
-            if(vols.length<20) return null;
-            const avg=vols.slice(-20,-1).reduce((a,b)=>a+b,0)/19;
-            return avg>0?parseFloat((vols[vols.length-1]/avg).toFixed(2)):null;
-          }
-          const rsi=calcRSI(closes,14);
           const ema200=calcEMA(closes,200);
           const ema50=calcEMA(closes,50);
-          const volSpike=calcVolSpike(volumes);
-          return {
-            price,rsi,ema200,ema50,volSpike,
-            vsEma200:ema200?parseFloat(((price/ema200-1)*100).toFixed(2)):null,
-            vsEma50:ema50?parseFloat(((price/ema50-1)*100).toFixed(2)):null,
-            type:'crypto'
-          };
-        } catch(e) { return null; }
+          return{price,rsi:calcRSI(closes,14),ema200,ema50,volSpike:calcVolSpike(volumes),
+            vsEma200:ema200?parseFloat(((price/ema200-1)*100).toFixed(2)):null,type:'crypto'};
+        }catch(e){return null;}
       }
 
-      async function fetchStocksBatch(symbols) {
-        try {
-          const url=BACKEND+'/stocks?symbols='+symbols.join(',');
-          const res=await fetch(url);
+      // ── Fetch liquidation data from Binance ──────────
+      async function fetchLiqData(symbol){
+        try{
+          const [oiRes,frRes,prRes]=await Promise.all([
+            fetch('https://fapi.binance.com/fapi/v1/openInterest?symbol='+symbol+'USDT'),
+            fetch('https://fapi.binance.com/fapi/v1/fundingRate?symbol='+symbol+'USDT&limit=1'),
+            fetch('https://fapi.binance.com/fapi/v1/ticker/price?symbol='+symbol+'USDT')
+          ]);
+          if(!oiRes.ok||!frRes.ok||!prRes.ok) return null;
+          const oi=await oiRes.json();
+          const fr=await frRes.json();
+          const pr=await prRes.json();
+          const price=parseFloat(pr.price);
+          const fundingRate=parseFloat(fr[0]?.fundingRate||0);
+          const openInterest=parseFloat(oi.openInterest);
+          const absFR=Math.abs(fundingRate);
+          let lev=absFR>0.003?25:absFR>0.001?15:absFR>0.0005?10:absFR>0.0002?7:5;
+          const longDist=fundingRate>=0?1/lev:1/(lev*0.6);
+          const shortDist=fundingRate<0?1/lev:1/(lev*0.6);
+          const longLiq=price*(1-longDist);
+          const shortLiq=price*(1+shortDist);
+          const distLong=parseFloat(((price-longLiq)/price*100).toFixed(2));
+          const distShort=parseFloat(((shortLiq-price)/price*100).toFixed(2));
+          const nearLong=distLong<=12;
+          const nearShort=distShort<=12;
+          const bias=fundingRate>0.0005?'LONGS_CROWDED':fundingRate<-0.0005?'SHORTS_CROWDED':'NEUTRAL';
+          return{price,fundingRate,openInterest,longLiq:longLiq.toFixed(4),shortLiq:shortLiq.toFixed(4),
+            distLong,distShort,nearLong,nearShort,bias,
+            alert:nearLong||nearShort,alertType:nearLong?'NEAR_LONG_LIQ':'NEAR_SHORT_LIQ'};
+        }catch(e){return null;}
+      }
+
+      // ── Fetch stocks from Render backend ─────────────
+      async function fetchStocksBatch(symbols){
+        try{
+          const res=await fetch(BACKEND+'/stocks?symbols='+symbols.join(','));
           if(!res.ok) return {};
           const data=await res.json();
-          // Add type field
-          Object.keys(data).forEach(k=>{ data[k].type='stock'; });
+          Object.keys(data).forEach(k=>{data[k].type='stock';});
           return data;
-        } catch(e) {
-          console.log('Backend error:',e.message);
-          return {};
-        }
+        }catch(e){console.log('Backend error:',e.message);return{};}
       }
 
+      // ── Fetch Reddit sentiment ────────────────────────
+      async function fetchRedditSentiment(symbols){
+        const sentimentMap={};
+        const topSymbols=symbols.slice(0,20);
+        const bullish=['moon','pump','bullish','buy','long','breakout','surge','rally','up','gain','beat','upgrade','outperform','oversold','accumulate','undervalued','strong','ath','breakout'];
+        const bearish=['dump','bearish','sell','short','crash','drop','down','fall','loss','rug','miss','downgrade','overbought','overvalued','weak','avoid','layoffs','scam','fraud'];
+        await Promise.all(topSymbols.map(async sym=>{
+          try{
+            const url='https://www.reddit.com/search.json?q='+encodeURIComponent(sym)+'&sort=hot&limit=20&t=week';
+            const res=await fetch(url,{headers:{'User-Agent':'ApexScanner/1.0'}});
+            if(!res.ok) return;
+            const data=await res.json();
+            const posts=data?.data?.children||[];
+            let b=0,bear=0,total=posts.length,ups=0;
+            posts.forEach(p=>{
+              const text=(p.data.title||'').toLowerCase();
+              const u=p.data.ups||0;
+              ups+=u;
+              bullish.forEach(w=>{if(text.includes(w))b+=1+(u>100?1:0);});
+              bearish.forEach(w=>{if(text.includes(w))bear+=1+(u>100?1:0);});
+            });
+            const score=b-bear;
+            sentimentMap[sym]={
+              label:score>1?'BULLISH':score<-1?'BEARISH':'NEUTRAL',
+              emoji:score>1?'green':score<-1?'red':'yellow',
+              posts:total,ups
+            };
+          }catch(e){}
+        }));
+        return sentimentMap;
+      }
+
+      // ── Main data fetch ───────────────────────────────
       const realData={};
       const cryptoTickers=allTickers.filter(t=>t.type==='crypto');
       const stockTickers=allTickers.filter(t=>t.type==='stock');
 
-      // Fetch crypto in parallel batches of 10
+      // Crypto from Binance
       for(let i=0;i<cryptoTickers.length;i+=10){
         const batch=cryptoTickers.slice(i,i+10);
         document.getElementById('loadingStatus').textContent='Fetching crypto data '+(i+1)+'-'+Math.min(i+10,cryptoTickers.length)+' of '+cryptoTickers.length+'...';
@@ -636,16 +781,14 @@
           const d=await fetchCryptoData(t.symbol);
           if(d) realData[t.symbol]=d;
         }));
-        await new Promise(r=>setTimeout(r,100));
+        await new Promise(r=>setTimeout(r,150));
       }
 
-      // Fetch stocks via backend in batches of 20
+      // Stocks from Render backend
       if(stockTickers.length>0){
-        document.getElementById('loadingStatus').textContent='Waking up stock data server (first time may take 30s)...';
-        // Wake up server first
-        try { await fetch(BACKEND+'/health'); } catch(e) {}
+        document.getElementById('loadingStatus').textContent='Connecting to stock data server...';
+        try{await fetch(BACKEND+'/health');}catch(e){}
         await new Promise(r=>setTimeout(r,2000));
-
         for(let i=0;i<stockTickers.length;i+=20){
           const batch=stockTickers.slice(i,i+20).map(t=>t.symbol);
           document.getElementById('loadingStatus').textContent='Fetching stock data '+(i+1)+'-'+Math.min(i+20,stockTickers.length)+' of '+stockTickers.length+'...';
@@ -655,30 +798,53 @@
         }
       }
 
-      // Pre-filter with real data — detect both oversold AND overbought
+      // Liquidation data for crypto
+      document.getElementById('loadingStatus').textContent='Fetching liquidation zone data...';
+      const liqData={};
+      const cryptoWithData=cryptoTickers.filter(t=>realData[t.symbol]).slice(0,100);
+      for(let i=0;i<cryptoWithData.length;i+=10){
+        const batch=cryptoWithData.slice(i,i+10);
+        await Promise.all(batch.map(async t=>{
+          const d=await fetchLiqData(t.symbol);
+          if(d) liqData[t.symbol]=d;
+        }));
+        await new Promise(r=>setTimeout(r,200));
+      }
+
+      // Pre-filter with real data
       const qualified=[];
       allTickers.forEach(t=>{
         const d=realData[t.symbol];
         if(!d) return;
         const sigs=[];
-        // Oversold signals
         if(d.rsi!==null&&d.rsi<parseFloat(rsiT)) sigs.push('RSI oversold ('+d.rsi+')');
         if(d.volSpike!==null&&d.volSpike>=parseFloat(volT)) sigs.push('Volume Spike '+d.volSpike+'x');
         if(d.vsEma200!==null&&Math.abs(d.vsEma200)<=5) sigs.push('Near 200 EMA ('+d.vsEma200+'%)');
-        // Bull retracement signals (overbought/extended)
         if(d.rsi!==null&&d.rsi>70) sigs.push('RSI overbought ('+d.rsi+') — retracement risk');
         if(d.vsEma200!==null&&d.vsEma200>20) sigs.push('Extended above 200 EMA ('+d.vsEma200+'%)');
         if(d.vsHigh52!==null&&d.vsHigh52>-5) sigs.push('Near 52W High ('+d.vsHigh52+'%)');
-        if(sigs.length>=parseInt(minT)) qualified.push({...t,sigs,d});
+        const liq=liqData[t.symbol];
+        if(liq&&liq.alert){
+          const dist=liq.alertType==='NEAR_LONG_LIQ'?liq.distLong:liq.distShort;
+          sigs.push((liq.alertType==='NEAR_LONG_LIQ'?'🔴 Long Liq Zone':'🟢 Short Liq Zone')+' '+dist+'% away');
+        }
+        if(sigs.length>=parseInt(minT)) qualified.push({...t,sigs,d,liq:liq||null});
       });
 
+      // Reddit sentiment for qualified assets
+      document.getElementById('loadingStatus').textContent='Fetching Reddit sentiment...';
+      const qualSymbols=qualified.map(q=>q.symbol);
+      const sentimentMap=await fetchRedditSentiment(qualSymbols);
+
       const realCount=Object.keys(realData).length;
-      document.getElementById('loadingStatus').textContent=realCount+' assets scanned with REAL data. '+qualified.length+' qualify. Sending to AI...';
+      const stockReal=Object.values(realData).filter(d=>d.type==='stock').length;
+      document.getElementById('loadingStatus').textContent=realCount+' assets scanned ('+stockReal+' stocks real data). '+qualified.length+' qualify. Sending to AI...';
       await new Promise(r=>setTimeout(r,300));
 
-      const aiTickers=(qualified.length>0)
-        ? qualified.map(q=>`${q.symbol}(RSI:${q.d.rsi},vsEMA200:${q.d.vsEma200}%,VolSpike:${q.d.volSpike}x,vs52wHigh:${q.d.vsHigh52}%,vs52wLow:${q.d.vsLow52}%)`).join(',')
-        : allTickers.map(t=>`${t.symbol}(${t.market})`).join(',');
+      // Build AI prompt with real data
+      const aiTickers=qualified.length>0
+        ? qualified.map(q=>`${q.symbol}(RSI:${q.d.rsi},vsEMA200:${q.d.vsEma200}%,VolSpike:${q.d.volSpike}x${q.liq?',LiqZone:'+q.liq.distLong+'%away':''})`).join(',')
+        : allTickers.slice(0,50).map(t=>t.symbol).join(',');
 
       const tickerList=aiTickers;
 
@@ -728,7 +894,21 @@ Rules:
         parsed=[];
       }
 
+      // Attach sentiment and liq data to alerts
+      parsed.forEach(function(a){
+        if(sentimentMap&&sentimentMap[a.symbol]){
+          const s=sentimentMap[a.symbol];
+          a.sentiment=s.label+' ('+s.posts+' posts, '+s.ups+' upvotes)';
+          a.sentimentEmoji=s.emoji;
+        }
+        const liq=liqData&&liqData[a.symbol];
+        if(liq&&liq.alert){
+          const dist=liq.alertType==='NEAR_LONG_LIQ'?liq.distLong:liq.distShort;
+          a.liqAlert=(liq.alertType==='NEAR_LONG_LIQ'?'🔴 Long Liq Zone':'🟢 Short Liq Zone')+' '+dist+'% away | Funding: '+liq.bias;
+        }
+      });
       allAlerts=parsed;
+      sendTelegram(parsed,sentimentMap,liqData);
 
       document.getElementById('loadingStatus').textContent='Generating market summary...';
 
