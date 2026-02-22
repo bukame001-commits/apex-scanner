@@ -213,6 +213,15 @@
         </div>
         <div class="api-note">Use the same OpenRouter key for both engines! Get it at <a href="https://openrouter.ai/keys" target="_blank">openrouter.ai/keys</a></div>
       </div>
+
+      <!-- FMP Key for stocks -->
+      <div class="api-field" id="fmpField">
+        <div class="api-label">STOCK DATA API KEY (FMP) — FOR STOCK SCANNING</div>
+        <input type="password" class="api-input" id="fmpKey"
+               placeholder="your-fmp-key-here"
+               oninput="saveKey('fmpKey', this.value)" />
+        <div class="api-note">Free key for real stock data. Get it at <a href="https://financialmodelingprep.com/developer/docs" target="_blank">financialmodelingprep.com</a> — free tier: 250 calls/day.</div>
+      </div>
     </div>
 
     <!-- Markets -->
@@ -410,6 +419,8 @@
       if (ck) document.getElementById('claudeKey').value = ck;
       if (gk) document.getElementById('geminiKey').value = gk;
       if (tt) document.getElementById('tgToken').value = tt;
+      const fk = localStorage.getItem('apex_key_fmpKey');
+      if (fk && document.getElementById('fmpKey')) document.getElementById('fmpKey').value = fk;
       if (tc) document.getElementById('tgChatId').value = tc;
     } catch(e) {}
   }
@@ -874,27 +885,37 @@
       }
 
       async function fetchStockData(symbol) {
-        // Try multiple proxies in order
-        const proxies = [
-          'https://query1.finance.yahoo.com/v8/finance/chart/' + symbol + '?interval=1wk&range=4y',
-          'https://corsproxy.io/?' + encodeURIComponent('https://query1.finance.yahoo.com/v8/finance/chart/' + symbol + '?interval=1wk&range=4y'),
-          'https://api.allorigins.win/raw?url=' + encodeURIComponent('https://query1.finance.yahoo.com/v8/finance/chart/' + symbol + '?interval=1wk&range=4y')
-        ];
+        const fmpKey = document.getElementById('fmpKey') ? document.getElementById('fmpKey').value.trim() : '';
+        if (!fmpKey) return null; // Skip if no FMP key
 
-        for (const url of proxies) {
-          try {
-            const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
-            if (!res.ok) continue;
-            const data = await res.json();
-            const q = data.chart && data.chart.result && data.chart.result[0];
-            if (!q) continue;
-            const closes = q.indicators.quote[0].close;
-            const volumes = q.indicators.quote[0].volume;
-            if (!closes || closes.length < 20) continue;
-            return { closes: closes.filter(Boolean), volumes: volumes.filter(Boolean) };
-          } catch(e) { continue; }
+        try {
+          // FMP weekly historical data - works directly from browser
+          const url = 'https://financialmodelingprep.com/api/v3/historical-price-full/' + symbol + '?apikey=' + fmpKey + '&timeseries=250';
+          const res = await fetch(url);
+          if (!res.ok) return null;
+          const data = await res.json();
+          if (!data.historical || data.historical.length < 20) return null;
+
+          // FMP returns daily data - aggregate to weekly (take every 5th candle)
+          const daily = data.historical.reverse(); // oldest first
+          const weekly = [];
+          for (let i = 0; i < daily.length; i += 5) {
+            const week = daily.slice(i, i+5);
+            if (week.length === 0) continue;
+            weekly.push({
+              close: week[week.length-1].close,
+              volume: week.reduce(function(s,d) { return s + (d.volume||0); }, 0)
+            });
+          }
+
+          if (weekly.length < 20) return null;
+          const closes = weekly.map(function(w) { return w.close; });
+          const volumes = weekly.map(function(w) { return w.volume; });
+          return { closes, volumes };
+        } catch(e) {
+          console.log('FMP error for ' + symbol + ':', e.message);
+          return null;
         }
-        return null;
       }
 
       function calcRSI(closes, period) {
