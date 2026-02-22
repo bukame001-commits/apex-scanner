@@ -220,7 +220,7 @@
     <div class="section-label">02 — SELECT MARKETS</div>
     <div class="card">
       <div class="market-grid">
-        <button class="market-btn active" data-market="crypto_top500" onclick="toggleMarket(this)">
+        <button class="market-btn" data-market="crypto_top500" onclick="toggleMarket(this)">
           <span class="icon">₿</span><div class="name">CRYPTO TOP 500</div><div class="desc">By market cap</div>
         </button>
         <button class="market-btn" data-market="crypto_top1000" onclick="toggleMarket(this)">
@@ -358,7 +358,7 @@
 
 <script>
   let selectedEngine = 'gemini';
-  let selectedMarkets = ['crypto_top500'];
+  let selectedMarkets = [];
   let selectedInds = ['WaveTrend','RSI Divergence','Bollinger Band Lower Touch','Volume Spike'];
   let allAlerts = [];
 
@@ -581,16 +581,32 @@
         sentHtml='<div style="margin-top:8px;font-family:Share Tech Mono,monospace;font-size:10px;padding:4px 10px;display:inline-block;border-radius:2px;border:1px solid;'+clr+'">REDDIT: '+a.sentiment+'</div>';
       }
 
-      // Liquidation badge
+      // Liquidation proximity (always show for crypto if data exists)
       let liqHtml='';
-      if(a.liqAlert){
-        liqHtml='<div style="margin-top:6px;font-family:Share Tech Mono,monospace;font-size:10px;padding:4px 10px;display:inline-block;border-radius:2px;border:1px solid;color:#ff3366;border-color:rgba(255,51,102,0.4);background:rgba(255,51,102,0.06);">'+a.liqAlert+'</div>';
+      if(a.distLong!==undefined){
+        const longColor=a.distLong<=8?'#ff3366':a.distLong<=15?'#ffb800':'#4a6070';
+        const shortColor=a.distShort<=8?'#ff3366':a.distShort<=15?'#ffb800':'#4a6070';
+        const nearWarn=a.nearLiq?'<span style="color:#ff3366;margin-left:8px;font-size:9px;animation:pulse-border 1s infinite;">⚠ NEAR LIQ</span>':'';
+        const biasColor=a.fundingBias==='LONGS_CROWDED'?'#ff6b35':a.fundingBias==='SHORTS_CROWDED'?'#00ff88':'#4a6070';
+        liqHtml=
+          '<div style="margin-top:8px;padding:8px 10px;border:1px solid #0e2033;border-radius:2px;background:rgba(255,51,102,0.03);">'+
+            '<div style="font-family:Share Tech Mono,monospace;font-size:9px;color:var(--muted);letter-spacing:2px;margin-bottom:6px;">LIQ ZONES'+nearWarn+'</div>'+
+            '<div style="display:flex;gap:16px;flex-wrap:wrap;">'+
+              '<div style="font-family:Share Tech Mono,monospace;font-size:10px;">🔴 LONG LIQ <span style="color:'+longColor+';">'+a.distLong+'% below</span></div>'+
+              '<div style="font-family:Share Tech Mono,monospace;font-size:10px;">🟢 SHORT LIQ <span style="color:'+shortColor+';">'+a.distShort+'% above</span></div>'+
+              '<div style="font-family:Share Tech Mono,monospace;font-size:10px;">FUNDING <span style="color:'+biasColor+';">'+a.fundingBias+'</span></div>'+
+            '</div>'+
+          '</div>';
       }
 
-      card.innerHTML=
+      // Data source badge
+      const isLive = a.dataSource === 'live';
+      const dataBadge = '<span style="font-family:Share Tech Mono,monospace;font-size:8px;padding:2px 7px;border-radius:2px;border:1px solid;margin-left:8px;'+(isLive?'color:#00ff88;border-color:rgba(0,255,136,0.4);background:rgba(0,255,136,0.06)':'color:#ffb800;border-color:rgba(255,184,0,0.4);background:rgba(255,184,0,0.06)')+'">'+(isLive?'● LIVE':'◌ AI EST')+'</span>';
+
+      card.innerHTML =
         '<div class="alert-top">'+
           '<div>'+
-            '<div class="alert-symbol">'+a.symbol+'</div>'+
+            '<div class="alert-symbol">'+a.symbol+dataBadge+'</div>'+
             '<div class="alert-market">'+(a.market||'')+' &bull; '+((a.type||'').toUpperCase())+'</div>'+
           '</div>'+
           '<div style="text-align:right">'+
@@ -602,6 +618,8 @@
         '<div class="alert-analysis">'+(a.analysis||'')+'</div>'+
         sentHtml+liqHtml+
         '<div class="alert-values">'+
+          (a.price!==undefined?'<div class="alert-val">PRICE <span>$'+parseFloat(a.price).toPrecision(5)+'</span></div>':'')+
+          (a.vsEma200!==undefined&&a.vsEma200!==null?'<div class="alert-val" title="% above/below 200 EMA">EMA200 <span style="color:'+(a.vsEma200<0?'#00ff88':'#ff6b35')+';">'+(a.vsEma200>0?'+':'')+a.vsEma200+'%</span></div>':'')+
           (a.wt1!==undefined?'<div class="alert-val">WT1 <span>'+a.wt1+'</span></div>':'')+
           (a.rsi!==undefined?'<div class="alert-val">RSI <span>'+a.rsi+'</span></div>':'')+
           (a.timeframe?'<div class="alert-val">TF <span>'+a.timeframe+'</span></div>':'')+
@@ -927,17 +945,36 @@ Rules:
         parsed=[];
       }
 
-      // Attach sentiment and liq data to alerts
+      // Attach real data, sentiment and liq data to alerts
       parsed.forEach(function(a){
+        // Tag whether this has real live data or is AI-estimated
+        const rd=realData[a.symbol];
+        if(rd){
+          a.dataSource='live';
+          a.price=rd.price;
+          a.vsEma200=rd.vsEma200;
+          // override RSI with real value if AI hallucinated it
+          if(rd.rsi!==null) a.rsi=rd.rsi;
+        } else {
+          a.dataSource='ai';
+        }
         if(sentimentMap&&sentimentMap[a.symbol]){
           const s=sentimentMap[a.symbol];
           a.sentiment=s.label+' ('+s.posts+' posts, '+s.ups+' upvotes)';
           a.sentimentEmoji=s.emoji;
         }
         const liq=liqData&&liqData[a.symbol];
-        if(liq&&liq.alert){
-          const dist=liq.alertType==='NEAR_LONG_LIQ'?liq.distLong:liq.distShort;
-          a.liqAlert=(liq.alertType==='NEAR_LONG_LIQ'?'🔴 Long Liq Zone':'🟢 Short Liq Zone')+' '+dist+'% away | Funding: '+liq.bias;
+        if(liq){
+          a.distLong=liq.distLong;
+          a.distShort=liq.distShort;
+          a.fundingBias=liq.bias;
+          a.nearLiq=liq.alert;
+          a.nearLiqType=liq.alertType;
+          // Legacy liqAlert for Telegram
+          if(liq.alert){
+            const dist=liq.alertType==='NEAR_LONG_LIQ'?liq.distLong:liq.distShort;
+            a.liqAlert=(liq.alertType==='NEAR_LONG_LIQ'?'🔴 Long Liq Zone':'🟢 Short Liq Zone')+' '+dist+'% away | Funding: '+liq.bias;
+          }
         }
       });
       allAlerts=parsed;
@@ -945,11 +982,21 @@ Rules:
 
       document.getElementById('loadingStatus').textContent='Generating market summary...';
 
-      const summaryPrompt=`Write a concise 3-sentence market summary for a trader covering ${marketsList} as of ${new Date().toDateString()}:
-1. Overall market sentiment
-2. Which sector looks most oversold/interesting
+      const topAssets=parsed.slice(0,5).map(a=>
+        `${a.symbol}: RSI=${a.rsi}, vsEMA200=${a.vsEma200 !== undefined ? a.vsEma200+'%' : 'N/A'}, signals=[${(a.signals||[]).join(', ')}]`
+      ).join('\n');
+
+      const summaryPrompt=`You are a trading analyst. Based on this REAL scanned data from ${marketsList} on ${new Date().toDateString()}, write a 3-sentence market summary:
+
+TOP QUALIFYING ASSETS (real data):
+${topAssets || 'No assets qualified'}
+
+Write:
+1. Overall market sentiment based on the data above
+2. Which assets/sectors look most interesting and why
 3. Key risk to watch
-Be direct, specific, no disclaimers.`;
+
+Be direct and specific. Reference the actual assets and numbers above. No disclaimers about not having real-time data — you have it above.`;
 
       const summary=await callAI(summaryPrompt);
 
