@@ -874,17 +874,27 @@
       }
 
       async function fetchStockData(symbol) {
-        try {
-          const url = 'https://query1.finance.yahoo.com/v8/finance/chart/' + symbol + '?interval=1wk&range=4y&cors=true';
-          const res = await fetch(url);
-          if (!res.ok) return null;
-          const data = await res.json();
-          const q = data.chart?.result?.[0];
-          if (!q) return null;
-          const closes = q.indicators.quote[0].close;
-          const volumes = q.indicators.quote[0].volume;
-          return { closes: closes.filter(Boolean), volumes: volumes.filter(Boolean) };
-        } catch(e) { return null; }
+        // Try multiple proxies in order
+        const proxies = [
+          'https://query1.finance.yahoo.com/v8/finance/chart/' + symbol + '?interval=1wk&range=4y',
+          'https://corsproxy.io/?' + encodeURIComponent('https://query1.finance.yahoo.com/v8/finance/chart/' + symbol + '?interval=1wk&range=4y'),
+          'https://api.allorigins.win/raw?url=' + encodeURIComponent('https://query1.finance.yahoo.com/v8/finance/chart/' + symbol + '?interval=1wk&range=4y')
+        ];
+
+        for (const url of proxies) {
+          try {
+            const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+            if (!res.ok) continue;
+            const data = await res.json();
+            const q = data.chart && data.chart.result && data.chart.result[0];
+            if (!q) continue;
+            const closes = q.indicators.quote[0].close;
+            const volumes = q.indicators.quote[0].volume;
+            if (!closes || closes.length < 20) continue;
+            return { closes: closes.filter(Boolean), volumes: volumes.filter(Boolean) };
+          } catch(e) { continue; }
+        }
+        return null;
       }
 
       function calcRSI(closes, period) {
@@ -957,9 +967,10 @@
       }
 
       // Fetch stock data from Yahoo Finance
+      let stockDataCount = 0;
       for (let i = 0; i < stockTickers.length; i += DATA_BATCH) {
         const batch = stockTickers.slice(i, i + DATA_BATCH);
-        document.getElementById('loadingStatus').textContent = 'Fetching stock data ' + (i+1) + '-' + Math.min(i+DATA_BATCH, stockTickers.length) + ' of ' + stockTickers.length + '...';
+        document.getElementById('loadingStatus').textContent = 'Fetching stock data ' + (i+1) + '-' + Math.min(i+DATA_BATCH, stockTickers.length) + ' of ' + stockTickers.length + ' (got data for ' + stockDataCount + ' so far)...';
         await Promise.all(batch.map(async function(t) {
           const data = await fetchStockData(t.symbol);
           if (!data) return;
@@ -976,6 +987,7 @@
             priceVsEma50: ema50 ? parseFloat(((price/ema50-1)*100).toFixed(2)) : null,
             type: 'stock'
           };
+          stockDataCount++;
         }));
         if (i + DATA_BATCH < stockTickers.length) await new Promise(function(r) { setTimeout(r, 200); });
       }
