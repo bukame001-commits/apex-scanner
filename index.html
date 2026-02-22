@@ -642,7 +642,9 @@
           (a.price!==undefined?'<div class="alert-val">PRICE <span>$'+parseFloat(a.price).toPrecision(5)+'</span></div>':'')+
           (a.marketCap?'<div class="alert-val">MCAP <span>'+(a.marketCap>=1e9?(a.marketCap/1e9).toFixed(2)+'B':(a.marketCap/1e6).toFixed(0)+'M')+'</span></div>':'')+
           (a.vsEma200!==undefined&&a.vsEma200!==null?'<div class="alert-val" title="% above/below 200 EMA">EMA200 <span style="color:'+(a.vsEma200<0?'#00ff88':'#ff6b35')+';">'+(a.vsEma200>0?'+':'')+a.vsEma200+'%</span></div>':'')+
-          (a.wt1!==undefined?'<div class="alert-val">WT1 <span>'+a.wt1+'</span></div>':'')+
+          (a.wt1!==undefined&&a.wt1!==null?'<div class="alert-val">WT1 <span style="color:'+(a.wt1<-53?'#00ff88':a.wt1>53?'#ff3366':'var(--accent)')+';">'+a.wt1+'</span></div>':'')+
+          (a.wt2!==undefined&&a.wt2!==null?'<div class="alert-val">WT2 <span>'+a.wt2+'</span></div>':'')+
+          (a.wtCrossed?'<div class="alert-val"><span style="color:'+(a.wtCrossType==='bullish'?'#00ff88':'#ff3366')+';font-weight:700;">'+(a.wtCrossType==='bullish'?'▲ BULL CROSS':'▼ BEAR CROSS')+'</span></div>':'')+
           (a.rsi!==undefined?'<div class="alert-val">RSI <span>'+a.rsi+'</span></div>':'')+
           (a.timeframe?'<div class="alert-val">TF <span>'+a.timeframe+'</span></div>':'')+
         '</div>';
@@ -700,17 +702,85 @@
         for(let i=closes.length-period;i<closes.length;i++){const d=closes[i]-closes[i-1];if(d>0)g+=d;else l+=Math.abs(d);}
         return parseFloat((100-100/(1+(g/(l||0.0001)))).toFixed(1));
       }
-      function calcEMA(closes,period){
-        if(!closes||closes.length<period) return null;
+
+      // EMA returning full series (needed for WaveTrend chained EMAs)
+      function calcEMASeries(src, period){
+        if(!src||src.length<period) return [];
         const k=2/(period+1);
-        let e=closes.slice(0,period).reduce((a,b)=>a+b,0)/period;
-        for(let i=period;i<closes.length;i++) e=closes[i]*k+e*(1-k);
-        return parseFloat(e.toFixed(4));
+        const out=new Array(src.length).fill(null);
+        // seed with SMA of first `period` values
+        let seed=0; for(let i=0;i<period;i++) seed+=src[i];
+        out[period-1]=seed/period;
+        for(let i=period;i<src.length;i++) out[i]=src[i]*k+out[i-1]*(1-k);
+        return out;
       }
+
+      // SMA of last N values of a series
+      function smaLast(series, period){
+        const valid=series.filter(v=>v!==null);
+        if(valid.length<period) return null;
+        const last=valid.slice(-period);
+        return last.reduce((a,b)=>a+b,0)/period;
+      }
+
+      function calcEMA(closes,period){
+        const s=calcEMASeries(closes,period);
+        const last=s.filter(v=>v!==null);
+        return last.length?parseFloat(last[last.length-1].toFixed(4)):null;
+      }
+
       function calcVolSpike(vols){
         if(!vols||vols.length<20) return null;
         const avg=vols.slice(-20,-1).reduce((a,b)=>a+b,0)/19;
         return avg>0?parseFloat((vols[vols.length-1]/avg).toFixed(2)):null;
+      }
+
+      // ── WaveTrend [LazyBear] exact implementation ────
+      // n1=10 (Channel Length), n2=21 (Average Length)
+      // ap  = hlc3
+      // esa = ema(ap, n1)
+      // d   = ema(abs(ap - esa), n1)
+      // ci  = (ap - esa) / (0.015 * d)
+      // tci = ema(ci, n2)
+      // wt1 = tci
+      // wt2 = sma(wt1, 4)
+      function calcWaveTrend(highs, lows, closes, n1=10, n2=21){
+        if(!highs||closes.length<n1+n2+4) return {wt1:null,wt2:null,crossed:false,crossType:null};
+        // hlc3
+        const ap=closes.map((c,i)=>(highs[i]+lows[i]+c)/3);
+        // esa = EMA(ap, n1)
+        const esa=calcEMASeries(ap, n1);
+        // d = EMA(|ap - esa|, n1)
+        const apMinusEsa=ap.map((v,i)=>esa[i]!==null?Math.abs(v-esa[i]):null);
+        const validStart=apMinusEsa.findIndex(v=>v!==null);
+        const dInput=apMinusEsa.slice(validStart);
+        const dSeries=calcEMASeries(dInput, n1);
+        // rebuild d aligned to original length
+        const d=new Array(validStart).fill(null).concat(dSeries);
+        // ci = (ap - esa) / (0.015 * d)
+        const ci=ap.map((v,i)=>{
+          if(esa[i]===null||d[i]===null||d[i]===0) return null;
+          return (v-esa[i])/(0.015*d[i]);
+        });
+        // tci = EMA(ci, n2)  — strip leading nulls first
+        const ciStart=ci.findIndex(v=>v!==null);
+        const tciSeries=calcEMASeries(ci.slice(ciStart), n2);
+        const wt1Series=new Array(ciStart).fill(null).concat(tciSeries);
+        // wt2 = SMA(wt1, 4)
+        const wt1Last=wt1Series.filter(v=>v!==null);
+        const wt1=wt1Last.length?parseFloat(wt1Last[wt1Last.length-1].toFixed(2)):null;
+        const wt2=wt1Last.length>=4?parseFloat(smaLast(wt1Last,4).toFixed(2)):null;
+        // Detect cross (bullish: wt1 crosses above wt2, bearish: crosses below)
+        let crossed=false, crossType=null;
+        if(wt1Last.length>=5 && wt2!==null){
+          const prevWt1=wt1Last[wt1Last.length-2];
+          const prevWt2=smaLast(wt1Last.slice(0,-1),4);
+          if(prevWt1!==null&&prevWt2!==null){
+            if(prevWt1<prevWt2 && wt1>wt2){ crossed=true; crossType='bullish'; }
+            else if(prevWt1>prevWt2 && wt1<wt2){ crossed=true; crossType='bearish'; }
+          }
+        }
+        return{wt1,wt2,crossed,crossType};
       }
 
       // ── Fetch crypto from Binance ────────────────────
@@ -719,14 +789,27 @@
           const res=await fetch('https://fapi.binance.com/fapi/v1/klines?symbol='+symbol+'USDT&interval=1w&limit=210');
           if(!res.ok) return null;
           const c=await res.json();
-          if(!c||c.length<20) return null;
+          if(!c||c.length<50) return null;
+          const highs=c.map(x=>parseFloat(x[2]));
+          const lows=c.map(x=>parseFloat(x[3]));
           const closes=c.map(x=>parseFloat(x[4]));
           const volumes=c.map(x=>parseFloat(x[5]));
           const price=closes[closes.length-1];
           const ema200=calcEMA(closes,200);
           const ema50=calcEMA(closes,50);
-          return{price,rsi:calcRSI(closes,14),ema200,ema50,volSpike:calcVolSpike(volumes),
-            vsEma200:ema200?parseFloat(((price/ema200-1)*100).toFixed(2)):null,type:'crypto'};
+          const wt=calcWaveTrend(highs,lows,closes);
+          return{
+            price,
+            rsi:calcRSI(closes,14),
+            ema200,ema50,
+            volSpike:calcVolSpike(volumes),
+            vsEma200:ema200?parseFloat(((price/ema200-1)*100).toFixed(2)):null,
+            wt1:wt.wt1,
+            wt2:wt.wt2,
+            wtCrossed:wt.crossed,
+            wtCrossType:wt.crossType,
+            type:'crypto'
+          };
         }catch(e){return null;}
       }
 
@@ -925,10 +1008,19 @@
           if(cap && cap>=selectedMcap*1e9) return; // skip if over cap limit
         }
         const sigs=[];
-        if(d.rsi!==null&&d.rsi<parseFloat(rsiT)) sigs.push('RSI oversold ('+d.rsi+')');
+        // WaveTrend [LazyBear] — osLevel1=-60, osLevel2=-53, obLevel1=60, obLevel2=53
+        if(d.wt1!==null&&d.wt2!==null){
+          if(d.wt1<-60) sigs.push('WT Deeply Oversold ('+d.wt1+')');
+          else if(d.wt1<parseFloat(wtT)) sigs.push('WT Oversold ('+d.wt1+')');
+          if(d.wtCrossed&&d.wtCrossType==='bullish'&&d.wt1<0) sigs.push('WT Bullish Cross ('+d.wt1+')');
+          if(d.wt1>60) sigs.push('WT Deeply Overbought ('+d.wt1+')');
+          else if(d.wt1>53) sigs.push('WT Overbought ('+d.wt1+')');
+          if(d.wtCrossed&&d.wtCrossType==='bearish'&&d.wt1>0) sigs.push('WT Bearish Cross ('+d.wt1+')');
+        }
+        if(d.rsi!==null&&d.rsi<parseFloat(rsiT)) sigs.push('RSI Oversold ('+d.rsi+')');
         if(d.volSpike!==null&&d.volSpike>=parseFloat(volT)) sigs.push('Volume Spike '+d.volSpike+'x');
         if(d.vsEma200!==null&&Math.abs(d.vsEma200)<=5) sigs.push('Near 200 EMA ('+d.vsEma200+'%)');
-        if(d.rsi!==null&&d.rsi>70) sigs.push('RSI overbought ('+d.rsi+') — retracement risk');
+        if(d.rsi!==null&&d.rsi>70) sigs.push('RSI Overbought ('+d.rsi+')');
         if(d.vsEma200!==null&&d.vsEma200>20) sigs.push('Extended above 200 EMA ('+d.vsEma200+'%)');
         if(d.vsHigh52!==null&&d.vsHigh52>-5) sigs.push('Near 52W High ('+d.vsHigh52+'%)');
         const liq=liqData[t.symbol];
@@ -952,7 +1044,7 @@
       // Build AI prompt with real data
       const hasRealData=qualified.length>0;
       const aiTickers=hasRealData
-        ? qualified.map(q=>`${q.symbol}(RSI:${q.d.rsi},vsEMA200:${q.d.vsEma200}%,VolSpike:${q.d.volSpike}x${q.liq?',LiqZone:'+q.liq.distLong+'%away':''})`).join(',')
+        ? qualified.map(q=>`${q.symbol}(WT1:${q.d.wt1},WT2:${q.d.wt2},WTCross:${q.d.wtCrossed?q.d.wtCrossType:'none'},RSI:${q.d.rsi},vsEMA200:${q.d.vsEma200}%,VolSpike:${q.d.volSpike}x${q.liq?',LiqZone:'+q.liq.distLong+'%away':''})`).join(',')
         : allTickers.slice(0,50).map(t=>t.symbol).join(',');
 
       const dataNote=hasRealData
@@ -966,7 +1058,8 @@ Market scope: ${marketsList}
 
 SCREENING CRITERIA:
 - Indicators: ${selectedInds.join(', ')}
-- WaveTrend oversold threshold: ${wtT}
+- WaveTrend [LazyBear]: osLevel1=-60 (deeply oversold), osLevel2=${wtT} (oversold), obLevel1=60 (deeply overbought), obLevel2=53
+- A bullish WT cross (wt1 crosses above wt2 while both below 0) is a strong buy signal
 - RSI oversold threshold: ${rsiT}
 - Volume spike: ${volT} above average
 - Minimum signals to qualify: ${minT} of ${selectedInds.length}
@@ -1016,7 +1109,10 @@ Rules:
           a.price=rd.price;
           a.vsEma200=rd.vsEma200;
           if(rd.rsi!==null) a.rsi=rd.rsi;
-          // attach market cap if we fetched it
+          if(rd.wt1!==null) a.wt1=rd.wt1;
+          if(rd.wt2!==null) a.wt2=rd.wt2;
+          a.wtCrossed=rd.wtCrossed;
+          a.wtCrossType=rd.wtCrossType;
           const qMatch=qualified.find(q=>q.symbol===a.symbol);
           if(qMatch&&qMatch.marketCap) a.marketCap=qMatch.marketCap;
         } else {
