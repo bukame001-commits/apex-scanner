@@ -278,8 +278,18 @@
       </div>
     </div>
 
+    <!-- Timeframe -->
+    <div class="section-label">04 — TIMEFRAME</div>
+    <div class="card">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;" id="tfBtns">
+        <button class="filter-btn" data-tf="4h" data-interval="4h" data-limit="300" onclick="selectTF(this)">4H</button>
+        <button class="filter-btn" data-tf="1d" data-interval="1d" data-limit="210" onclick="selectTF(this)">DAILY</button>
+        <button class="filter-btn active" data-tf="1w" data-interval="1w" data-limit="210" onclick="selectTF(this)">WEEKLY</button>
+      </div>
+    </div>
+
     <!-- Thresholds -->
-    <div class="section-label">04 — THRESHOLDS</div>
+    <div class="section-label">04b — THRESHOLDS</div>
     <div class="card">
       <div class="slider-grid">
         <div class="slider-item">
@@ -375,12 +385,24 @@
   let selectedMarkets = [];
   let selectedInds = ['WaveTrend','RSI Combo','Bollinger Band Lower Touch','Volume Spike'];
   let allAlerts = [];
-  let selectedMcap = 0; // 0 = no filter, otherwise max billion USD
+  let selectedMcap = 0;
+  let selectedTF = {tf:'1w', interval:'1w', limit:210, label:'1W'}; // 0 = no filter, otherwise max billion USD
 
   function selectMcap(btn) {
     document.querySelectorAll('#mcapBtns .filter-btn').forEach(b=>b.classList.remove('active'));
     btn.classList.add('active');
     selectedMcap = parseFloat(btn.dataset.mcap);
+  }
+
+  function selectTF(btn) {
+    document.querySelectorAll('#tfBtns .filter-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    selectedTF = {
+      tf: btn.dataset.tf,
+      interval: btn.dataset.interval,
+      limit: parseInt(btn.dataset.limit),
+      label: btn.dataset.tf==='1w'?'1W': btn.dataset.tf==='1d'?'1D':'4H'
+    };
   }
 
   const MARKET_TICKERS = {
@@ -934,7 +956,7 @@
       // ── Fetch crypto from Binance ────────────────────
       async function fetchCryptoData(symbol){
         try{
-          const res=await fetch('https://fapi.binance.com/fapi/v1/klines?symbol='+symbol+'USDT&interval=1w&limit=210');
+          const res=await fetch('https://fapi.binance.com/fapi/v1/klines?symbol='+symbol+'USDT&interval='+selectedTF.interval+'&limit='+selectedTF.limit);
           if(!res.ok) return null;
           const c=await res.json();
           if(!c||c.length<60) return null;
@@ -1197,7 +1219,7 @@
 
       const realCount=Object.keys(realData).length;
       const stockReal=Object.values(realData).filter(d=>d.type==='stock').length;
-      document.getElementById('loadingStatus').textContent=realCount+' assets scanned ('+stockReal+' stocks real data). '+qualified.length+' qualify. Sending to AI...';
+      document.getElementById('loadingStatus').textContent=realCount+' assets scanned ('+stockReal+' stocks real data) on '+selectedTF.label+'. '+qualified.length+' qualify. Sending to AI...';
       await new Promise(r=>setTimeout(r,300));
 
       // Build AI prompt with real data
@@ -1242,7 +1264,7 @@ ${aiTickers}
 Identify assets from ${marketsList} MOST LIKELY showing oversold weekly conditions and potential reversal setups.
 
 IMPORTANT: Respond with ONLY a raw JSON array. No markdown. No backticks. No explanation. Start with [ end with ]. Keep "analysis" under 12 words.
-[{"symbol":"AAPL","market":"${marketsList}","type":"stock","score":3,"signals":["WaveTrend Oversold","RSI Divergence","Volume Spike"],"wt1":-45.2,"wt2":-48.1,"rsi":32.1,"timeframe":"1W","analysis":"12 words max"}]
+[{"symbol":"AAPL","market":"${marketsList}","type":"stock","score":3,"signals":["WaveTrend Oversold","RSI Divergence","Volume Spike"],"wt1":-45.2,"wt2":-48.1,"rsi":32.1,"timeframe":"${selectedTF.label}","analysis":"12 words max"}]
 
 Rules:
 - Only include assets from ${marketsList} meeting at least ${minT} criteria
