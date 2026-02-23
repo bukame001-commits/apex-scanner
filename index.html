@@ -940,14 +940,31 @@
         const wt1Last=wt1Series.filter(v=>v!==null);
         const wt1=wt1Last.length?parseFloat(wt1Last[wt1Last.length-1].toFixed(2)):null;
         const wt2=wt1Last.length>=4?parseFloat(smaLast(wt1Last,4).toFixed(2)):null;
-        // Detect cross (bullish: wt1 crosses above wt2, bearish: crosses below)
+        // Detect cross — check candle[n-2] vs candle[n-1] (confirmed, not just current)
+        // Require wt1 to have actually crossed wt2 with separation > 0.5 to avoid noise
         let crossed=false, crossType=null;
-        if(wt1Last.length>=5 && wt2!==null){
+        if(wt1Last.length>=6 && wt2!==null){
+          // current bar values
+          const curWt1=wt1Last[wt1Last.length-1];
+          const curWt2=smaLast(wt1Last,4);
+          // previous bar values (1 candle back)
           const prevWt1=wt1Last[wt1Last.length-2];
           const prevWt2=smaLast(wt1Last.slice(0,-1),4);
-          if(prevWt1!==null&&prevWt2!==null){
-            if(prevWt1<prevWt2 && wt1>wt2){ crossed=true; crossType='bullish'; }
-            else if(prevWt1>prevWt2 && wt1<wt2){ crossed=true; crossType='bearish'; }
+          // bar before that (2 candles back — to confirm cross happened last bar)
+          const prev2Wt1=wt1Last[wt1Last.length-3];
+          const prev2Wt2=smaLast(wt1Last.slice(0,-2),4);
+          if(prevWt1!==null&&prevWt2!==null&&prev2Wt1!==null&&prev2Wt2!==null){
+            // Bullish cross: 2 bars ago wt1 was below wt2, last bar wt1 crossed above wt2
+            // AND current bar wt1 still above wt2 (confirmation), AND both in oversold territory
+            const bullishCross = prev2Wt1<prev2Wt2 && prevWt1>prevWt2 && curWt1>curWt2;
+            // Bearish cross: 2 bars ago wt1 was above wt2, last bar crossed below
+            const bearishCross = prev2Wt1>prev2Wt2 && prevWt1<prevWt2 && curWt1<curWt2;
+            // Minimum separation to filter noise (WT scale is ~-100 to 100)
+            const separation=Math.abs(curWt1-curWt2);
+            if(separation>=0.5){
+              if(bullishCross){ crossed=true; crossType='bullish'; }
+              else if(bearishCross){ crossed=true; crossType='bearish'; }
+            }
           }
         }
         return{wt1,wt2,crossed,crossType};
