@@ -220,7 +220,7 @@
     <div class="section-label">02 — SELECT MARKETS</div>
     <div class="card">
       <div class="market-grid">
-        <button class="market-btn" data-market="crypto_top500" onclick="toggleMarket(this)">
+        <button class="market-btn active" data-market="crypto_top500" onclick="toggleMarket(this)">
           <span class="icon">₿</span><div class="name">CRYPTO TOP 500</div><div class="desc">By market cap</div>
         </button>
         <button class="market-btn" data-market="crypto_top1000" onclick="toggleMarket(this)">
@@ -368,11 +368,11 @@
       <div id="aiSummaryText"></div>
     </div>
     <div class="filter-bar">
-      <button class="filter-btn active" onclick="filterAlerts('all',this)">ALL</button>
-      <button class="filter-btn" onclick="filterAlerts('strong',this)">🔥 STRONG</button>
-      <button class="filter-btn" onclick="filterAlerts('moderate',this)">⚡ MODERATE</button>
-      <button class="filter-btn" onclick="filterAlerts('crypto',this)">₿ CRYPTO</button>
-      <button class="filter-btn" onclick="filterAlerts('stocks',this)">📈 STOCKS</button>
+      <button class="filter-btn result-filter active" onclick="filterAlerts('all',this)">ALL</button>
+      <button class="filter-btn result-filter" onclick="filterAlerts('strong',this)">🔥 STRONG</button>
+      <button class="filter-btn result-filter" onclick="filterAlerts('moderate',this)">⚡ MODERATE</button>
+      <button class="filter-btn result-filter" onclick="filterAlerts('crypto',this)">₿ CRYPTO</button>
+      <button class="filter-btn result-filter" onclick="filterAlerts('stocks',this)">📈 STOCKS</button>
     </div>
     <div id="alertsContainer"></div>
   </div>
@@ -382,7 +382,7 @@
 
 <script>
   let selectedEngine = 'gemini';
-  let selectedMarkets = [];
+  let selectedMarkets = ['crypto_top500'];
   let selectedInds = ['WaveTrend','RSI Combo','Bollinger Band Lower Touch','Volume Spike'];
   let allAlerts = [];
   let selectedMcap = 0;
@@ -681,14 +681,14 @@
           (a.wtCrossed?'<div class="alert-val"><span style="color:'+(a.wtCrossType==='bullish'?'#00ff88':'#ff3366')+';font-weight:700;">'+(a.wtCrossType==='bullish'?'▲ BULL CROSS':'▼ BEAR CROSS')+'</span></div>':'')+
           (a.rsi!==undefined?'<div class="alert-val">RSI <span>'+a.rsi+'</span></div>':'')+
           (a.rsiCombo&&a.rsiCombo.adx!==null?'<div class="alert-val">ADX <span style="color:var(--warn);">'+a.rsiCombo.adx+'</span></div>':'')+
-          (a.timeframe?'<div class="alert-val">TF <span>'+a.timeframe+'</span></div>':'')+
+          '<div class="alert-val">TF <span style="color:var(--accent);">'+selectedTF.label+'</span></div>'+
         '</div>';
       c.appendChild(card);
     });
   }
 
   function filterAlerts(type,btn) {
-    document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.result-filter').forEach(b=>b.classList.remove('active'));
     btn.classList.add('active');
     let f=allAlerts;
     if(type==='strong') f=allAlerts.filter(a=>a.score>=3);
@@ -697,6 +697,410 @@
     else if(type==='stocks') f=allAlerts.filter(a=>a.type==='stock');
     renderAlerts(f);
   }
+
+  const BACKEND='https://apex-backend-k8kw.onrender.com';
+
+  // ── RSI Combo [by Marco] exact implementation ────────
+  // RMA (Rolling Moving Average) = Pine's rma() — same as Wilder's smoothing
+  function calcRMASeries(src, period){
+    const out=new Array(src.length).fill(null);
+    // seed with SMA of first `period` values
+    let sum=0, count=0;
+    for(let i=0;i<src.length;i++){
+      if(src[i]===null||src[i]===undefined) continue;
+      sum+=src[i]; count++;
+      if(count===period){
+        out[i]=sum/period;
+      } else if(count>period){
+        const prev=out[i-1];
+        out[i]=(prev*(period-1)+src[i])/period;
+      }
+    }
+    return out;
+  }
+
+  // RSI using RMA (matches Pine's rsi() exactly)
+  // up = rma(max(change(src),0), len)
+  // down = rma(-min(change(src),0), len)
+  // rsi = down==0 ? 100 : up==0 ? 0 : 100-(100/(1+up/down))
+  function calcRSIComboSeries(closes, len=14){
+    const n=closes.length;
+    const changes=new Array(n).fill(null);
+    for(let i=1;i<n;i++) changes[i]=closes[i]-closes[i-1];
+    const gains=changes.map(v=>v===null?null:Math.max(v,0));
+    const losses=changes.map(v=>v===null?null:Math.max(-v,0));
+    const upSeries=calcRMASeries(gains,len);
+    const downSeries=calcRMASeries(losses,len);
+    const rsiSeries=upSeries.map((up,i)=>{
+      if(up===null) return null;
+      const down=downSeries[i];
+      if(down===0) return 100;
+      if(up===0) return 0;
+      return 100-(100/(1+up/down));
+    });
+    return{rsiSeries,upSeries,downSeries};
+  }
+
+  // SMA series
+  function calcSMASeries(src, period){
+    const out=new Array(src.length).fill(null);
+    for(let i=period-1;i<src.length;i++){
+      if(src[i]===null) continue;
+      let s=0,c=0;
+      for(let j=i-period+1;j<=i;j++){if(src[j]!==null){s+=src[j];c++;}}
+      if(c===period) out[i]=s/period;
+    }
+    return out;
+  }
+
+  // Momentum: mom(src, length) = src - src[length]
+  function calcMomSeries(src, period){
+    const out=new Array(src.length).fill(null);
+    for(let i=period;i<src.length;i++){
+      if(src[i]!==null&&src[i-period]!==null) out[i]=src[i]-src[i-period];
+    }
+    return out;
+  }
+
+  // Full RSI Combo — returns all signals from Marco's script
+  function calcRSICombo(closes){
+    const n=closes.length;
+    if(n<60) return null;
+
+    // ── Core RSI (RMA-based) ──
+    const {rsiSeries,upSeries,downSeries}=calcRSIComboSeries(closes,14);
+
+    // ── ADX of RSI ──
+    // sum = up + down
+    // adx = 100 * rma(abs(up-down)/(sum==0?1:sum), 6)
+    const adxInput=upSeries.map((up,i)=>{
+      if(up===null||downSeries[i]===null) return null;
+      const sum=up+downSeries[i];
+      return Math.abs(up-downSeries[i])/(sum===0?1:sum);
+    });
+    const adxRma=calcRMASeries(adxInput,6);
+    const adxSeries=adxRma.map(v=>v===null?null:100*v);
+
+    // ── Momentum of ADX ──
+    const amSeries=calcMomSeries(adxSeries,5);  // am = mom(adx,5)
+    const rsiMom6=calcMomSeries(rsiSeries,6);    // mom(rsi,6)
+
+    // ── RSI Exhaustion signals ──
+    // mup:  rsi<42 AND am>0 AND mom(rsi,6)<0  → oversold exhaustion (bullish)
+    // mdown: rsi>58 AND am>0 AND mom(rsi,6)>0 → overbought exhaustion (bearish)
+    const last=n-1;
+    const rsi=rsiSeries[last];
+    const am=amSeries[last];
+    const rsiM6=rsiMom6[last];
+    const mup=rsi!==null&&am!==null&&rsiM6!==null && rsi<42&&am>0&&rsiM6<0;
+    const mdown=rsi!==null&&am!==null&&rsiM6!==null && rsi>58&&am>0&&rsiM6>0;
+
+    // ── RSS — Relative Spread Strength ──
+    // E1=ema(close,10), E2=ema(close,40)
+    // Spread=E1-E2, RS=rsi(Spread,5), Smooth=sma(RS,3)
+    const e1=calcEMASeries(closes,10);
+    const e2=calcEMASeries(closes,40);
+    const spread=e1.map((v,i)=>v!==null&&e2[i]!==null?v-e2[i]:null);
+    const spreadCloses=spread.filter(v=>v!==null);
+    const {rsiSeries:rsSeries}=calcRSIComboSeries(spreadCloses,5);
+    const rsSmoothRaw=calcSMASeries(rsSeries,3);
+    const smooth=rsSmoothRaw.filter(v=>v!==null);
+    const smoothVal=smooth.length?smooth[smooth.length-1]:null;
+    // Fill signals: smooth<18 → oversold zone, smooth>82 → overbought zone
+    const rssOversold=smoothVal!==null&&smoothVal<18;
+    const rssOverbought=smoothVal!==null&&smoothVal>82;
+
+    // ── Swing 350 ──
+    // rs=rsi(close,3), mrs=sma(rs,3)
+    // BUY:  crossunder(sma(rs,3), 20) → mrs just crossed below 20
+    // SELL: crossover(sma(rs,3), 80)  → mrs just crossed above 80
+    const {rsiSeries:rs3Series}=calcRSIComboSeries(closes,3);
+    const mrs=calcSMASeries(rs3Series,3);
+    const mrsLast=mrs[last];
+    const mrsPrev=mrs[last-1];
+    const swing350Buy=mrsLast!==null&&mrsPrev!==null&&mrsPrev>=20&&mrsLast<20;
+    const swing350Sell=mrsLast!==null&&mrsPrev!==null&&mrsPrev<=80&&mrsLast>80;
+
+    return{
+      rsi:rsi!==null?parseFloat(rsi.toFixed(1)):null,
+      adx:adxSeries[last]!==null?parseFloat(adxSeries[last].toFixed(1)):null,
+      am:am!==null?parseFloat(am.toFixed(2)):null,
+      mup,    // RSI down-exhaustion bullish signal
+      mdown,  // RSI up-exhaustion bearish signal
+      smoothRSS:smoothVal!==null?parseFloat(smoothVal.toFixed(1)):null,
+      rssOversold,
+      rssOverbought,
+      swing350Buy,
+      swing350Sell,
+      mrs:mrsLast!==null?parseFloat(mrsLast.toFixed(1)):null
+    };
+  }
+
+  // Simple RSI (kept for backward compat with stock backend data)
+  function calcRSI(closes,period){
+    const {rsiSeries}=calcRSIComboSeries(closes,period);
+    const valid=rsiSeries.filter(v=>v!==null);
+    return valid.length?parseFloat(valid[valid.length-1].toFixed(1)):null;
+  }
+
+  // EMA returning full series (needed for WaveTrend chained EMAs)
+  function calcEMASeries(src, period){
+    if(!src||src.length<period) return [];
+    const k=2/(period+1);
+    const out=new Array(src.length).fill(null);
+    // seed with SMA of first `period` values
+    let seed=0; for(let i=0;i<period;i++) seed+=src[i];
+    out[period-1]=seed/period;
+    for(let i=period;i<src.length;i++) out[i]=src[i]*k+out[i-1]*(1-k);
+    return out;
+  }
+
+  // SMA of last N values of a series
+  function smaLast(series, period){
+    const valid=series.filter(v=>v!==null);
+    if(valid.length<period) return null;
+    const last=valid.slice(-period);
+    return last.reduce((a,b)=>a+b,0)/period;
+  }
+
+  function calcEMA(closes,period){
+    const s=calcEMASeries(closes,period);
+    const last=s.filter(v=>v!==null);
+    return last.length?parseFloat(last[last.length-1].toFixed(4)):null;
+  }
+
+  function calcVolSpike(vols){
+    if(!vols||vols.length<20) return null;
+    const avg=vols.slice(-20,-1).reduce((a,b)=>a+b,0)/19;
+    return avg>0?parseFloat((vols[vols.length-1]/avg).toFixed(2)):null;
+  }
+
+  // ── WaveTrend [LazyBear] exact implementation ────
+  // n1=10 (Channel Length), n2=21 (Average Length)
+  // ap  = hlc3
+  // esa = ema(ap, n1)
+  // d   = ema(abs(ap - esa), n1)
+  // ci  = (ap - esa) / (0.015 * d)
+  // tci = ema(ci, n2)
+  // wt1 = tci
+  // wt2 = sma(wt1, 4)
+  function calcWaveTrend(highs, lows, closes, n1=10, n2=21){
+    if(!highs||closes.length<n1+n2+4) return {wt1:null,wt2:null,crossed:false,crossType:null};
+    // hlc3
+    const ap=closes.map((c,i)=>(highs[i]+lows[i]+c)/3);
+    // esa = EMA(ap, n1)
+    const esa=calcEMASeries(ap, n1);
+    // d = EMA(|ap - esa|, n1)
+    const apMinusEsa=ap.map((v,i)=>esa[i]!==null?Math.abs(v-esa[i]):null);
+    const validStart=apMinusEsa.findIndex(v=>v!==null);
+    const dInput=apMinusEsa.slice(validStart);
+    const dSeries=calcEMASeries(dInput, n1);
+    // rebuild d aligned to original length
+    const d=new Array(validStart).fill(null).concat(dSeries);
+    // ci = (ap - esa) / (0.015 * d)
+    const ci=ap.map((v,i)=>{
+      if(esa[i]===null||d[i]===null||d[i]===0) return null;
+      return (v-esa[i])/(0.015*d[i]);
+    });
+    // tci = EMA(ci, n2)  — strip leading nulls first
+    const ciStart=ci.findIndex(v=>v!==null);
+    const tciSeries=calcEMASeries(ci.slice(ciStart), n2);
+    const wt1Series=new Array(ciStart).fill(null).concat(tciSeries);
+    // wt2 = SMA(wt1, 4)
+    const wt1Last=wt1Series.filter(v=>v!==null);
+    const wt1=wt1Last.length?parseFloat(wt1Last[wt1Last.length-1].toFixed(2)):null;
+    const wt2=wt1Last.length>=4?parseFloat(smaLast(wt1Last,4).toFixed(2)):null;
+    // Detect cross — check candle[n-2] vs candle[n-1] (confirmed, not just current)
+    // Require wt1 to have actually crossed wt2 with separation > 0.5 to avoid noise
+    let crossed=false, crossType=null;
+    if(wt1Last.length>=6 && wt2!==null){
+      // current bar values
+      const curWt1=wt1Last[wt1Last.length-1];
+      const curWt2=smaLast(wt1Last,4);
+      // previous bar values (1 candle back)
+      const prevWt1=wt1Last[wt1Last.length-2];
+      const prevWt2=smaLast(wt1Last.slice(0,-1),4);
+      // bar before that (2 candles back — to confirm cross happened last bar)
+      const prev2Wt1=wt1Last[wt1Last.length-3];
+      const prev2Wt2=smaLast(wt1Last.slice(0,-2),4);
+      if(prevWt1!==null&&prevWt2!==null&&prev2Wt1!==null&&prev2Wt2!==null){
+        // Bullish cross: 2 bars ago wt1 was below wt2, last bar wt1 crossed above wt2
+        // AND current bar wt1 still above wt2 (confirmation), AND both in oversold territory
+        const bullishCross = prev2Wt1<prev2Wt2 && prevWt1>prevWt2 && curWt1>curWt2;
+        // Bearish cross: 2 bars ago wt1 was above wt2, last bar crossed below
+        const bearishCross = prev2Wt1>prev2Wt2 && prevWt1<prevWt2 && curWt1<curWt2;
+        // Minimum separation to filter noise (WT scale is ~-100 to 100)
+        const separation=Math.abs(curWt1-curWt2);
+        if(separation>=0.5){
+          if(bullishCross){ crossed=true; crossType='bullish'; }
+          else if(bearishCross){ crossed=true; crossType='bearish'; }
+        }
+      }
+    }
+    return{wt1,wt2,crossed,crossType};
+  }
+
+  // ── Fetch crypto from Binance (futures first, spot fallback) ──
+  async function fetchCryptoData(symbol){
+    // Helper to process raw kline array into indicators
+    function processKlines(c){
+      if(!c||c.length<60) return null;
+      const highs=c.map(x=>parseFloat(x[2]));
+      const lows=c.map(x=>parseFloat(x[3]));
+      const closes=c.map(x=>parseFloat(x[4]));
+      const volumes=c.map(x=>parseFloat(x[5]));
+      const price=closes[closes.length-1];
+      const ema200=calcEMA(closes,200);
+      const wt=calcWaveTrend(highs,lows,closes);
+      const rsiCombo=calcRSICombo(closes);
+      return{
+        price,
+        rsi:rsiCombo?rsiCombo.rsi:null,
+        rsiCombo,
+        ema200,
+        ema50:calcEMA(closes,50),
+        volSpike:calcVolSpike(volumes),
+        vsEma200:ema200?parseFloat(((price/ema200-1)*100).toFixed(2)):null,
+        wt1:wt.wt1,wt2:wt.wt2,
+        wtCrossed:wt.crossed,wtCrossType:wt.crossType,
+        type:'crypto'
+      };
+    }
+    // Try futures first
+    try{
+      const res=await fetch('https://fapi.binance.com/fapi/v1/klines?symbol='+symbol+'USDT&interval='+selectedTF.interval+'&limit='+selectedTF.limit);
+      if(res.ok){
+        const c=await res.json();
+        const result=processKlines(c);
+        if(result) return result;
+      }
+    }catch(e){}
+    // Fallback to spot (covers SHIB, PEPE, etc. not on futures)
+    try{
+      const res=await fetch('https://api.binance.com/api/v3/klines?symbol='+symbol+'USDT&interval='+selectedTF.interval+'&limit='+selectedTF.limit);
+      if(res.ok){
+        const c=await res.json();
+        return processKlines(c);
+      }
+    }catch(e){}
+    return null;
+  }
+
+  // ── Fetch liquidation data from Binance ──────────
+  async function fetchLiqData(symbol){
+    try{
+      const [oiRes,frRes,prRes]=await Promise.all([
+        fetch('https://fapi.binance.com/fapi/v1/openInterest?symbol='+symbol+'USDT'),
+        fetch('https://fapi.binance.com/fapi/v1/fundingRate?symbol='+symbol+'USDT&limit=1'),
+        fetch('https://fapi.binance.com/fapi/v1/ticker/price?symbol='+symbol+'USDT')
+      ]);
+      if(!oiRes.ok||!frRes.ok||!prRes.ok) return null;
+      const oi=await oiRes.json();
+      const fr=await frRes.json();
+      const pr=await prRes.json();
+      const price=parseFloat(pr.price);
+      const fundingRate=parseFloat(fr[0]?.fundingRate||0);
+      const openInterest=parseFloat(oi.openInterest);
+      const absFR=Math.abs(fundingRate);
+      let lev=absFR>0.003?25:absFR>0.001?15:absFR>0.0005?10:absFR>0.0002?7:5;
+      const longDist=fundingRate>=0?1/lev:1/(lev*0.6);
+      const shortDist=fundingRate<0?1/lev:1/(lev*0.6);
+      const longLiq=price*(1-longDist);
+      const shortLiq=price*(1+shortDist);
+      const distLong=parseFloat(((price-longLiq)/price*100).toFixed(2));
+      const distShort=parseFloat(((shortLiq-price)/price*100).toFixed(2));
+      const nearLong=distLong<=12;
+      const nearShort=distShort<=12;
+      const bias=fundingRate>0.0005?'LONGS_CROWDED':fundingRate<-0.0005?'SHORTS_CROWDED':'NEUTRAL';
+      return{price,fundingRate,openInterest,longLiq:longLiq.toFixed(4),shortLiq:shortLiq.toFixed(4),
+        distLong,distShort,nearLong,nearShort,bias,
+        alert:nearLong||nearShort,alertType:nearLong?'NEAR_LONG_LIQ':'NEAR_SHORT_LIQ'};
+    }catch(e){return null;}
+  }
+
+  // ── Fetch stocks from Render backend ─────────────
+  async function fetchStocksBatch(symbols){
+    try{
+      const res=await fetch(BACKEND+'/stocks?symbols='+symbols.join(','),{signal:AbortSignal.timeout(20000)});
+      if(!res.ok) return {};
+      const data=await res.json();
+      Object.keys(data).forEach(k=>{data[k].type='stock';});
+      return data;
+    }catch(e){console.log('Backend error:',e.message);return{};}
+  }
+
+  // ── Fetch market cap from Yahoo Finance (free, no key) ──
+  async function fetchMarketCaps(symbols){
+    const caps={};
+    await Promise.all(symbols.map(async sym=>{
+      try{
+        const url='https://query2.finance.yahoo.com/v8/finance/chart/'+sym+'?interval=1d&range=1d';
+        const res=await fetch(url,{signal:AbortSignal.timeout(8000)});
+        if(!res.ok) return;
+        const data=await res.json();
+        const mc=data?.chart?.result?.[0]?.meta?.marketCap;
+        if(mc) caps[sym]=mc;
+      }catch(e){}
+    }));
+    return caps;
+  }
+  async function wakeBackend(){
+    const maxWait=75000; // 75 seconds max
+    const interval=5000; // retry every 5 seconds
+    const start=Date.now();
+    let attempt=0;
+    while(Date.now()-start<maxWait){
+      attempt++;
+      const elapsed=Math.round((Date.now()-start)/1000);
+      document.getElementById('loadingStatus').textContent=
+        attempt===1
+          ? 'Waking stock data server (Render free tier sleeps — please wait up to 60s)...'
+          : `Still waking server... (${elapsed}s elapsed, retrying)`;
+      try{
+        const res=await fetch(BACKEND+'/health',{signal:AbortSignal.timeout(interval)});
+        if(res.ok){
+          document.getElementById('loadingStatus').textContent='Stock server is online! Fetching data...';
+          return true;
+        }
+      }catch(e){}
+      await new Promise(r=>setTimeout(r,1000));
+    }
+    return false;
+  }
+
+  // ── Fetch Reddit sentiment ────────────────────────
+  async function fetchRedditSentiment(symbols){
+    const sentimentMap={};
+    const topSymbols=symbols.slice(0,20);
+    const bullish=['moon','pump','bullish','buy','long','breakout','surge','rally','up','gain','beat','upgrade','outperform','oversold','accumulate','undervalued','strong','ath','breakout'];
+    const bearish=['dump','bearish','sell','short','crash','drop','down','fall','loss','rug','miss','downgrade','overbought','overvalued','weak','avoid','layoffs','scam','fraud'];
+    await Promise.all(topSymbols.map(async sym=>{
+      try{
+        const url='https://www.reddit.com/search.json?q='+encodeURIComponent(sym)+'&sort=hot&limit=20&t=week';
+        const res=await fetch(url,{headers:{'User-Agent':'ApexScanner/1.0'}});
+        if(!res.ok) return;
+        const data=await res.json();
+        const posts=data?.data?.children||[];
+        let b=0,bear=0,total=posts.length,ups=0;
+        posts.forEach(p=>{
+          const text=(p.data.title||'').toLowerCase();
+          const u=p.data.ups||0;
+          ups+=u;
+          bullish.forEach(w=>{if(text.includes(w))b+=1+(u>100?1:0);});
+          bearish.forEach(w=>{if(text.includes(w))bear+=1+(u>100?1:0);});
+        });
+        const score=b-bear;
+        sentimentMap[sym]={
+          label:score>1?'BULLISH':score<-1?'BEARISH':'NEUTRAL',
+          emoji:score>1?'green':score<-1?'red':'yellow',
+          posts:total,ups
+        };
+      }catch(e){}
+    }));
+    return sentimentMap;
+  }
+
+
 
   // ── Main scan ─────────────────────────────────────
   async function runScan() {
@@ -728,394 +1132,6 @@
       allTickers=allTickers.filter(t=>{if(seen.has(t.symbol))return false;seen.add(t.symbol);return true;});
 
       const marketsList=selectedMarkets.map(m=>MARKET_TICKERS[m]?.label).join(', ');
-      const BACKEND='https://apex-backend-k8kw.onrender.com';
-
-      // ── RSI Combo [by Marco] exact implementation ────────
-      // RMA (Rolling Moving Average) = Pine's rma() — same as Wilder's smoothing
-      function calcRMASeries(src, period){
-        const out=new Array(src.length).fill(null);
-        // seed with SMA of first `period` values
-        let sum=0, count=0;
-        for(let i=0;i<src.length;i++){
-          if(src[i]===null||src[i]===undefined) continue;
-          sum+=src[i]; count++;
-          if(count===period){
-            out[i]=sum/period;
-          } else if(count>period){
-            const prev=out[i-1];
-            out[i]=(prev*(period-1)+src[i])/period;
-          }
-        }
-        return out;
-      }
-
-      // RSI using RMA (matches Pine's rsi() exactly)
-      // up = rma(max(change(src),0), len)
-      // down = rma(-min(change(src),0), len)
-      // rsi = down==0 ? 100 : up==0 ? 0 : 100-(100/(1+up/down))
-      function calcRSIComboSeries(closes, len=14){
-        const n=closes.length;
-        const changes=new Array(n).fill(null);
-        for(let i=1;i<n;i++) changes[i]=closes[i]-closes[i-1];
-        const gains=changes.map(v=>v===null?null:Math.max(v,0));
-        const losses=changes.map(v=>v===null?null:Math.max(-v,0));
-        const upSeries=calcRMASeries(gains,len);
-        const downSeries=calcRMASeries(losses,len);
-        const rsiSeries=upSeries.map((up,i)=>{
-          if(up===null) return null;
-          const down=downSeries[i];
-          if(down===0) return 100;
-          if(up===0) return 0;
-          return 100-(100/(1+up/down));
-        });
-        return{rsiSeries,upSeries,downSeries};
-      }
-
-      // SMA series
-      function calcSMASeries(src, period){
-        const out=new Array(src.length).fill(null);
-        for(let i=period-1;i<src.length;i++){
-          if(src[i]===null) continue;
-          let s=0,c=0;
-          for(let j=i-period+1;j<=i;j++){if(src[j]!==null){s+=src[j];c++;}}
-          if(c===period) out[i]=s/period;
-        }
-        return out;
-      }
-
-      // Momentum: mom(src, length) = src - src[length]
-      function calcMomSeries(src, period){
-        const out=new Array(src.length).fill(null);
-        for(let i=period;i<src.length;i++){
-          if(src[i]!==null&&src[i-period]!==null) out[i]=src[i]-src[i-period];
-        }
-        return out;
-      }
-
-      // Full RSI Combo — returns all signals from Marco's script
-      function calcRSICombo(closes){
-        const n=closes.length;
-        if(n<60) return null;
-
-        // ── Core RSI (RMA-based) ──
-        const {rsiSeries,upSeries,downSeries}=calcRSIComboSeries(closes,14);
-
-        // ── ADX of RSI ──
-        // sum = up + down
-        // adx = 100 * rma(abs(up-down)/(sum==0?1:sum), 6)
-        const adxInput=upSeries.map((up,i)=>{
-          if(up===null||downSeries[i]===null) return null;
-          const sum=up+downSeries[i];
-          return Math.abs(up-downSeries[i])/(sum===0?1:sum);
-        });
-        const adxRma=calcRMASeries(adxInput,6);
-        const adxSeries=adxRma.map(v=>v===null?null:100*v);
-
-        // ── Momentum of ADX ──
-        const amSeries=calcMomSeries(adxSeries,5);  // am = mom(adx,5)
-        const rsiMom6=calcMomSeries(rsiSeries,6);    // mom(rsi,6)
-
-        // ── RSI Exhaustion signals ──
-        // mup:  rsi<42 AND am>0 AND mom(rsi,6)<0  → oversold exhaustion (bullish)
-        // mdown: rsi>58 AND am>0 AND mom(rsi,6)>0 → overbought exhaustion (bearish)
-        const last=n-1;
-        const rsi=rsiSeries[last];
-        const am=amSeries[last];
-        const rsiM6=rsiMom6[last];
-        const mup=rsi!==null&&am!==null&&rsiM6!==null && rsi<42&&am>0&&rsiM6<0;
-        const mdown=rsi!==null&&am!==null&&rsiM6!==null && rsi>58&&am>0&&rsiM6>0;
-
-        // ── RSS — Relative Spread Strength ──
-        // E1=ema(close,10), E2=ema(close,40)
-        // Spread=E1-E2, RS=rsi(Spread,5), Smooth=sma(RS,3)
-        const e1=calcEMASeries(closes,10);
-        const e2=calcEMASeries(closes,40);
-        const spread=e1.map((v,i)=>v!==null&&e2[i]!==null?v-e2[i]:null);
-        const spreadCloses=spread.filter(v=>v!==null);
-        const {rsiSeries:rsSeries}=calcRSIComboSeries(spreadCloses,5);
-        const rsSmoothRaw=calcSMASeries(rsSeries,3);
-        const smooth=rsSmoothRaw.filter(v=>v!==null);
-        const smoothVal=smooth.length?smooth[smooth.length-1]:null;
-        // Fill signals: smooth<18 → oversold zone, smooth>82 → overbought zone
-        const rssOversold=smoothVal!==null&&smoothVal<18;
-        const rssOverbought=smoothVal!==null&&smoothVal>82;
-
-        // ── Swing 350 ──
-        // rs=rsi(close,3), mrs=sma(rs,3)
-        // BUY:  crossunder(sma(rs,3), 20) → mrs just crossed below 20
-        // SELL: crossover(sma(rs,3), 80)  → mrs just crossed above 80
-        const {rsiSeries:rs3Series}=calcRSIComboSeries(closes,3);
-        const mrs=calcSMASeries(rs3Series,3);
-        const mrsLast=mrs[last];
-        const mrsPrev=mrs[last-1];
-        const swing350Buy=mrsLast!==null&&mrsPrev!==null&&mrsPrev>=20&&mrsLast<20;
-        const swing350Sell=mrsLast!==null&&mrsPrev!==null&&mrsPrev<=80&&mrsLast>80;
-
-        return{
-          rsi:rsi!==null?parseFloat(rsi.toFixed(1)):null,
-          adx:adxSeries[last]!==null?parseFloat(adxSeries[last].toFixed(1)):null,
-          am:am!==null?parseFloat(am.toFixed(2)):null,
-          mup,    // RSI down-exhaustion bullish signal
-          mdown,  // RSI up-exhaustion bearish signal
-          smoothRSS:smoothVal!==null?parseFloat(smoothVal.toFixed(1)):null,
-          rssOversold,
-          rssOverbought,
-          swing350Buy,
-          swing350Sell,
-          mrs:mrsLast!==null?parseFloat(mrsLast.toFixed(1)):null
-        };
-      }
-
-      // Simple RSI (kept for backward compat with stock backend data)
-      function calcRSI(closes,period){
-        const {rsiSeries}=calcRSIComboSeries(closes,period);
-        const valid=rsiSeries.filter(v=>v!==null);
-        return valid.length?parseFloat(valid[valid.length-1].toFixed(1)):null;
-      }
-
-      // EMA returning full series (needed for WaveTrend chained EMAs)
-      function calcEMASeries(src, period){
-        if(!src||src.length<period) return [];
-        const k=2/(period+1);
-        const out=new Array(src.length).fill(null);
-        // seed with SMA of first `period` values
-        let seed=0; for(let i=0;i<period;i++) seed+=src[i];
-        out[period-1]=seed/period;
-        for(let i=period;i<src.length;i++) out[i]=src[i]*k+out[i-1]*(1-k);
-        return out;
-      }
-
-      // SMA of last N values of a series
-      function smaLast(series, period){
-        const valid=series.filter(v=>v!==null);
-        if(valid.length<period) return null;
-        const last=valid.slice(-period);
-        return last.reduce((a,b)=>a+b,0)/period;
-      }
-
-      function calcEMA(closes,period){
-        const s=calcEMASeries(closes,period);
-        const last=s.filter(v=>v!==null);
-        return last.length?parseFloat(last[last.length-1].toFixed(4)):null;
-      }
-
-      function calcVolSpike(vols){
-        if(!vols||vols.length<20) return null;
-        const avg=vols.slice(-20,-1).reduce((a,b)=>a+b,0)/19;
-        return avg>0?parseFloat((vols[vols.length-1]/avg).toFixed(2)):null;
-      }
-
-      // ── WaveTrend [LazyBear] exact implementation ────
-      // n1=10 (Channel Length), n2=21 (Average Length)
-      // ap  = hlc3
-      // esa = ema(ap, n1)
-      // d   = ema(abs(ap - esa), n1)
-      // ci  = (ap - esa) / (0.015 * d)
-      // tci = ema(ci, n2)
-      // wt1 = tci
-      // wt2 = sma(wt1, 4)
-      function calcWaveTrend(highs, lows, closes, n1=10, n2=21){
-        if(!highs||closes.length<n1+n2+4) return {wt1:null,wt2:null,crossed:false,crossType:null};
-        // hlc3
-        const ap=closes.map((c,i)=>(highs[i]+lows[i]+c)/3);
-        // esa = EMA(ap, n1)
-        const esa=calcEMASeries(ap, n1);
-        // d = EMA(|ap - esa|, n1)
-        const apMinusEsa=ap.map((v,i)=>esa[i]!==null?Math.abs(v-esa[i]):null);
-        const validStart=apMinusEsa.findIndex(v=>v!==null);
-        const dInput=apMinusEsa.slice(validStart);
-        const dSeries=calcEMASeries(dInput, n1);
-        // rebuild d aligned to original length
-        const d=new Array(validStart).fill(null).concat(dSeries);
-        // ci = (ap - esa) / (0.015 * d)
-        const ci=ap.map((v,i)=>{
-          if(esa[i]===null||d[i]===null||d[i]===0) return null;
-          return (v-esa[i])/(0.015*d[i]);
-        });
-        // tci = EMA(ci, n2)  — strip leading nulls first
-        const ciStart=ci.findIndex(v=>v!==null);
-        const tciSeries=calcEMASeries(ci.slice(ciStart), n2);
-        const wt1Series=new Array(ciStart).fill(null).concat(tciSeries);
-        // wt2 = SMA(wt1, 4)
-        const wt1Last=wt1Series.filter(v=>v!==null);
-        const wt1=wt1Last.length?parseFloat(wt1Last[wt1Last.length-1].toFixed(2)):null;
-        const wt2=wt1Last.length>=4?parseFloat(smaLast(wt1Last,4).toFixed(2)):null;
-        // Detect cross — check candle[n-2] vs candle[n-1] (confirmed, not just current)
-        // Require wt1 to have actually crossed wt2 with separation > 0.5 to avoid noise
-        let crossed=false, crossType=null;
-        if(wt1Last.length>=6 && wt2!==null){
-          // current bar values
-          const curWt1=wt1Last[wt1Last.length-1];
-          const curWt2=smaLast(wt1Last,4);
-          // previous bar values (1 candle back)
-          const prevWt1=wt1Last[wt1Last.length-2];
-          const prevWt2=smaLast(wt1Last.slice(0,-1),4);
-          // bar before that (2 candles back — to confirm cross happened last bar)
-          const prev2Wt1=wt1Last[wt1Last.length-3];
-          const prev2Wt2=smaLast(wt1Last.slice(0,-2),4);
-          if(prevWt1!==null&&prevWt2!==null&&prev2Wt1!==null&&prev2Wt2!==null){
-            // Bullish cross: 2 bars ago wt1 was below wt2, last bar wt1 crossed above wt2
-            // AND current bar wt1 still above wt2 (confirmation), AND both in oversold territory
-            const bullishCross = prev2Wt1<prev2Wt2 && prevWt1>prevWt2 && curWt1>curWt2;
-            // Bearish cross: 2 bars ago wt1 was above wt2, last bar crossed below
-            const bearishCross = prev2Wt1>prev2Wt2 && prevWt1<prevWt2 && curWt1<curWt2;
-            // Minimum separation to filter noise (WT scale is ~-100 to 100)
-            const separation=Math.abs(curWt1-curWt2);
-            if(separation>=0.5){
-              if(bullishCross){ crossed=true; crossType='bullish'; }
-              else if(bearishCross){ crossed=true; crossType='bearish'; }
-            }
-          }
-        }
-        return{wt1,wt2,crossed,crossType};
-      }
-
-      // ── Fetch crypto from Binance ────────────────────
-      async function fetchCryptoData(symbol){
-        try{
-          const res=await fetch('https://fapi.binance.com/fapi/v1/klines?symbol='+symbol+'USDT&interval='+selectedTF.interval+'&limit='+selectedTF.limit);
-          if(!res.ok) return null;
-          const c=await res.json();
-          if(!c||c.length<60) return null;
-          const highs=c.map(x=>parseFloat(x[2]));
-          const lows=c.map(x=>parseFloat(x[3]));
-          const closes=c.map(x=>parseFloat(x[4]));
-          const volumes=c.map(x=>parseFloat(x[5]));
-          const price=closes[closes.length-1];
-          const ema200=calcEMA(closes,200);
-          const ema50=calcEMA(closes,50);
-          const wt=calcWaveTrend(highs,lows,closes);
-          const rsiCombo=calcRSICombo(closes);
-          return{
-            price,
-            rsi:rsiCombo?rsiCombo.rsi:null,
-            rsiCombo,
-            ema200,ema50,
-            volSpike:calcVolSpike(volumes),
-            vsEma200:ema200?parseFloat(((price/ema200-1)*100).toFixed(2)):null,
-            wt1:wt.wt1,
-            wt2:wt.wt2,
-            wtCrossed:wt.crossed,
-            wtCrossType:wt.crossType,
-            type:'crypto'
-          };
-        }catch(e){return null;}
-      }
-
-      // ── Fetch liquidation data from Binance ──────────
-      async function fetchLiqData(symbol){
-        try{
-          const [oiRes,frRes,prRes]=await Promise.all([
-            fetch('https://fapi.binance.com/fapi/v1/openInterest?symbol='+symbol+'USDT'),
-            fetch('https://fapi.binance.com/fapi/v1/fundingRate?symbol='+symbol+'USDT&limit=1'),
-            fetch('https://fapi.binance.com/fapi/v1/ticker/price?symbol='+symbol+'USDT')
-          ]);
-          if(!oiRes.ok||!frRes.ok||!prRes.ok) return null;
-          const oi=await oiRes.json();
-          const fr=await frRes.json();
-          const pr=await prRes.json();
-          const price=parseFloat(pr.price);
-          const fundingRate=parseFloat(fr[0]?.fundingRate||0);
-          const openInterest=parseFloat(oi.openInterest);
-          const absFR=Math.abs(fundingRate);
-          let lev=absFR>0.003?25:absFR>0.001?15:absFR>0.0005?10:absFR>0.0002?7:5;
-          const longDist=fundingRate>=0?1/lev:1/(lev*0.6);
-          const shortDist=fundingRate<0?1/lev:1/(lev*0.6);
-          const longLiq=price*(1-longDist);
-          const shortLiq=price*(1+shortDist);
-          const distLong=parseFloat(((price-longLiq)/price*100).toFixed(2));
-          const distShort=parseFloat(((shortLiq-price)/price*100).toFixed(2));
-          const nearLong=distLong<=12;
-          const nearShort=distShort<=12;
-          const bias=fundingRate>0.0005?'LONGS_CROWDED':fundingRate<-0.0005?'SHORTS_CROWDED':'NEUTRAL';
-          return{price,fundingRate,openInterest,longLiq:longLiq.toFixed(4),shortLiq:shortLiq.toFixed(4),
-            distLong,distShort,nearLong,nearShort,bias,
-            alert:nearLong||nearShort,alertType:nearLong?'NEAR_LONG_LIQ':'NEAR_SHORT_LIQ'};
-        }catch(e){return null;}
-      }
-
-      // ── Fetch stocks from Render backend ─────────────
-      async function fetchStocksBatch(symbols){
-        try{
-          const res=await fetch(BACKEND+'/stocks?symbols='+symbols.join(','),{signal:AbortSignal.timeout(20000)});
-          if(!res.ok) return {};
-          const data=await res.json();
-          Object.keys(data).forEach(k=>{data[k].type='stock';});
-          return data;
-        }catch(e){console.log('Backend error:',e.message);return{};}
-      }
-
-      // ── Fetch market cap from Yahoo Finance (free, no key) ──
-      async function fetchMarketCaps(symbols){
-        const caps={};
-        await Promise.all(symbols.map(async sym=>{
-          try{
-            const url='https://query2.finance.yahoo.com/v8/finance/chart/'+sym+'?interval=1d&range=1d';
-            const res=await fetch(url,{signal:AbortSignal.timeout(8000)});
-            if(!res.ok) return;
-            const data=await res.json();
-            const mc=data?.chart?.result?.[0]?.meta?.marketCap;
-            if(mc) caps[sym]=mc;
-          }catch(e){}
-        }));
-        return caps;
-      }
-      async function wakeBackend(){
-        const maxWait=75000; // 75 seconds max
-        const interval=5000; // retry every 5 seconds
-        const start=Date.now();
-        let attempt=0;
-        while(Date.now()-start<maxWait){
-          attempt++;
-          const elapsed=Math.round((Date.now()-start)/1000);
-          document.getElementById('loadingStatus').textContent=
-            attempt===1
-              ? 'Waking stock data server (Render free tier sleeps — please wait up to 60s)...'
-              : `Still waking server... (${elapsed}s elapsed, retrying)`;
-          try{
-            const res=await fetch(BACKEND+'/health',{signal:AbortSignal.timeout(interval)});
-            if(res.ok){
-              document.getElementById('loadingStatus').textContent='Stock server is online! Fetching data...';
-              return true;
-            }
-          }catch(e){}
-          await new Promise(r=>setTimeout(r,1000));
-        }
-        return false;
-      }
-
-      // ── Fetch Reddit sentiment ────────────────────────
-      async function fetchRedditSentiment(symbols){
-        const sentimentMap={};
-        const topSymbols=symbols.slice(0,20);
-        const bullish=['moon','pump','bullish','buy','long','breakout','surge','rally','up','gain','beat','upgrade','outperform','oversold','accumulate','undervalued','strong','ath','breakout'];
-        const bearish=['dump','bearish','sell','short','crash','drop','down','fall','loss','rug','miss','downgrade','overbought','overvalued','weak','avoid','layoffs','scam','fraud'];
-        await Promise.all(topSymbols.map(async sym=>{
-          try{
-            const url='https://www.reddit.com/search.json?q='+encodeURIComponent(sym)+'&sort=hot&limit=20&t=week';
-            const res=await fetch(url,{headers:{'User-Agent':'ApexScanner/1.0'}});
-            if(!res.ok) return;
-            const data=await res.json();
-            const posts=data?.data?.children||[];
-            let b=0,bear=0,total=posts.length,ups=0;
-            posts.forEach(p=>{
-              const text=(p.data.title||'').toLowerCase();
-              const u=p.data.ups||0;
-              ups+=u;
-              bullish.forEach(w=>{if(text.includes(w))b+=1+(u>100?1:0);});
-              bearish.forEach(w=>{if(text.includes(w))bear+=1+(u>100?1:0);});
-            });
-            const score=b-bear;
-            sentimentMap[sym]={
-              label:score>1?'BULLISH':score<-1?'BEARISH':'NEUTRAL',
-              emoji:score>1?'green':score<-1?'red':'yellow',
-              posts:total,ups
-            };
-          }catch(e){}
-        }));
-        return sentimentMap;
-      }
-
       // ── Main data fetch ───────────────────────────────
       const realData={};
       const cryptoTickers=allTickers.filter(t=>t.type==='crypto');
@@ -1239,21 +1255,23 @@
       document.getElementById('loadingStatus').textContent=realCount+' assets scanned ('+stockReal+' stocks real data) on '+selectedTF.label+'. '+qualified.length+' qualify. Sending to AI...';
       await new Promise(r=>setTimeout(r,300));
 
-      // Build AI prompt with real data
-      const hasRealData=qualified.length>0;
-      const aiTickers=hasRealData
-        ? qualified.map(q=>{
+      // Build AI prompt — only with real qualified data, never fall back to AI picking
+      if(qualified.length===0){
+        document.getElementById('loading').classList.remove('visible');
+        document.getElementById('setupPanel').style.display='block';
+        showError('No assets qualified with real data on '+selectedTF.label+'. Try loosening your thresholds or selecting more indicators.');
+        return;
+      }
+
+      const aiTickers=qualified.map(q=>{
             const rc=q.d.rsiCombo;
             const rsiInfo=rc
               ? `RSI:${rc.rsi},ADX:${rc.adx},mup:${rc.mup},mdown:${rc.mdown},RSSsmooth:${rc.smoothRSS},Swing350Buy:${rc.swing350Buy},Swing350Sell:${rc.swing350Sell}`
               : `RSI:${q.d.rsi}`;
             return `${q.symbol}(WT1:${q.d.wt1},WT2:${q.d.wt2},WTCross:${q.d.wtCrossed?q.d.wtCrossType:'none'},${rsiInfo},vsEMA200:${q.d.vsEma200}%,VolSpike:${q.d.volSpike}x${q.liq?',LiqZone:'+q.liq.distLong+'%away':''})`;
-          }).join(',')
-        : allTickers.slice(0,50).map(t=>t.symbol).join(',');
+          }).join(',');
 
-      const dataNote=hasRealData
-        ? `The following ${qualified.length} assets have REAL live calculated data on the ${selectedTF.label} timeframe and already pass all screening criteria. Your job is ONLY to format them as JSON — do NOT add, remove or reorder assets, do NOT invent new ones:`
-        : `WARNING: No live data retrieved. Estimate from training knowledge for ${marketsList} on ${selectedTF.label} timeframe. Flag as estimates.`;
+      const dataNote=`The following ${qualified.length} assets have REAL live calculated data on the ${selectedTF.label} timeframe and already pass all screening criteria. Your job is ONLY to format them as JSON — do NOT add, remove or reorder assets, do NOT invent new ones:`;
 
       document.getElementById('loadingStatus').textContent=`Formatting ${qualified.length} qualified assets with AI...`;
 
@@ -1332,9 +1350,10 @@ Rules:
           a.signals=q.sigs.map(s=>s.includes(':')?s.split(':').slice(1).join(':'):s);
         }
         // Always stamp correct timeframe — never trust AI on this
-        a.timeframe=selectedTF.label;
+        a.timeframe = selectedTF.label;
       });
       parsed.forEach(function(a){
+        a.timeframe = selectedTF.label; // enforce again after real data attachment
         // Tag whether this has real live data or is AI-estimated
         const rd=realData[a.symbol];
         if(rd){
@@ -1403,14 +1422,12 @@ Be direct and specific. Reference the actual assets and numbers above. No discla
       document.getElementById('statMod').textContent=allAlerts.length-strong;
       document.getElementById('statEngine').textContent=engineName;
       // Simple markdown renderer for the summary
-      function renderMarkdown(text) {
-        return text
+      const renderMarkdown = text => text
           .replace(/^#{1,3}\s+(.+)$/gm, '<strong style="font-family:Orbitron,monospace;font-size:11px;color:var(--accent);letter-spacing:1px;">$1</strong>')
           .replace(/\*\*(.+?)\*\*/g, '<strong style="color:var(--strong);">$1</strong>')
           .replace(/\*(.+?)\*/g, '<em>$1</em>')
           .replace(/\n\n/g, '<br><br>')
           .replace(/\n/g, '<br>');
-      }
       document.getElementById('aiSummaryText').innerHTML = renderMarkdown(summary);
       document.getElementById('aiSummary').classList.add('visible');
 
