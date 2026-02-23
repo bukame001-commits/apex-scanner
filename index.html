@@ -1252,43 +1252,29 @@
         : allTickers.slice(0,50).map(t=>t.symbol).join(',');
 
       const dataNote=hasRealData
-        ? `The following assets have REAL live data (from Binance/Finnhub) and pre-qualify based on the criteria above:`
-        : `WARNING: No live data was retrieved. These are ${marketsList} tickers. Use your training knowledge to estimate which are most likely oversold on weekly charts as of today. Be explicit that these are estimates.`;
+        ? `The following ${qualified.length} assets have REAL live calculated data on the ${selectedTF.label} timeframe and already pass all screening criteria. Your job is ONLY to format them as JSON — do NOT add, remove or reorder assets, do NOT invent new ones:`
+        : `WARNING: No live data retrieved. Estimate from training knowledge for ${marketsList} on ${selectedTF.label} timeframe. Flag as estimates.`;
 
-      document.getElementById('loadingStatus').textContent=`Analyzing ${allTickers.length} assets across ${selectedMarkets.length} market(s)...`;
+      document.getElementById('loadingStatus').textContent=`Formatting ${qualified.length} qualified assets with AI...`;
 
-      const prompt=`You are an expert technical analyst. Today is ${new Date().toDateString()}.
-Market scope: ${marketsList}
+      const prompt=`You are a technical analyst formatter. Today is ${new Date().toDateString()}.
+Timeframe: ${selectedTF.label}
+Market: ${marketsList}
 
-SCREENING CRITERIA:
-- Indicators: ${selectedInds.join(', ')}
-- WaveTrend [LazyBear]: osLevel1=-60 (deeply oversold), osLevel2=${wtT} (oversold), obLevel1=60 (deeply overbought), obLevel2=53
-- A bullish WT cross (wt1 crosses above wt2 while both below 0) is a strong buy signal
-- RSI Combo [Marco]: RMA-based RSI(14)
-  * RSI Down-Exhaustion (mup): RSI<42 AND ADX-momentum>0 AND RSI-momentum<0 → bullish reversal
-  * RSI Up-Exhaustion (mdown): RSI>58 AND ADX-momentum>0 AND RSI-momentum>0 → bearish reversal
-  * RSS Oversold: EMA spread RSI smooth < 18 → bullish
-  * RSS Overbought: EMA spread RSI smooth > 82 → bearish
-  * Swing 350 BUY: SMA(RSI3,3) crosses below 20
-  * Swing 350 SELL: SMA(RSI3,3) crosses above 80
-- RSI oversold threshold: ${rsiT}
-- Volume spike: ${volT} above average
-- Minimum signals to qualify: ${minT} of ${selectedInds.length}
-
+These assets passed REAL screening on the ${selectedTF.label} timeframe:
 ${dataNote}
 ${aiTickers}
 
-Identify assets from ${marketsList} MOST LIKELY showing oversold weekly conditions and potential reversal setups.
+Format EACH asset above as a JSON object. Include ALL of them. Do not skip any. Do not add any not listed above.
 
-IMPORTANT: Respond with ONLY a raw JSON array. No markdown. No backticks. No explanation. Start with [ end with ]. Keep "analysis" under 12 words.
-[{"symbol":"AAPL","market":"${marketsList}","type":"stock","score":3,"signals":["WaveTrend Oversold","RSI Divergence","Volume Spike"],"wt1":-45.2,"wt2":-48.1,"rsi":32.1,"timeframe":"${selectedTF.label}","analysis":"12 words max"}]
+IMPORTANT: Respond with ONLY a raw JSON array. No markdown. No backticks. Start with [ end with ]. Keep "analysis" under 12 words.
+[{"symbol":"BTC","market":"${marketsList}","type":"crypto","score":2,"signals":["WaveTrend Oversold","Volume Spike"],"wt1":-45.2,"wt2":-48.1,"rsi":32.1,"timeframe":"${selectedTF.label}","analysis":"12 words max describing ${selectedTF.label} conditions"}]
 
 Rules:
-- Only include assets from ${marketsList} meeting at least ${minT} criteria
-- Maximum 6 results only, sorted by score descending
-- Return [] if nothing qualifies
-- Score = number of triggered indicators (max ${selectedInds.length})
-- DO NOT return crypto assets if the market is stocks, and vice versa`;
+- timeframe field MUST be "${selectedTF.label}" for every entry
+- score = number of triggered indicators from the data provided
+- analysis must reference ${selectedTF.label} chart conditions, not weekly or any other timeframe
+- Return [] only if the asset list above is empty`;
 
       document.getElementById('loadingStatus').textContent='Analyzing chart patterns...';
       const response=await callAI(prompt);
@@ -1335,7 +1321,19 @@ Rules:
         parsed=[];
       }
 
-      // Attach real data, sentiment and liq data to alerts
+      // Override AI score and timeframe with deterministic real values
+      parsed.forEach(function(a){
+        const q=qualified.find(q=>q.symbol===a.symbol);
+        if(q){
+          // Recalculate score from actual triggered indicators
+          const triggeredInds=new Set(q.sigs.map(s=>s.split(':')[0]));
+          a.score=[...triggeredInds].filter(k=>selectedInds.includes(k)).length;
+          // Always use the signals from real data, not AI guesses
+          a.signals=q.sigs.map(s=>s.includes(':')?s.split(':').slice(1).join(':'):s);
+        }
+        // Always stamp correct timeframe — never trust AI on this
+        a.timeframe=selectedTF.label;
+      });
       parsed.forEach(function(a){
         // Tag whether this has real live data or is AI-estimated
         const rd=realData[a.symbol];
