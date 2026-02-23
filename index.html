@@ -248,8 +248,8 @@
         <button class="ind-btn active" data-ind="WaveTrend" onclick="toggleInd(this)">
           <div class="ind-name">WAVETREND</div><div class="ind-desc">WT1 cross WT2 oversold</div><div class="ind-check">✓</div>
         </button>
-        <button class="ind-btn active" data-ind="RSI Divergence" onclick="toggleInd(this)">
-          <div class="ind-name">RSI + DIVERGENCE</div><div class="ind-desc">Oversold + bullish div</div><div class="ind-check">✓</div>
+        <button class="ind-btn active" data-ind="RSI Combo" onclick="toggleInd(this)">
+          <div class="ind-name">RSI COMBO</div><div class="ind-desc">🟢 green / 🔴 red dot signal</div><div class="ind-check">✓</div>
         </button>
         <button class="ind-btn" data-ind="MACD Crossover" onclick="toggleInd(this)">
           <div class="ind-name">MACD</div><div class="ind-desc">Bullish crossover</div><div class="ind-check"></div>
@@ -373,7 +373,7 @@
 <script>
   let selectedEngine = 'gemini';
   let selectedMarkets = [];
-  let selectedInds = ['WaveTrend','RSI Divergence','Bollinger Band Lower Touch','Volume Spike'];
+  let selectedInds = ['WaveTrend','RSI Combo','Bollinger Band Lower Touch','Volume Spike'];
   let allAlerts = [];
   let selectedMcap = 0; // 0 = no filter, otherwise max billion USD
 
@@ -591,7 +591,10 @@
       card.dataset.strength=isStrong?'strong':'moderate';
       const signals=a.signals||[];
       let sigsHtml='';
-      signals.forEach(function(s){ sigsHtml+='<span class="signal-tag '+getSignalClass(s)+'">'+s+'</span>'; });
+      signals.forEach(function(s){
+        const label=s.includes(':')?s.split(':').slice(1).join(':'):s;
+        sigsHtml+='<span class="signal-tag '+getSignalClass(label)+'">'+label+'</span>';
+      });
 
       // Reddit sentiment badge
       let sentHtml='';
@@ -620,7 +623,15 @@
           '</div>';
       }
 
-      // Data source badge
+      // RSI Combo badges
+      let rsiComboHtml='';
+      if(a.rsiCombo){
+        const rc=a.rsiCombo;
+        const badges=[];
+        if(rc.mup)   badges.push('<span style="font-family:Share Tech Mono,monospace;font-size:9px;padding:3px 8px;border-radius:2px;border:1px solid;color:#00ff88;border-color:rgba(0,255,136,0.4);background:rgba(0,255,136,0.08);">🟢 RSI GREEN DOT — Bullish Exhaustion</span>');
+        if(rc.mdown) badges.push('<span style="font-family:Share Tech Mono,monospace;font-size:9px;padding:3px 8px;border-radius:2px;border:1px solid;color:#ff3366;border-color:rgba(255,51,102,0.4);background:rgba(255,51,102,0.08);">🔴 RSI RED DOT — Bearish Exhaustion</span>');
+        if(badges.length) rsiComboHtml='<div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:7px;">'+badges.join('')+'</div>';
+      }
       const isLive = a.dataSource === 'live';
       const dataBadge = '<span style="font-family:Share Tech Mono,monospace;font-size:8px;padding:2px 7px;border-radius:2px;border:1px solid;margin-left:8px;'+(isLive?'color:#00ff88;border-color:rgba(0,255,136,0.4);background:rgba(0,255,136,0.06)':'color:#ffb800;border-color:rgba(255,184,0,0.4);background:rgba(255,184,0,0.06)')+'">'+(isLive?'● LIVE':'◌ AI EST')+'</span>';
 
@@ -636,6 +647,7 @@
           '</div>'+
         '</div>'+
         '<div class="alert-signals">'+sigsHtml+'</div>'+
+        rsiComboHtml+
         '<div class="alert-analysis">'+(a.analysis||'')+'</div>'+
         sentHtml+liqHtml+
         '<div class="alert-values">'+
@@ -646,6 +658,7 @@
           (a.wt2!==undefined&&a.wt2!==null?'<div class="alert-val">WT2 <span>'+a.wt2+'</span></div>':'')+
           (a.wtCrossed?'<div class="alert-val"><span style="color:'+(a.wtCrossType==='bullish'?'#00ff88':'#ff3366')+';font-weight:700;">'+(a.wtCrossType==='bullish'?'▲ BULL CROSS':'▼ BEAR CROSS')+'</span></div>':'')+
           (a.rsi!==undefined?'<div class="alert-val">RSI <span>'+a.rsi+'</span></div>':'')+
+          (a.rsiCombo&&a.rsiCombo.adx!==null?'<div class="alert-val">ADX <span style="color:var(--warn);">'+a.rsiCombo.adx+'</span></div>':'')+
           (a.timeframe?'<div class="alert-val">TF <span>'+a.timeframe+'</span></div>':'')+
         '</div>';
       c.appendChild(card);
@@ -695,12 +708,147 @@
       const marketsList=selectedMarkets.map(m=>MARKET_TICKERS[m]?.label).join(', ');
       const BACKEND='https://apex-backend-k8kw.onrender.com';
 
-      // ── Helper calculations ──────────────────────────
+      // ── RSI Combo [by Marco] exact implementation ────────
+      // RMA (Rolling Moving Average) = Pine's rma() — same as Wilder's smoothing
+      function calcRMASeries(src, period){
+        const out=new Array(src.length).fill(null);
+        // seed with SMA of first `period` values
+        let sum=0, count=0;
+        for(let i=0;i<src.length;i++){
+          if(src[i]===null||src[i]===undefined) continue;
+          sum+=src[i]; count++;
+          if(count===period){
+            out[i]=sum/period;
+          } else if(count>period){
+            const prev=out[i-1];
+            out[i]=(prev*(period-1)+src[i])/period;
+          }
+        }
+        return out;
+      }
+
+      // RSI using RMA (matches Pine's rsi() exactly)
+      // up = rma(max(change(src),0), len)
+      // down = rma(-min(change(src),0), len)
+      // rsi = down==0 ? 100 : up==0 ? 0 : 100-(100/(1+up/down))
+      function calcRSIComboSeries(closes, len=14){
+        const n=closes.length;
+        const changes=new Array(n).fill(null);
+        for(let i=1;i<n;i++) changes[i]=closes[i]-closes[i-1];
+        const gains=changes.map(v=>v===null?null:Math.max(v,0));
+        const losses=changes.map(v=>v===null?null:Math.max(-v,0));
+        const upSeries=calcRMASeries(gains,len);
+        const downSeries=calcRMASeries(losses,len);
+        const rsiSeries=upSeries.map((up,i)=>{
+          if(up===null) return null;
+          const down=downSeries[i];
+          if(down===0) return 100;
+          if(up===0) return 0;
+          return 100-(100/(1+up/down));
+        });
+        return{rsiSeries,upSeries,downSeries};
+      }
+
+      // SMA series
+      function calcSMASeries(src, period){
+        const out=new Array(src.length).fill(null);
+        for(let i=period-1;i<src.length;i++){
+          if(src[i]===null) continue;
+          let s=0,c=0;
+          for(let j=i-period+1;j<=i;j++){if(src[j]!==null){s+=src[j];c++;}}
+          if(c===period) out[i]=s/period;
+        }
+        return out;
+      }
+
+      // Momentum: mom(src, length) = src - src[length]
+      function calcMomSeries(src, period){
+        const out=new Array(src.length).fill(null);
+        for(let i=period;i<src.length;i++){
+          if(src[i]!==null&&src[i-period]!==null) out[i]=src[i]-src[i-period];
+        }
+        return out;
+      }
+
+      // Full RSI Combo — returns all signals from Marco's script
+      function calcRSICombo(closes){
+        const n=closes.length;
+        if(n<60) return null;
+
+        // ── Core RSI (RMA-based) ──
+        const {rsiSeries,upSeries,downSeries}=calcRSIComboSeries(closes,14);
+
+        // ── ADX of RSI ──
+        // sum = up + down
+        // adx = 100 * rma(abs(up-down)/(sum==0?1:sum), 6)
+        const adxInput=upSeries.map((up,i)=>{
+          if(up===null||downSeries[i]===null) return null;
+          const sum=up+downSeries[i];
+          return Math.abs(up-downSeries[i])/(sum===0?1:sum);
+        });
+        const adxRma=calcRMASeries(adxInput,6);
+        const adxSeries=adxRma.map(v=>v===null?null:100*v);
+
+        // ── Momentum of ADX ──
+        const amSeries=calcMomSeries(adxSeries,5);  // am = mom(adx,5)
+        const rsiMom6=calcMomSeries(rsiSeries,6);    // mom(rsi,6)
+
+        // ── RSI Exhaustion signals ──
+        // mup:  rsi<42 AND am>0 AND mom(rsi,6)<0  → oversold exhaustion (bullish)
+        // mdown: rsi>58 AND am>0 AND mom(rsi,6)>0 → overbought exhaustion (bearish)
+        const last=n-1;
+        const rsi=rsiSeries[last];
+        const am=amSeries[last];
+        const rsiM6=rsiMom6[last];
+        const mup=rsi!==null&&am!==null&&rsiM6!==null && rsi<42&&am>0&&rsiM6<0;
+        const mdown=rsi!==null&&am!==null&&rsiM6!==null && rsi>58&&am>0&&rsiM6>0;
+
+        // ── RSS — Relative Spread Strength ──
+        // E1=ema(close,10), E2=ema(close,40)
+        // Spread=E1-E2, RS=rsi(Spread,5), Smooth=sma(RS,3)
+        const e1=calcEMASeries(closes,10);
+        const e2=calcEMASeries(closes,40);
+        const spread=e1.map((v,i)=>v!==null&&e2[i]!==null?v-e2[i]:null);
+        const spreadCloses=spread.filter(v=>v!==null);
+        const {rsiSeries:rsSeries}=calcRSIComboSeries(spreadCloses,5);
+        const rsSmoothRaw=calcSMASeries(rsSeries,3);
+        const smooth=rsSmoothRaw.filter(v=>v!==null);
+        const smoothVal=smooth.length?smooth[smooth.length-1]:null;
+        // Fill signals: smooth<18 → oversold zone, smooth>82 → overbought zone
+        const rssOversold=smoothVal!==null&&smoothVal<18;
+        const rssOverbought=smoothVal!==null&&smoothVal>82;
+
+        // ── Swing 350 ──
+        // rs=rsi(close,3), mrs=sma(rs,3)
+        // BUY:  crossunder(sma(rs,3), 20) → mrs just crossed below 20
+        // SELL: crossover(sma(rs,3), 80)  → mrs just crossed above 80
+        const {rsiSeries:rs3Series}=calcRSIComboSeries(closes,3);
+        const mrs=calcSMASeries(rs3Series,3);
+        const mrsLast=mrs[last];
+        const mrsPrev=mrs[last-1];
+        const swing350Buy=mrsLast!==null&&mrsPrev!==null&&mrsPrev>=20&&mrsLast<20;
+        const swing350Sell=mrsLast!==null&&mrsPrev!==null&&mrsPrev<=80&&mrsLast>80;
+
+        return{
+          rsi:rsi!==null?parseFloat(rsi.toFixed(1)):null,
+          adx:adxSeries[last]!==null?parseFloat(adxSeries[last].toFixed(1)):null,
+          am:am!==null?parseFloat(am.toFixed(2)):null,
+          mup,    // RSI down-exhaustion bullish signal
+          mdown,  // RSI up-exhaustion bearish signal
+          smoothRSS:smoothVal!==null?parseFloat(smoothVal.toFixed(1)):null,
+          rssOversold,
+          rssOverbought,
+          swing350Buy,
+          swing350Sell,
+          mrs:mrsLast!==null?parseFloat(mrsLast.toFixed(1)):null
+        };
+      }
+
+      // Simple RSI (kept for backward compat with stock backend data)
       function calcRSI(closes,period){
-        if(!closes||closes.length<period+1) return null;
-        let g=0,l=0;
-        for(let i=closes.length-period;i<closes.length;i++){const d=closes[i]-closes[i-1];if(d>0)g+=d;else l+=Math.abs(d);}
-        return parseFloat((100-100/(1+(g/(l||0.0001)))).toFixed(1));
+        const {rsiSeries}=calcRSIComboSeries(closes,period);
+        const valid=rsiSeries.filter(v=>v!==null);
+        return valid.length?parseFloat(valid[valid.length-1].toFixed(1)):null;
       }
 
       // EMA returning full series (needed for WaveTrend chained EMAs)
@@ -789,7 +937,7 @@
           const res=await fetch('https://fapi.binance.com/fapi/v1/klines?symbol='+symbol+'USDT&interval=1w&limit=210');
           if(!res.ok) return null;
           const c=await res.json();
-          if(!c||c.length<50) return null;
+          if(!c||c.length<60) return null;
           const highs=c.map(x=>parseFloat(x[2]));
           const lows=c.map(x=>parseFloat(x[3]));
           const closes=c.map(x=>parseFloat(x[4]));
@@ -798,9 +946,11 @@
           const ema200=calcEMA(closes,200);
           const ema50=calcEMA(closes,50);
           const wt=calcWaveTrend(highs,lows,closes);
+          const rsiCombo=calcRSICombo(closes);
           return{
             price,
-            rsi:calcRSI(closes,14),
+            rsi:rsiCombo?rsiCombo.rsi:null,
+            rsiCombo,
             ema200,ema50,
             volSpike:calcVolSpike(volumes),
             vsEma200:ema200?parseFloat(((price/ema200-1)*100).toFixed(2)):null,
@@ -1008,27 +1158,36 @@
           if(cap && cap>=selectedMcap*1e9) return; // skip if over cap limit
         }
         const sigs=[];
-        // WaveTrend [LazyBear] — osLevel1=-60, osLevel2=-53, obLevel1=60, obLevel2=53
+        // WaveTrend [LazyBear]
         if(d.wt1!==null&&d.wt2!==null){
-          if(d.wt1<-60) sigs.push('WT Deeply Oversold ('+d.wt1+')');
-          else if(d.wt1<parseFloat(wtT)) sigs.push('WT Oversold ('+d.wt1+')');
-          if(d.wtCrossed&&d.wtCrossType==='bullish'&&d.wt1<0) sigs.push('WT Bullish Cross ('+d.wt1+')');
-          if(d.wt1>60) sigs.push('WT Deeply Overbought ('+d.wt1+')');
-          else if(d.wt1>53) sigs.push('WT Overbought ('+d.wt1+')');
-          if(d.wtCrossed&&d.wtCrossType==='bearish'&&d.wt1>0) sigs.push('WT Bearish Cross ('+d.wt1+')');
+          if(d.wt1<-60) sigs.push('WaveTrend:WT Deeply Oversold ('+d.wt1+')');
+          else if(d.wt1<parseFloat(wtT)) sigs.push('WaveTrend:WT Oversold ('+d.wt1+')');
+          if(d.wtCrossed&&d.wtCrossType==='bullish'&&d.wt1<0) sigs.push('WaveTrend:WT Bullish Cross ('+d.wt1+')');
+          if(d.wt1>60) sigs.push('WaveTrend:WT Deeply Overbought ('+d.wt1+')');
+          else if(d.wt1>53) sigs.push('WaveTrend:WT Overbought ('+d.wt1+')');
+          if(d.wtCrossed&&d.wtCrossType==='bearish'&&d.wt1>0) sigs.push('WaveTrend:WT Bearish Cross ('+d.wt1+')');
         }
-        if(d.rsi!==null&&d.rsi<parseFloat(rsiT)) sigs.push('RSI Oversold ('+d.rsi+')');
-        if(d.volSpike!==null&&d.volSpike>=parseFloat(volT)) sigs.push('Volume Spike '+d.volSpike+'x');
-        if(d.vsEma200!==null&&Math.abs(d.vsEma200)<=5) sigs.push('Near 200 EMA ('+d.vsEma200+'%)');
-        if(d.rsi!==null&&d.rsi>70) sigs.push('RSI Overbought ('+d.rsi+')');
-        if(d.vsEma200!==null&&d.vsEma200>20) sigs.push('Extended above 200 EMA ('+d.vsEma200+'%)');
-        if(d.vsHigh52!==null&&d.vsHigh52>-5) sigs.push('Near 52W High ('+d.vsHigh52+'%)');
+        // RSI Combo [Marco] — fires on green dot (mup) or red dot (mdown)
+        if(d.rsiCombo){
+          const rc=d.rsiCombo;
+          if(rc.mup)   sigs.push('RSI Combo:🟢 RSI Green Dot (RSI:'+rc.rsi+' ADXm:'+rc.am+')');
+          if(rc.mdown) sigs.push('RSI Combo:🔴 RSI Red Dot (RSI:'+rc.rsi+' ADXm:'+rc.am+')');
+        }
+        // Plain RSI oversold fallback for stocks without rsiCombo
+        if(!d.rsiCombo&&d.rsi!==null&&d.rsi<parseFloat(rsiT)) sigs.push('RSI Combo:RSI Oversold ('+d.rsi+')');
+        if(d.volSpike!==null&&d.volSpike>=parseFloat(volT)) sigs.push('Volume Spike:Volume Spike '+d.volSpike+'x');
+        if(d.vsEma200!==null&&Math.abs(d.vsEma200)<=5) sigs.push('200 EMA proximity:Near 200 EMA ('+d.vsEma200+'%)');
+        if(d.vsEma200!==null&&d.vsEma200>20) sigs.push('200 EMA proximity:Extended above 200 EMA ('+d.vsEma200+'%)');
+        if(d.vsHigh52!==null&&d.vsHigh52>-5) sigs.push('200 EMA proximity:Near 52W High ('+d.vsHigh52+'%)');
         const liq=liqData[t.symbol];
         if(liq&&liq.alert){
           const dist=liq.alertType==='NEAR_LONG_LIQ'?liq.distLong:liq.distShort;
-          sigs.push((liq.alertType==='NEAR_LONG_LIQ'?'🔴 Long Liq Zone':'🟢 Short Liq Zone')+' '+dist+'% away');
+          sigs.push('Liq Zone:'+(liq.alertType==='NEAR_LONG_LIQ'?'🔴 Long Liq Zone':'🟢 Short Liq Zone')+' '+dist+'% away');
         }
-        if(sigs.length>=parseInt(minT)) qualified.push({...t,sigs,d,liq:liq||null,marketCap:marketCapData[t.symbol]||null});
+        // Count how many selected indicators are triggered
+        const triggeredInds=new Set(sigs.map(s=>s.split(':')[0]));
+        const matchCount=[...triggeredInds].filter(k=>selectedInds.includes(k)).length;
+        if(matchCount>=parseInt(minT)) qualified.push({...t,sigs,d,liq:liq||null,marketCap:marketCapData[t.symbol]||null});
       });
 
       // Reddit sentiment for qualified assets
@@ -1044,7 +1203,13 @@
       // Build AI prompt with real data
       const hasRealData=qualified.length>0;
       const aiTickers=hasRealData
-        ? qualified.map(q=>`${q.symbol}(WT1:${q.d.wt1},WT2:${q.d.wt2},WTCross:${q.d.wtCrossed?q.d.wtCrossType:'none'},RSI:${q.d.rsi},vsEMA200:${q.d.vsEma200}%,VolSpike:${q.d.volSpike}x${q.liq?',LiqZone:'+q.liq.distLong+'%away':''})`).join(',')
+        ? qualified.map(q=>{
+            const rc=q.d.rsiCombo;
+            const rsiInfo=rc
+              ? `RSI:${rc.rsi},ADX:${rc.adx},mup:${rc.mup},mdown:${rc.mdown},RSSsmooth:${rc.smoothRSS},Swing350Buy:${rc.swing350Buy},Swing350Sell:${rc.swing350Sell}`
+              : `RSI:${q.d.rsi}`;
+            return `${q.symbol}(WT1:${q.d.wt1},WT2:${q.d.wt2},WTCross:${q.d.wtCrossed?q.d.wtCrossType:'none'},${rsiInfo},vsEMA200:${q.d.vsEma200}%,VolSpike:${q.d.volSpike}x${q.liq?',LiqZone:'+q.liq.distLong+'%away':''})`;
+          }).join(',')
         : allTickers.slice(0,50).map(t=>t.symbol).join(',');
 
       const dataNote=hasRealData
@@ -1060,6 +1225,13 @@ SCREENING CRITERIA:
 - Indicators: ${selectedInds.join(', ')}
 - WaveTrend [LazyBear]: osLevel1=-60 (deeply oversold), osLevel2=${wtT} (oversold), obLevel1=60 (deeply overbought), obLevel2=53
 - A bullish WT cross (wt1 crosses above wt2 while both below 0) is a strong buy signal
+- RSI Combo [Marco]: RMA-based RSI(14)
+  * RSI Down-Exhaustion (mup): RSI<42 AND ADX-momentum>0 AND RSI-momentum<0 → bullish reversal
+  * RSI Up-Exhaustion (mdown): RSI>58 AND ADX-momentum>0 AND RSI-momentum>0 → bearish reversal
+  * RSS Oversold: EMA spread RSI smooth < 18 → bullish
+  * RSS Overbought: EMA spread RSI smooth > 82 → bearish
+  * Swing 350 BUY: SMA(RSI3,3) crosses below 20
+  * Swing 350 SELL: SMA(RSI3,3) crosses above 80
 - RSI oversold threshold: ${rsiT}
 - Volume spike: ${volT} above average
 - Minimum signals to qualify: ${minT} of ${selectedInds.length}
@@ -1137,6 +1309,7 @@ Rules:
           if(rd.wt2!==null) a.wt2=rd.wt2;
           a.wtCrossed=rd.wtCrossed;
           a.wtCrossType=rd.wtCrossType;
+          if(rd.rsiCombo) a.rsiCombo=rd.rsiCombo;
           const qMatch=qualified.find(q=>q.symbol===a.symbol);
           if(qMatch&&qMatch.marketCap) a.marketCap=qMatch.marketCap;
         } else {
