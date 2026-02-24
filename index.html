@@ -963,9 +963,24 @@
     return{wt1,wt2,crossed,crossType};
   }
 
-  // ── Fetch crypto from Binance (futures → spot → CoinGecko fallback) ──
+  // Per-session caches so repeated scans skip known-failing sources
+  const BINANCE_FUTURES_OK  = new Set();
+  const BINANCE_SPOT_OK     = new Set();
+  const NO_BINANCE          = new Set(); // confirmed absent from both Binance endpoints
+
+  // Fetch with hard timeout — no more hanging requests blocking batches
+  async function fetchWithTimeout(url, ms=6000){
+    const ctrl = new AbortController();
+    const timer = setTimeout(()=>ctrl.abort(), ms);
+    try{
+      const res = await fetch(url, {signal:ctrl.signal});
+      clearTimeout(timer);
+      return res;
+    }catch(e){ clearTimeout(timer); return null; }
+  }
+
+  // ── Fetch crypto: Binance Futures → Spot → Gate.io → CoinGecko ──
   async function fetchCryptoData(symbol){
-    // Map OHLCV candles into indicators — works for both Binance and CoinGecko formats
     function processKlines(c){
       if(!c||c.length<35) return null;
       const highs=c.map(x=>parseFloat(x[2]));
@@ -977,107 +992,73 @@
       const wt=calcWaveTrend(highs,lows,closes);
       const rsiCombo=calcRSICombo(closes);
       return{
-        price,
-        rsi:rsiCombo?rsiCombo.rsi:null,
-        rsiCombo,
-        ema200,
-        ema50:calcEMA(closes,50),
-        volSpike:calcVolSpike(volumes),
+        price, rsi:rsiCombo?rsiCombo.rsi:null, rsiCombo, ema200,
+        ema50:calcEMA(closes,50), volSpike:calcVolSpike(volumes),
         vsEma200:ema200?parseFloat(((price/ema200-1)*100).toFixed(2)):null,
-        wt1:wt.wt1,wt2:wt.wt2,
-        wtCrossed:wt.crossed,wtCrossType:wt.crossType,
+        wt1:wt.wt1, wt2:wt.wt2, wtCrossed:wt.crossed, wtCrossType:wt.crossType,
         type:'crypto'
       };
     }
 
-    // Try Binance futures
-    try{
-      const res=await fetch('https://fapi.binance.com/fapi/v1/klines?symbol='+symbol+'USDT&interval='+selectedTF.interval+'&limit='+selectedTF.limit);
-      if(res.ok){
-        const c=await res.json();
+    // 1️⃣ Binance Futures
+    if(!NO_BINANCE.has(symbol)){
+      const res=await fetchWithTimeout(`https://fapi.binance.com/fapi/v1/klines?symbol=${symbol}USDT&interval=${selectedTF.interval}&limit=${selectedTF.limit}`, 6000);
+      if(res&&res.ok){
+        const c=await res.json().catch(()=>null);
         if(Array.isArray(c)&&c.length>0){
-          const result=processKlines(c);
-          if(result) return result;
+          const r=processKlines(c);
+          if(r){ BINANCE_FUTURES_OK.add(symbol); return r; }
         }
       }
-    }catch(e){}
 
-    // Try Binance spot
-    try{
-      const res=await fetch('https://api.binance.com/api/v3/klines?symbol='+symbol+'USDT&interval='+selectedTF.interval+'&limit='+selectedTF.limit);
-      if(res.ok){
-        const c=await res.json();
+      // 2️⃣ Binance Spot
+      const res2=await fetchWithTimeout(`https://api.binance.com/api/v3/klines?symbol=${symbol}USDT&interval=${selectedTF.interval}&limit=${selectedTF.limit}`, 6000);
+      if(res2&&res2.ok){
+        const c=await res2.json().catch(()=>null);
         if(Array.isArray(c)&&c.length>0){
-          const result=processKlines(c);
-          if(result) return result;
+          const r=processKlines(c);
+          if(r){ BINANCE_SPOT_OK.add(symbol); return r; }
         }
       }
-    }catch(e){}
+      NO_BINANCE.add(symbol); // mark as not on Binance — skip both next scan
+    }
 
-    // Gate.io fallback — huge listing coverage, no API key needed
-    // Gate.io interval format: 1w=604800, 1d=86400, 4h=14400
-    try{
-      const gateInterval=selectedTF.tf==='1w'?'604800':selectedTF.tf==='1d'?'86400':'14400';
-      const gateLimit=selectedTF.limit;
-      const res=await fetch(`https://api.gateio.ws/api/v4/spot/candlesticks?currency_pair=${symbol}_USDT&interval=${gateInterval}&limit=${gateLimit}`);
-      if(res.ok){
-        const c=await res.json();
-        // Gate.io format: [timestamp, volume, close, high, low, open, ...]
-        if(Array.isArray(c)&&c.length>0){
-          // Convert to Binance format: [ts, open, high, low, close, volume]
-          const converted=c.map(x=>[
-            parseInt(x[0])*1000,  // timestamp (Gate.io uses seconds)
-            parseFloat(x[5]),     // open
-            parseFloat(x[3]),     // high
-            parseFloat(x[4]),     // low
-            parseFloat(x[2]),     // close
-            parseFloat(x[1])      // volume
-          ]);
-          const result=processKlines(converted);
-          if(result) return result;
-        }
+    // 3️⃣ Gate.io — only reaches here for non-Binance coins
+    const gateInterval=selectedTF.tf==='1w'?'604800':selectedTF.tf==='1d'?'86400':'14400';
+    const gRes=await fetchWithTimeout(`https://api.gateio.ws/api/v4/spot/candlesticks?currency_pair=${symbol}_USDT&interval=${gateInterval}&limit=${selectedTF.limit}`, 8000);
+    if(gRes&&gRes.ok){
+      const c=await gRes.json().catch(()=>null);
+      if(Array.isArray(c)&&c.length>0){
+        const converted=c.map(x=>[parseInt(x[0])*1000,parseFloat(x[5]),parseFloat(x[3]),parseFloat(x[4]),parseFloat(x[2]),parseFloat(x[1])]);
+        const r=processKlines(converted);
+        if(r) return r;
       }
-    }catch(e){}
+    }
 
-    // CoinGecko fallback — for delisted/non-Binance tokens (e.g. HNT)
+    // 4️⃣ CoinGecko — absolute last resort
     try{
-      // Step 1: resolve symbol → CoinGecko id
-      const searchRes=await fetch('https://api.coingecko.com/api/v3/search?query='+encodeURIComponent(symbol));
-      if(!searchRes.ok) return null;
-      const searchData=await searchRes.json();
-      const match=searchData.coins?.find(c=>c.symbol?.toUpperCase()===symbol.toUpperCase());
+      const sRes=await fetchWithTimeout(`https://api.coingecko.com/api/v3/search?query=${encodeURIComponent(symbol)}`, 8000);
+      if(!sRes) return null;
+      const sd=await sRes.json();
+      const match=sd.coins?.find(c=>c.symbol?.toUpperCase()===symbol.toUpperCase());
       if(!match) return null;
-      const cgId=match.id;
-
-      // Step 2: fetch OHLCV — days param based on timeframe
       const days=selectedTF.tf==='1w'?365:selectedTF.tf==='1d'?210:60;
-      const ohlcRes=await fetch(`https://api.coingecko.com/api/v3/coins/${cgId}/ohlc?vs_currency=usd&days=${days}`);
-      if(!ohlcRes.ok) return null;
-      const ohlcRaw=await ohlcRes.json(); // [[timestamp,open,high,low,close],...]
-
-      if(!ohlcRaw||ohlcRaw.length<35) return null;
-
-      // CoinGecko OHLC format: [timestamp, open, high, low, close] — no volume
-      // Convert to Binance format: [ts,open,high,low,close,volume]
-      const klines=ohlcRaw.map(c=>[c[0],c[1],c[2],c[3],c[4],0]);
-
-      // For weekly TF, CoinGecko returns daily — resample to weekly
-      let sampled=klines;
+      const oRes=await fetchWithTimeout(`https://api.coingecko.com/api/v3/coins/${match.id}/ohlc?vs_currency=usd&days=${days}`, 10000);
+      if(!oRes) return null;
+      const raw=await oRes.json();
+      if(!raw||raw.length<35) return null;
+      let klines=raw.map(c=>[c[0],c[1],c[2],c[3],c[4],0]);
       if(selectedTF.tf==='1w'){
-        sampled=[];
+        const wk=[];
         for(let i=0;i<klines.length;i+=7){
-          const week=klines.slice(i,i+7);
-          if(week.length<3) continue;
-          const open=week[0][1];
-          const high=Math.max(...week.map(c=>parseFloat(c[2])));
-          const low=Math.min(...week.map(c=>parseFloat(c[3])));
-          const close=week[week.length-1][4];
-          sampled.push([week[0][0],open,high,low,close,0]);
+          const w=klines.slice(i,i+7);
+          if(w.length<3) continue;
+          wk.push([w[0][0],w[0][1],Math.max(...w.map(c=>c[2])),Math.min(...w.map(c=>c[3])),w[w.length-1][4],0]);
         }
+        klines=wk;
       }
-      return processKlines(sampled);
+      return processKlines(klines);
     }catch(e){}
-
     return null;
   }
 
@@ -1269,15 +1250,16 @@
       const cryptoTickers=allTickers.filter(t=>t.type==='crypto');
       const stockTickers=allTickers.filter(t=>t.type==='stock');
 
-      // Crypto from Binance
-      for(let i=0;i<cryptoTickers.length;i+=10){
-        const batch=cryptoTickers.slice(i,i+10);
-        document.getElementById('loadingStatus').textContent='Fetching crypto data '+(i+1)+'-'+Math.min(i+10,cryptoTickers.length)+' of '+cryptoTickers.length+'...';
+      // Crypto — fetch 50 at a time in parallel (Binance has no strict public rate limit)
+      const BATCH = 50;
+      for(let i=0;i<cryptoTickers.length;i+=BATCH){
+        const batch=cryptoTickers.slice(i,i+BATCH);
+        const pct=Math.round((i/cryptoTickers.length)*100);
+        document.getElementById('loadingStatus').textContent=`Scanning crypto ${i+1}–${Math.min(i+BATCH,cryptoTickers.length)} of ${cryptoTickers.length} (${pct}%)...`;
         await Promise.all(batch.map(async t=>{
           const d=await fetchCryptoData(t.symbol);
           if(d) realData[t.symbol]=d;
         }));
-        await new Promise(r=>setTimeout(r,150));
       }
 
       // Stocks from Render backend (with wake-up for free tier)
