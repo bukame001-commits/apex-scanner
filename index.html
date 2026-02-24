@@ -936,6 +936,7 @@
     // d = EMA(|ap - esa|, n1)
     const apMinusEsa=ap.map((v,i)=>esa[i]!==null?Math.abs(v-esa[i]):null);
     const validStart=apMinusEsa.findIndex(v=>v!==null);
+    if(validStart===-1) return {wt1:null,wt2:null,crossed:false,crossType:null};
     const dInput=apMinusEsa.slice(validStart);
     const dSeries=calcEMASeries(dInput, n1);
     // rebuild d aligned to original length
@@ -947,6 +948,7 @@
     });
     // tci = EMA(ci, n2)  — strip leading nulls first
     const ciStart=ci.findIndex(v=>v!==null);
+    if(ciStart===-1) return {wt1:null,wt2:null,crossed:false,crossType:null};
     const tciSeries=calcEMASeries(ci.slice(ciStart), n2);
     const wt1Series=new Array(ciStart).fill(null).concat(tciSeries);
     // wt2 = SMA(wt1, 4)
