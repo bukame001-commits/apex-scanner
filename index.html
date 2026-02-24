@@ -394,6 +394,9 @@
  const EXCLUDE_SYMBOLS = new Set(['USDT','USDC','BUSD','TUSD','USDD','USDP','FDUSD','DAI','FRAX','LUSD','PYUSD','GUSD','SUSD','USDB','USDX','EURC','WBTC','WETH','WBNB','STETH','WSTETH','CBETH','RETH','BETH','SOLVBTC','BTCB','HBTC','RENBTC']);
 
  const BACKEND = 'https://apex-backend-k8kw.onrender.com';
+const BINANCE_FUTURES_OK  = new Set();
+const BINANCE_SPOT_OK     = new Set();
+const NO_BINANCE          = new Set();
 
  // --- State Variables ---
  let selectedEngine = 'gemini';
