@@ -765,7 +765,7 @@
   // Full RSI Combo — returns all signals from Marco's script
   function calcRSICombo(closes){
     const n=closes.length;
-    if(n<60) return null;
+    if(n<35) return null;
 
     // ── Core RSI (RMA-based) ──
     const {rsiSeries,upSeries,downSeries}=calcRSIComboSeries(closes,14);
@@ -940,11 +940,11 @@
     return{wt1,wt2,crossed,crossType};
   }
 
-  // ── Fetch crypto from Binance (futures first, spot fallback) ──
+  // ── Fetch crypto from Binance (futures → spot → CoinGecko fallback) ──
   async function fetchCryptoData(symbol){
-    // Helper to process raw kline array into indicators
+    // Map OHLCV candles into indicators — works for both Binance and CoinGecko formats
     function processKlines(c){
-      if(!c||c.length<60) return null;
+      if(!c||c.length<35) return null;
       const highs=c.map(x=>parseFloat(x[2]));
       const lows=c.map(x=>parseFloat(x[3]));
       const closes=c.map(x=>parseFloat(x[4]));
@@ -966,23 +966,95 @@
         type:'crypto'
       };
     }
-    // Try futures first
+
+    // Try Binance futures
     try{
       const res=await fetch('https://fapi.binance.com/fapi/v1/klines?symbol='+symbol+'USDT&interval='+selectedTF.interval+'&limit='+selectedTF.limit);
       if(res.ok){
         const c=await res.json();
-        const result=processKlines(c);
-        if(result) return result;
+        if(Array.isArray(c)&&c.length>0){
+          const result=processKlines(c);
+          if(result) return result;
+        }
       }
     }catch(e){}
-    // Fallback to spot (covers SHIB, PEPE, etc. not on futures)
+
+    // Try Binance spot
     try{
       const res=await fetch('https://api.binance.com/api/v3/klines?symbol='+symbol+'USDT&interval='+selectedTF.interval+'&limit='+selectedTF.limit);
       if(res.ok){
         const c=await res.json();
-        return processKlines(c);
+        if(Array.isArray(c)&&c.length>0){
+          const result=processKlines(c);
+          if(result) return result;
+        }
       }
     }catch(e){}
+
+    // Gate.io fallback — huge listing coverage, no API key needed
+    // Gate.io interval format: 1w=604800, 1d=86400, 4h=14400
+    try{
+      const gateInterval=selectedTF.tf==='1w'?'604800':selectedTF.tf==='1d'?'86400':'14400';
+      const gateLimit=selectedTF.limit;
+      const res=await fetch(`https://api.gateio.ws/api/v4/spot/candlesticks?currency_pair=${symbol}_USDT&interval=${gateInterval}&limit=${gateLimit}`);
+      if(res.ok){
+        const c=await res.json();
+        // Gate.io format: [timestamp, volume, close, high, low, open, ...]
+        if(Array.isArray(c)&&c.length>0){
+          // Convert to Binance format: [ts, open, high, low, close, volume]
+          const converted=c.map(x=>[
+            parseInt(x[0])*1000,  // timestamp (Gate.io uses seconds)
+            parseFloat(x[5]),     // open
+            parseFloat(x[3]),     // high
+            parseFloat(x[4]),     // low
+            parseFloat(x[2]),     // close
+            parseFloat(x[1])      // volume
+          ]);
+          const result=processKlines(converted);
+          if(result) return result;
+        }
+      }
+    }catch(e){}
+
+    // CoinGecko fallback — for delisted/non-Binance tokens (e.g. HNT)
+    try{
+      // Step 1: resolve symbol → CoinGecko id
+      const searchRes=await fetch('https://api.coingecko.com/api/v3/search?query='+encodeURIComponent(symbol));
+      if(!searchRes.ok) return null;
+      const searchData=await searchRes.json();
+      const match=searchData.coins?.find(c=>c.symbol?.toUpperCase()===symbol.toUpperCase());
+      if(!match) return null;
+      const cgId=match.id;
+
+      // Step 2: fetch OHLCV — days param based on timeframe
+      const days=selectedTF.tf==='1w'?365:selectedTF.tf==='1d'?210:60;
+      const ohlcRes=await fetch(`https://api.coingecko.com/api/v3/coins/${cgId}/ohlc?vs_currency=usd&days=${days}`);
+      if(!ohlcRes.ok) return null;
+      const ohlcRaw=await ohlcRes.json(); // [[timestamp,open,high,low,close],...]
+
+      if(!ohlcRaw||ohlcRaw.length<35) return null;
+
+      // CoinGecko OHLC format: [timestamp, open, high, low, close] — no volume
+      // Convert to Binance format: [ts,open,high,low,close,volume]
+      const klines=ohlcRaw.map(c=>[c[0],c[1],c[2],c[3],c[4],0]);
+
+      // For weekly TF, CoinGecko returns daily — resample to weekly
+      let sampled=klines;
+      if(selectedTF.tf==='1w'){
+        sampled=[];
+        for(let i=0;i<klines.length;i+=7){
+          const week=klines.slice(i,i+7);
+          if(week.length<3) continue;
+          const open=week[0][1];
+          const high=Math.max(...week.map(c=>parseFloat(c[2])));
+          const low=Math.min(...week.map(c=>parseFloat(c[3])));
+          const close=week[week.length-1][4];
+          sampled.push([week[0][0],open,high,low,close,0]);
+        }
+      }
+      return processKlines(sampled);
+    }catch(e){}
+
     return null;
   }
 
@@ -1245,25 +1317,33 @@
         if(matchCount>=parseInt(minT)) qualified.push({...t,sigs,d,liq:liq||null,marketCap:marketCapData[t.symbol]||null});
       });
 
+      // Sort by number of triggered selected indicators (descending), cap at 20
+      qualified.sort((a,b)=>{
+        const aScore=[...new Set(a.sigs.map(s=>s.split(':')[0]))].filter(k=>selectedInds.includes(k)).length;
+        const bScore=[...new Set(b.sigs.map(s=>s.split(':')[0]))].filter(k=>selectedInds.includes(k)).length;
+        return bScore-aScore;
+      });
+      const topQualified=qualified.slice(0,20);
+
       // Reddit sentiment for qualified assets
       document.getElementById('loadingStatus').textContent='Fetching Reddit sentiment...';
-      const qualSymbols=qualified.map(q=>q.symbol);
+      const qualSymbols=topQualified.map(q=>q.symbol);
       const sentimentMap=await fetchRedditSentiment(qualSymbols);
 
       const realCount=Object.keys(realData).length;
       const stockReal=Object.values(realData).filter(d=>d.type==='stock').length;
-      document.getElementById('loadingStatus').textContent=realCount+' assets scanned ('+stockReal+' stocks real data) on '+selectedTF.label+'. '+qualified.length+' qualify. Sending to AI...';
+      document.getElementById('loadingStatus').textContent=realCount+' assets scanned ('+stockReal+' stocks real data) on '+selectedTF.label+'. '+topQualified.length+' qualify (top '+Math.min(topQualified.length,20)+' by score). Formatting with AI...';
       await new Promise(r=>setTimeout(r,300));
 
       // Build AI prompt — only with real qualified data, never fall back to AI picking
-      if(qualified.length===0){
+      if(topQualified.length===0){
         document.getElementById('loading').classList.remove('visible');
         document.getElementById('setupPanel').style.display='block';
         showError('No assets qualified with real data on '+selectedTF.label+'. Try loosening your thresholds or selecting more indicators.');
         return;
       }
 
-      const aiTickers=qualified.map(q=>{
+      const aiTickers=topQualified.map(q=>{
             const rc=q.d.rsiCombo;
             const rsiInfo=rc
               ? `RSI:${rc.rsi},ADX:${rc.adx},mup:${rc.mup},mdown:${rc.mdown},RSSsmooth:${rc.smoothRSS},Swing350Buy:${rc.swing350Buy},Swing350Sell:${rc.swing350Sell}`
@@ -1271,7 +1351,7 @@
             return `${q.symbol}(WT1:${q.d.wt1},WT2:${q.d.wt2},WTCross:${q.d.wtCrossed?q.d.wtCrossType:'none'},${rsiInfo},vsEMA200:${q.d.vsEma200}%,VolSpike:${q.d.volSpike}x${q.liq?',LiqZone:'+q.liq.distLong+'%away':''})`;
           }).join(',');
 
-      const dataNote=`The following ${qualified.length} assets have REAL live calculated data on the ${selectedTF.label} timeframe and already pass all screening criteria. Your job is ONLY to format them as JSON — do NOT add, remove or reorder assets, do NOT invent new ones:`;
+      const dataNote=`The following ${topQualified.length} assets have REAL live calculated data on the ${selectedTF.label} timeframe and already pass all screening criteria. Your job is ONLY to format them as JSON — do NOT add, remove or reorder assets, do NOT invent new ones:`;
 
       document.getElementById('loadingStatus').textContent=`Formatting ${qualified.length} qualified assets with AI...`;
 
@@ -1341,7 +1421,7 @@ Rules:
 
       // Override AI score and timeframe with deterministic real values
       parsed.forEach(function(a){
-        const q=qualified.find(q=>q.symbol===a.symbol);
+        const q=topQualified.find(q=>q.symbol===a.symbol);
         if(q){
           // Recalculate score from actual triggered indicators
           const triggeredInds=new Set(q.sigs.map(s=>s.split(':')[0]));
@@ -1366,7 +1446,7 @@ Rules:
           a.wtCrossed=rd.wtCrossed;
           a.wtCrossType=rd.wtCrossType;
           if(rd.rsiCombo) a.rsiCombo=rd.rsiCombo;
-          const qMatch=qualified.find(q=>q.symbol===a.symbol);
+          const qMatch=topQualified.find(q=>q.symbol===a.symbol);
           if(qMatch&&qMatch.marketCap) a.marketCap=qMatch.marketCap;
         } else {
           a.dataSource='ai';
