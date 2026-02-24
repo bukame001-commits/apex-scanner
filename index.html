@@ -680,6 +680,26 @@
       const isLive = a.dataSource === 'live';
       const dataBadge = '<span style="font-family:Share Tech Mono,monospace;font-size:8px;padding:2px 7px;border-radius:2px;border:1px solid;margin-left:8px;'+(isLive?'color:#00ff88;border-color:rgba(0,255,136,0.4);background:rgba(0,255,136,0.06)':'color:#ffb800;border-color:rgba(255,184,0,0.4);background:rgba(255,184,0,0.06)')+'">'+(isLive?'● LIVE':'◌ AI EST')+'</span>';
 
+      // Build research HTML outside of string concatenation
+      let researchHtml = '';
+      if(a.verdict) {
+        const vColor  = a.verdict==='STRONG'?'#00ff88':a.verdict==='WEAK'?'#ff3366':'#ffb800';
+        const vBg     = a.verdict==='STRONG'?'rgba(0,255,136,0.06)':a.verdict==='WEAK'?'rgba(255,51,102,0.06)':'rgba(255,184,0,0.06)';
+        const vBorder = a.verdict==='STRONG'?'rgba(0,255,136,0.3)':a.verdict==='WEAK'?'rgba(255,51,102,0.3)':'rgba(255,184,0,0.3)';
+        researchHtml =
+          '<div style="margin-top:10px;padding:10px 12px;border:1px solid #0e2033;border-radius:2px;background:rgba(0,212,255,0.02);">'+
+            '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">'+
+              '<span style="font-family:Share Tech Mono,monospace;font-size:9px;color:var(--muted);letter-spacing:2px;">AI RESEARCH</span>'+
+              '<span style="font-family:Share Tech Mono,monospace;font-size:9px;padding:2px 8px;border-radius:2px;border:1px solid '+vBorder+';color:'+vColor+';background:'+vBg+';">'+a.verdict+'</span>'+
+            '</div>'+
+            (a.fundamentals ? '<div style="margin-bottom:6px;"><span style="font-family:Share Tech Mono,monospace;font-size:9px;color:var(--accent);letter-spacing:1px;">FUNDAMENTALS </span><span style="font-size:11px;color:var(--text);line-height:1.5;">'+a.fundamentals+'</span></div>' : '')+
+            (a.disruptive   ? '<div style="margin-bottom:6px;"><span style="font-family:Share Tech Mono,monospace;font-size:9px;color:#7b4dff;letter-spacing:1px;">TECH/INNOVATION </span><span style="font-size:11px;color:var(--text);line-height:1.5;">'+a.disruptive+'</span></div>' : '')+
+            (a.news         ? '<div><span style="font-family:Share Tech Mono,monospace;font-size:9px;color:var(--warn);letter-spacing:1px;">RECENT NEWS </span><span style="font-size:11px;color:var(--text);line-height:1.5;">'+a.news+'</span></div>' : '')+
+          '</div>';
+      } else if(a.fundamentals === '' && a.verdict === '') {
+        researchHtml = '<div style="margin-top:8px;font-family:Share Tech Mono,monospace;font-size:9px;color:var(--muted);font-style:italic;">Fetching research intel...</div>';
+      }
+
       card.innerHTML =
         '<div class="alert-top">'+
           '<div>'+
@@ -694,21 +714,7 @@
         '<div class="alert-signals">'+sigsHtml+'</div>'+
         rsiComboHtml+
         sentHtml+liqHtml+
-        // ── AI Research Section ─────────────────────────────────
-        (a.verdict ? (()=>{
-          const vColor = a.verdict==='STRONG'?'#00ff88':a.verdict==='WEAK'?'#ff3366':'#ffb800';
-          const vBg    = a.verdict==='STRONG'?'rgba(0,255,136,0.06)':a.verdict==='WEAK'?'rgba(255,51,102,0.06)':'rgba(255,184,0,0.06)';
-          const vBorder= a.verdict==='STRONG'?'rgba(0,255,136,0.3)':a.verdict==='WEAK'?'rgba(255,51,102,0.3)':'rgba(255,184,0,0.3)';
-          return '<div style="margin-top:10px;padding:10px 12px;border:1px solid #0e2033;border-radius:2px;background:rgba(0,212,255,0.02);">'+
-            '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">'+
-              '<span style="font-family:Share Tech Mono,monospace;font-size:9px;color:var(--muted);letter-spacing:2px;">AI RESEARCH</span>'+
-              '<span style="font-family:Share Tech Mono,monospace;font-size:9px;padding:2px 8px;border-radius:2px;border:1px solid '+vBorder+';color:'+vColor+';background:'+vBg+';">'+a.verdict+'</span>'+
-            '</div>'+
-            (a.fundamentals?'<div style="margin-bottom:6px;"><span style="font-family:Share Tech Mono,monospace;font-size:9px;color:var(--accent);letter-spacing:1px;">FUNDAMENTALS </span><span style="font-size:11px;color:var(--text);line-height:1.5;">'+a.fundamentals+'</span></div>':'')+
-            (a.disruptive?'<div style="margin-bottom:6px;"><span style="font-family:Share Tech Mono,monospace;font-size:9px;color:#7b4dff;letter-spacing:1px;">TECH/INNOVATION </span><span style="font-size:11px;color:var(--text);line-height:1.5;">'+a.disruptive+'</span></div>':'')+
-            (a.news?'<div><span style="font-family:Share Tech Mono,monospace;font-size:9px;color:var(--warn);letter-spacing:1px;">RECENT NEWS </span><span style="font-size:11px;color:var(--text);line-height:1.5;">'+a.news+'</span></div>':'')+
-          '</div>';
-        })() : (a.fundamentals===''&&a.verdict===''?'<div style="margin-top:8px;font-family:Share Tech Mono,monospace;font-size:9px;color:var(--muted);font-style:italic;">Fetching research intel...</div>':''))+
+        researchHtml+
         '<div class="alert-values">'+
           (a.price!==undefined?'<div class="alert-val">PRICE <span>$'+parseFloat(a.price).toPrecision(5)+'</span></div>':'')+
           (a.marketCap?'<div class="alert-val">MCAP <span>'+(a.marketCap>=1e9?(a.marketCap/1e9).toFixed(2)+'B':(a.marketCap/1e6).toFixed(0)+'M')+'</span></div>':'')+
