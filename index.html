@@ -525,7 +525,7 @@
           'anthropic-dangerous-direct-browser-access': 'true'
         },
         body: JSON.stringify({
-          model: 'claude-haiku-4-5',
+          model: 'claude-haiku-4-5-20251001',
           max_tokens: 4096,
           messages: [{ role: 'user', content: prompt }]
         })
@@ -538,7 +538,7 @@
     }
 
     // OpenRouter fallback (sk-or-...)
-    const model = selectedEngine === 'claude' ? 'anthropic/claude-haiku-4-5' : 'google/gemini-2.0-flash-exp:free';
+    const model = selectedEngine === 'claude' ? 'anthropic/claude-haiku-4-5-20251001' : 'google/gemini-2.0-flash-exp:free';
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -693,8 +693,22 @@
         '</div>'+
         '<div class="alert-signals">'+sigsHtml+'</div>'+
         rsiComboHtml+
-        '<div class="alert-analysis">'+(a.analysis||'')+'</div>'+
         sentHtml+liqHtml+
+        // ── AI Research Section ─────────────────────────────────
+        (a.verdict ? (()=>{
+          const vColor = a.verdict==='STRONG'?'#00ff88':a.verdict==='WEAK'?'#ff3366':'#ffb800';
+          const vBg    = a.verdict==='STRONG'?'rgba(0,255,136,0.06)':a.verdict==='WEAK'?'rgba(255,51,102,0.06)':'rgba(255,184,0,0.06)';
+          const vBorder= a.verdict==='STRONG'?'rgba(0,255,136,0.3)':a.verdict==='WEAK'?'rgba(255,51,102,0.3)':'rgba(255,184,0,0.3)';
+          return '<div style="margin-top:10px;padding:10px 12px;border:1px solid #0e2033;border-radius:2px;background:rgba(0,212,255,0.02);">'+
+            '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">'+
+              '<span style="font-family:Share Tech Mono,monospace;font-size:9px;color:var(--muted);letter-spacing:2px;">AI RESEARCH</span>'+
+              '<span style="font-family:Share Tech Mono,monospace;font-size:9px;padding:2px 8px;border-radius:2px;border:1px solid '+vBorder+';color:'+vColor+';background:'+vBg+';">'+a.verdict+'</span>'+
+            '</div>'+
+            (a.fundamentals?'<div style="margin-bottom:6px;"><span style="font-family:Share Tech Mono,monospace;font-size:9px;color:var(--accent);letter-spacing:1px;">FUNDAMENTALS </span><span style="font-size:11px;color:var(--text);line-height:1.5;">'+a.fundamentals+'</span></div>':'')+
+            (a.disruptive?'<div style="margin-bottom:6px;"><span style="font-family:Share Tech Mono,monospace;font-size:9px;color:#7b4dff;letter-spacing:1px;">TECH/INNOVATION </span><span style="font-size:11px;color:var(--text);line-height:1.5;">'+a.disruptive+'</span></div>':'')+
+            (a.news?'<div><span style="font-family:Share Tech Mono,monospace;font-size:9px;color:var(--warn);letter-spacing:1px;">RECENT NEWS </span><span style="font-size:11px;color:var(--text);line-height:1.5;">'+a.news+'</span></div>':'')+
+          '</div>';
+        })() : (a.fundamentals===''&&a.verdict===''?'<div style="margin-top:8px;font-family:Share Tech Mono,monospace;font-size:9px;color:var(--muted);font-style:italic;">Fetching research intel...</div>':''))+
         '<div class="alert-values">'+
           (a.price!==undefined?'<div class="alert-val">PRICE <span>$'+parseFloat(a.price).toPrecision(5)+'</span></div>':'')+
           (a.marketCap?'<div class="alert-val">MCAP <span>'+(a.marketCap>=1e9?(a.marketCap/1e9).toFixed(2)+'B':(a.marketCap/1e6).toFixed(0)+'M')+'</span></div>':'')+
@@ -1377,7 +1391,7 @@
       document.getElementById('loadingStatus').textContent=realCount+' assets scanned ('+stockReal+' stocks real data) on '+selectedTF.label+'. '+topQualified.length+' qualify (top '+Math.min(topQualified.length,20)+' by score). Formatting with AI...';
       await new Promise(r=>setTimeout(r,300));
 
-      // Build AI prompt — only with real qualified data, never fall back to AI picking
+      // ── All numbers come from real data — AI never touches indicators ──
       if(topQualified.length===0){
         document.getElementById('loading').classList.remove('visible');
         document.getElementById('setupPanel').style.display='block';
@@ -1385,176 +1399,122 @@
         return;
       }
 
-      const aiTickers=topQualified.map(q=>{
-            const rc=q.d.rsiCombo;
-            const rsiInfo=rc
-              ? `RSI:${rc.rsi},ADX:${rc.adx},mup:${rc.mup},mdown:${rc.mdown},RSSsmooth:${rc.smoothRSS},Swing350Buy:${rc.swing350Buy},Swing350Sell:${rc.swing350Sell}`
-              : `RSI:${q.d.rsi}`;
-            return `${q.symbol}(WT1:${q.d.wt1},WT2:${q.d.wt2},WTCross:${q.d.wtCrossed?q.d.wtCrossType:'none'},${rsiInfo},vsEMA200:${q.d.vsEma200}%,VolSpike:${q.d.volSpike}x${q.liq?',LiqZone:'+q.liq.distLong+'%away':''})`;
-          }).join(',');
-
-      const dataNote=`The following ${topQualified.length} assets have REAL live calculated data on the ${selectedTF.label} timeframe and already pass all screening criteria. Your job is ONLY to format them as JSON — do NOT add, remove or reorder assets, do NOT invent new ones:`;
-
-      document.getElementById('loadingStatus').textContent=`Formatting ${qualified.length} qualified assets with AI...`;
-
-      const prompt=`You are a technical analyst formatter. Today is ${new Date().toDateString()}.
-Timeframe: ${selectedTF.label}
-Market: ${marketsList}
-
-These assets passed REAL screening on the ${selectedTF.label} timeframe:
-${dataNote}
-${aiTickers}
-
-Format EACH asset above as a JSON object. Include ALL of them. Do not skip any. Do not add any not listed above.
-
-IMPORTANT: Respond with ONLY a raw JSON array. No markdown. No backticks. Start with [ end with ]. Keep "analysis" under 12 words.
-[{"symbol":"BTC","market":"${marketsList}","type":"crypto","score":2,"signals":["WaveTrend Oversold","Volume Spike"],"wt1":-45.2,"wt2":-48.1,"rsi":32.1,"timeframe":"${selectedTF.label}","analysis":"12 words max describing ${selectedTF.label} conditions"}]
-
-Rules:
-- timeframe field MUST be "${selectedTF.label}" for every entry
-- score = number of triggered indicators from the data provided
-- analysis must reference ${selectedTF.label} chart conditions, not weekly or any other timeframe
-- Return [] only if the asset list above is empty`;
-
-      document.getElementById('loadingStatus').textContent='Analyzing chart patterns...';
-      const response=await callAI(prompt);
-
-      let parsed=[];
-      console.log('Raw AI response:', response);
-      try {
-        let clean=response.replace(/```json|```/gi,'').trim();
-        const s=clean.indexOf('[');
-        let e=clean.lastIndexOf(']');
-        if(s===-1){ showError('No JSON array found in response. Raw: '+response.substring(0,400)); }
-        else {
-          // If no closing ] (truncated), try to salvage complete objects
-          if(e===-1||e<s){
-            // Find last complete object — last occurrence of '}' before truncation
-            const lastBrace=clean.lastIndexOf('}');
-            if(lastBrace>s){
-              clean=clean.slice(s,lastBrace+1)+']';
-              e=clean.length-1;
-            }
-          } else {
-            clean=clean.slice(s,e+1);
-          }
-          try{
-            parsed=JSON.parse(clean);
-          } catch(e2){
-            // Last resort: extract each {...} object individually
-            const objMatches=clean.match(/\{[^{}]*\}/g)||[];
-            const recovered=[];
-            objMatches.forEach(obj=>{
-              try{ recovered.push(JSON.parse(obj)); }catch(e3){}
-            });
-            if(recovered.length>0){
-              parsed=recovered;
-              console.warn('Recovered '+recovered.length+' objects from malformed JSON');
-            } else {
-              showError('Parse error: '+e2.message+' | Raw: '+response.substring(0,400));
-            }
-          }
+      // Build results 100% from real calculated values — zero AI involvement in numbers
+      let parsed = topQualified.map(q => {
+        const rd = q.d;
+        const signals = q.sigs.map(s => s.includes(':') ? s.split(':').slice(1).join(':') : s);
+        const triggeredInds = new Set(q.sigs.map(s => s.split(':')[0]));
+        const score = [...triggeredInds].filter(k => selectedInds.includes(k)).length;
+        const obj = {
+          symbol: q.symbol, market: q.market, type: q.type,
+          score, signals, timeframe: selectedTF.label, dataSource: 'live',
+          price: rd.price, wt1: rd.wt1, wt2: rd.wt2,
+          wtCrossed: rd.wtCrossed, wtCrossType: rd.wtCrossType,
+          rsi: rd.rsi, rsiCombo: rd.rsiCombo,
+          vsEma200: rd.vsEma200, volSpike: rd.volSpike,
+          marketCap: q.marketCap || null,
+          fundamentals: '', disruptive: '', news: '', verdict: ''
+        };
+        if(sentimentMap && sentimentMap[q.symbol]){
+          const s = sentimentMap[q.symbol];
+          obj.sentiment = s.label+' ('+s.posts+' posts, '+s.ups+' upvotes)';
+          obj.sentimentEmoji = s.emoji;
         }
-      } catch(err){
-        console.error('Parse error:',err);
-        showError('Parse error: '+err.message+' | Raw: '+response.substring(0,400));
-        parsed=[];
-      }
-
-      // Override AI score and timeframe with deterministic real values
-      parsed.forEach(function(a){
-        const q=topQualified.find(q=>q.symbol===a.symbol);
-        if(q){
-          // Recalculate score from actual triggered indicators
-          const triggeredInds=new Set(q.sigs.map(s=>s.split(':')[0]));
-          a.score=[...triggeredInds].filter(k=>selectedInds.includes(k)).length;
-          // Always use the signals from real data, not AI guesses
-          a.signals=q.sigs.map(s=>s.includes(':')?s.split(':').slice(1).join(':'):s);
-        }
-        // Always stamp correct timeframe — never trust AI on this
-        a.timeframe = selectedTF.label;
-      });
-      parsed.forEach(function(a){
-        a.timeframe = selectedTF.label; // enforce again after real data attachment
-        // Tag whether this has real live data or is AI-estimated
-        const rd=realData[a.symbol];
-        if(rd){
-          a.dataSource='live';
-          a.price=rd.price;
-          a.vsEma200=rd.vsEma200;
-          if(rd.rsi!==null) a.rsi=rd.rsi;
-          if(rd.wt1!==null) a.wt1=rd.wt1;
-          if(rd.wt2!==null) a.wt2=rd.wt2;
-          a.wtCrossed=rd.wtCrossed;
-          a.wtCrossType=rd.wtCrossType;
-          if(rd.rsiCombo) a.rsiCombo=rd.rsiCombo;
-          const qMatch=topQualified.find(q=>q.symbol===a.symbol);
-          if(qMatch&&qMatch.marketCap) a.marketCap=qMatch.marketCap;
-        } else {
-          a.dataSource='ai';
-        }
-        if(sentimentMap&&sentimentMap[a.symbol]){
-          const s=sentimentMap[a.symbol];
-          a.sentiment=s.label+' ('+s.posts+' posts, '+s.ups+' upvotes)';
-          a.sentimentEmoji=s.emoji;
-        }
-        const liq=liqData&&liqData[a.symbol];
+        const liq = liqData && liqData[q.symbol];
         if(liq){
-          a.distLong=liq.distLong;
-          a.distShort=liq.distShort;
-          a.fundingBias=liq.bias;
-          a.nearLiq=liq.alert;
-          a.nearLiqType=liq.alertType;
-          // Legacy liqAlert for Telegram
+          obj.distLong=liq.distLong; obj.distShort=liq.distShort;
+          obj.fundingBias=liq.bias; obj.nearLiq=liq.alert; obj.nearLiqType=liq.alertType;
           if(liq.alert){
             const dist=liq.alertType==='NEAR_LONG_LIQ'?liq.distLong:liq.distShort;
-            a.liqAlert=(liq.alertType==='NEAR_LONG_LIQ'?'🔴 Long Liq Zone':'🟢 Short Liq Zone')+' '+dist+'% away | Funding: '+liq.bias;
+            obj.liqAlert=(liq.alertType==='NEAR_LONG_LIQ'?'🔴 Long Liq Zone':'🟢 Short Liq Zone')+' '+dist+'% away | Funding: '+liq.bias;
           }
         }
+        return obj;
       });
-      allAlerts=parsed;
-      sendTelegram(parsed,sentimentMap,liqData);
 
-      document.getElementById('loadingStatus').textContent='Generating market summary...';
+      allAlerts = parsed;
+      sendTelegram(parsed, sentimentMap, liqData);
 
-      const topAssets=parsed.slice(0,5).map(a=>
-        `${a.symbol}: RSI=${a.rsi}, vsEMA200=${a.vsEma200 !== undefined ? a.vsEma200+'%' : 'N/A'}, signals=[${(a.signals||[]).join(', ')}]`
-      ).join('\n');
-
-      const summaryPrompt=`You are a trading analyst. Based on this REAL scanned data from ${marketsList} on ${new Date().toDateString()}, write a 3-sentence market summary:
-
-TOP QUALIFYING ASSETS (real data):
-${topAssets || 'No assets qualified'}
-
-Write:
-1. Overall market sentiment based on the data above
-2. Which assets/sectors look most interesting and why
-3. Key risk to watch
-
-Be direct and specific. Reference the actual assets and numbers above. No disclaimers about not having real-time data — you have it above.`;
-
-      const summary=await callAI(summaryPrompt);
-
+      // Show results immediately — no waiting for AI
       document.getElementById('loading').classList.remove('visible');
       document.getElementById('resultsSection').classList.add('visible');
-
-      const strong=allAlerts.filter(a=>a.score>=3).length;
-      document.getElementById('statTotal').textContent=allAlerts.length;
-      document.getElementById('statStrong').textContent=strong;
-      document.getElementById('statMod').textContent=allAlerts.length-strong;
-      document.getElementById('statEngine').textContent=engineName;
-      // Simple markdown renderer for the summary
-      const renderMarkdown = text => text
-          .replace(/^#{1,3}\s+(.+)$/gm, '<strong style="font-family:Orbitron,monospace;font-size:11px;color:var(--accent);letter-spacing:1px;">$1</strong>')
-          .replace(/\*\*(.+?)\*\*/g, '<strong style="color:var(--strong);">$1</strong>')
-          .replace(/\*(.+?)\*/g, '<em>$1</em>')
-          .replace(/\n\n/g, '<br><br>')
-          .replace(/\n/g, '<br>');
-      document.getElementById('aiSummaryText').innerHTML = renderMarkdown(summary);
-      document.getElementById('aiSummary').classList.add('visible');
-
+      const strong = allAlerts.filter(a=>a.score>=3).length;
+      document.getElementById('statTotal').textContent    = allAlerts.length;
+      document.getElementById('statStrong').textContent   = strong;
+      document.getElementById('statMod').textContent      = allAlerts.length - strong;
+      document.getElementById('statEngine').textContent   = engineName;
       allAlerts.sort((a,b)=>b.score-a.score);
       renderAlerts(allAlerts);
+
+      // ── Market summary (AI uses only real numbers we provide) ─────
+      document.getElementById('loading').classList.add('visible');
+      document.getElementById('loadingStatus').textContent = 'Generating market summary...';
+      const topAssets = parsed.slice(0,5).map(a=>
+        `${a.symbol}: RSI=${a.rsi}, WT1=${a.wt1}, vsEMA200=${a.vsEma200!==undefined?a.vsEma200+'%':'N/A'}, signals=[${(a.signals||[]).join(', ')}]`
+      ).join('\n');
+      const summaryPrompt = `You are a trading analyst. Based on REAL scanned data from ${marketsList} on ${new Date().toDateString()}, write a 3-sentence market summary:\n\nTOP QUALIFYING ASSETS (real data):\n${topAssets||'No assets qualified'}\n\n1. Overall market sentiment based on the data\n2. Which assets look most interesting and why\n3. Key risk to watch\n\nBe direct. Reference actual assets and numbers. No disclaimers about real-time data — you have it above.`;
+      try {
+        const summary = await callAI(summaryPrompt);
+        const renderMarkdown = text => text
+          .replace(/^#{1,3}\s+(.+)$/gm,'<strong style="font-family:Orbitron,monospace;font-size:11px;color:var(--accent);letter-spacing:1px;">$1</strong>')
+          .replace(/\*\*(.+?)\*\*/g,'<strong style="color:var(--strong);">$1</strong>')
+          .replace(/\*(.+?)\*/g,'<em>$1</em>')
+          .replace(/\n\n/g,'<br><br>').replace(/\n/g,'<br>');
+        document.getElementById('aiSummaryText').innerHTML = renderMarkdown(summary);
+        document.getElementById('aiSummary').classList.add('visible');
+      } catch(e){ console.warn('Summary failed:',e.message); }
+
+      // ── AI Fundamental Enrichment — knowledge only, no numbers ────
+      // AI is asked ONLY about fundamentals/tech/news — never about chart values
+      document.getElementById('loadingStatus').textContent = 'Fetching fundamentals & news intel...';
+      const enrichList = parsed.map(a=>a.symbol).join(', ');
+      const enrichPrompt = `You are a research analyst. For each asset listed, provide a brief research note based on your knowledge up to early 2025.
+
+Assets: ${enrichList}
+
+Return a JSON array. For EACH asset:
+{
+  "symbol": "TICKER",
+  "fundamentals": "One sentence: financial health, team quality, adoption, revenue or TVL growth.",
+  "disruptive": "One sentence: is the technology genuinely novel or disruptive vs competitors?",
+  "news": "One to two sentences: notable recent developments, upgrades, partnerships, or red flags as of early 2025.",
+  "verdict": "STRONG" or "NEUTRAL" or "WEAK"
+}
+
+verdict guide:
+- STRONG = solid fundamentals + real innovation + positive recent developments
+- WEAK   = failing fundamentals, abandoned project, major scandal, or rug risk
+- NEUTRAL = mixed picture or insufficient knowledge
+
+IMPORTANT: If you have limited knowledge of an asset, set verdict "NEUTRAL" and state that honestly. Do NOT invent facts.
+Return ONLY the raw JSON array. No markdown, no backticks, no extra text.`;
+
+      try {
+        const enrichResponse = await callAI(enrichPrompt);
+        let enrichData = [];
+        try {
+          let clean = enrichResponse.replace(/```json|```/gi,'').trim();
+          const s = clean.indexOf('['), e = clean.lastIndexOf(']');
+          if(s!==-1 && e>s) enrichData = JSON.parse(clean.slice(s,e+1));
+        } catch(e2){
+          const objs = enrichResponse.match(/\{[\s\S]*?\}/g)||[];
+          objs.forEach(o=>{ try{ enrichData.push(JSON.parse(o)); }catch(e3){} });
+        }
+        // Attach enrichment — only non-numeric knowledge fields
+        enrichData.forEach(enrich => {
+          const alert = allAlerts.find(a=>a.symbol===enrich.symbol);
+          if(alert){
+            alert.fundamentals = enrich.fundamentals || '';
+            alert.disruptive   = enrich.disruptive   || '';
+            alert.news         = enrich.news         || '';
+            alert.verdict      = enrich.verdict      || 'NEUTRAL';
+          }
+        });
+        allAlerts.sort((a,b)=>b.score-a.score);
+        renderAlerts(allAlerts);
+      } catch(e){ console.warn('Enrichment failed:',e.message); }
+
+      document.getElementById('loading').classList.remove('visible');
 
     } catch(err) {
       showError('ERROR: ' + err.message);
