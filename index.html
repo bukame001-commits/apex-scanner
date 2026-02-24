@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>APEX SCANNER AI</title>
+<title>APEX SCANNER AI v2.0</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&family=Inter:wght@300;400;500&display=swap');
   :root {
@@ -26,1539 +26,276 @@
   .card{background:var(--card);border:1px solid var(--border);border-radius:2px;padding:16px;margin-bottom:14px;position:relative;overflow:hidden;}
   .card::before{content:'';position:absolute;top:0;left:0;width:3px;height:100%;background:var(--accent);}
 
-  /* AI Engine Selector */
+  /* Engine Selector */
   .engine-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
   .engine-btn{background:var(--surface);border:2px solid var(--border);border-radius:2px;padding:14px;cursor:pointer;transition:all 0.15s;text-align:left;}
-  .engine-btn:hover{border-color:var(--accent);}
   .engine-btn.active-claude{background:rgba(255,107,53,0.08);border-color:#ff6b35;}
   .engine-btn.active-gemini{background:rgba(0,212,255,0.08);border-color:var(--accent);}
-  .engine-logo{font-size:24px;margin-bottom:6px;}
   .engine-name{font-family:'Orbitron',monospace;font-size:13px;font-weight:700;color:var(--strong);}
   .engine-name.claude{color:#ff6b35;}
   .engine-name.gemini{color:var(--accent);}
-  .engine-desc{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--muted);margin-top:4px;line-height:1.5;}
-  .engine-badge{display:inline-block;font-family:'Share Tech Mono',monospace;font-size:8px;padding:2px 6px;border-radius:2px;margin-top:6px;}
-  .engine-badge.free{background:rgba(0,255,136,0.1);color:var(--accent2);border:1px solid rgba(0,255,136,0.3);}
-  .engine-badge.paid{background:rgba(255,107,53,0.1);color:#ff6b35;border:1px solid rgba(255,107,53,0.3);}
 
   /* API inputs */
-  .api-row{display:grid;grid-template-columns:1fr;gap:10px;}
   .api-field{display:none;}
   .api-field.visible{display:block;}
-  .api-label{font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--muted);margin-bottom:6px;letter-spacing:1px;}
   .api-input{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:2px;padding:10px 14px;color:var(--text);font-family:'Share Tech Mono',monospace;font-size:12px;outline:none;transition:border-color 0.15s;}
   .api-input:focus{border-color:var(--accent);}
-  .api-input::placeholder{color:var(--muted);}
-  .api-actions{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;}
-  .api-clear-btn{font-family:'Share Tech Mono',monospace;font-size:9px;padding:5px 10px;background:transparent;border:1px solid var(--border);color:var(--muted);cursor:pointer;letter-spacing:1px;transition:all 0.15s;}
-  .api-clear-btn:hover{border-color:var(--danger);color:var(--danger);}
-  .api-note{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--muted);margin-top:8px;line-height:1.6;}
-  .api-note a{color:var(--accent);text-decoration:none;}
+  .api-label{font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--muted);margin-bottom:6px;}
 
-  /* Markets */
-  .market-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;}
-  .market-btn{background:var(--surface);border:1px solid var(--border);border-radius:2px;padding:10px 12px;cursor:pointer;transition:all 0.15s;font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--muted);text-align:left;}
-  .market-btn:hover{border-color:var(--accent);color:var(--accent);}
-  .market-btn.active{background:rgba(0,212,255,0.08);border-color:var(--accent);color:var(--accent);}
-  .market-btn .icon{font-size:16px;display:block;margin-bottom:4px;}
-  .market-btn .name{font-size:11px;font-weight:700;}
-  .market-btn .desc{font-size:9px;opacity:0.6;margin-top:2px;}
-
-  /* Indicators */
-  .ind-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;}
-  .ind-btn{background:var(--surface);border:1px solid var(--border);border-radius:2px;padding:10px 12px;cursor:pointer;transition:all 0.15s;font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--muted);text-align:left;position:relative;}
-  .ind-btn:hover{border-color:var(--accent2);color:var(--text);}
-  .ind-btn.active{background:rgba(0,255,136,0.06);border-color:var(--accent2);color:var(--accent2);}
-  .ind-btn .ind-name{font-size:12px;font-weight:700;}
-  .ind-btn .ind-desc{font-size:9px;opacity:0.6;margin-top:3px;}
-  .ind-check{position:absolute;top:8px;right:8px;width:14px;height:14px;border:1px solid currentColor;border-radius:2px;display:flex;align-items:center;justify-content:center;font-size:9px;}
+  /* Markets/Inds */
+  .grid-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;}
+  .btn-item{background:var(--surface);border:1px solid var(--border);border-radius:2px;padding:10px 12px;cursor:pointer;transition:all 0.15s;font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--muted);text-align:left;position:relative;}
+  .btn-item.active{border-color:var(--accent);color:var(--accent);background:rgba(0,212,255,0.05);}
+  .btn-item.active-green{border-color:var(--accent2);color:var(--accent2);background:rgba(0,255,136,0.05);}
 
   /* Sliders */
   .slider-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
   @media(max-width:500px){.slider-grid{grid-template-columns:1fr;}}
   .slider-item label{font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--muted);display:block;margin-bottom:6px;}
-  .slider-item label span{color:var(--accent);float:right;font-size:12px;}
+  .slider-item label span{color:var(--accent);float:right;}
   input[type=range]{-webkit-appearance:none;width:100%;height:2px;background:var(--border);outline:none;}
-  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:2px;background:var(--accent);cursor:pointer;box-shadow:0 0 8px rgba(0,212,255,0.6);}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;background:var(--accent);cursor:pointer;border-radius:2px;}
 
-  /* Scan button */
-  .scan-btn{width:100%;padding:18px;background:transparent;border:1px solid var(--accent);color:var(--accent);font-family:'Orbitron',monospace;font-size:14px;font-weight:700;letter-spacing:4px;cursor:pointer;position:relative;overflow:hidden;transition:all 0.2s;margin-top:6px;}
-  .scan-btn::before{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(0,212,255,0.1),transparent);transform:translateX(-100%);transition:transform 0.4s;}
-  .scan-btn:hover::before{transform:translateX(100%);}
-  .scan-btn:hover{background:rgba(0,212,255,0.08);box-shadow:0 0 30px rgba(0,212,255,0.2);}
-  .scan-btn:disabled{opacity:0.4;cursor:not-allowed;}
+  /* Buttons */
+  .scan-btn{width:100%;padding:18px;background:transparent;border:1px solid var(--accent);color:var(--accent);font-family:'Orbitron',monospace;font-size:14px;font-weight:700;letter-spacing:4px;cursor:pointer;transition:0.2s;margin-top:10px;}
+  .scan-btn:hover{background:rgba(0,212,255,0.1);box-shadow:0 0 20px rgba(0,212,255,0.2);}
 
   /* Loading */
-  .loading{display:none;text-align:center;padding:40px;font-family:'Share Tech Mono',monospace;font-size:12px;color:var(--accent);letter-spacing:2px;}
+  .loading{display:none;text-align:center;padding:40px;font-family:'Share Tech Mono',monospace;color:var(--accent);}
   .loading.visible{display:block;}
   .loading-bar{width:100%;height:2px;background:var(--border);margin:16px 0;position:relative;overflow:hidden;}
-  .loading-bar::after{content:'';position:absolute;top:0;left:-40%;width:40%;height:100%;background:linear-gradient(90deg,transparent,var(--accent),transparent);animation:scan-line 1.2s infinite;}
+  .loading-bar::after{content:'';position:absolute;top:0;left:-40%;width:40%;height:100%;background:var(--accent);animation:scan-line 1.2s infinite;}
   @keyframes scan-line{0%{left:-40%;}100%{left:100%;}}
 
-  /* Results */
-  .results-section{display:none;margin-top:20px;}
-  .results-section.visible{display:block;}
-  .results-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px;}
-  .results-stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px;margin-bottom:16px;}
-  .stat-box{background:var(--card);border:1px solid var(--border);border-radius:2px;padding:10px 14px;text-align:center;}
-  .stat-box .stat-val{font-family:'Orbitron',monospace;font-size:22px;font-weight:700;color:var(--accent);}
-  .stat-box .stat-label{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:2px;margin-top:4px;}
-
-  /* Alert cards */
-  .alert-card{background:var(--card);border:1px solid var(--border);border-radius:2px;padding:14px 16px;margin-bottom:10px;position:relative;overflow:hidden;transition:border-color 0.15s;}
-  .alert-card:hover{border-color:rgba(0,212,255,0.4);}
+  /* Alert Card */
+  .alert-card{background:var(--card);border:1px solid var(--border);padding:16px;margin-bottom:10px;position:relative;transition:0.15s;}
+  .alert-card:hover{border-color:var(--accent);}
   .alert-card.strong::before{content:'';position:absolute;top:0;left:0;width:3px;height:100%;background:var(--accent2);}
-  .alert-card.moderate::before{content:'';position:absolute;top:0;left:0;width:3px;height:100%;background:var(--warn);}
-  .alert-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;}
-  .alert-symbol{font-family:'Orbitron',monospace;font-size:16px;font-weight:700;color:var(--strong);}
-  .alert-market{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--muted);margin-top:2px;}
-  .alert-score{font-family:'Orbitron',monospace;font-size:20px;font-weight:900;color:var(--accent2);}
-  .alert-score.moderate{color:var(--warn);}
-  .alert-signals{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;}
-  .signal-tag{font-family:'Share Tech Mono',monospace;font-size:10px;padding:3px 8px;border-radius:2px;border:1px solid;}
-  .signal-tag.wt{color:var(--accent);border-color:rgba(0,212,255,0.4);background:rgba(0,212,255,0.06);}
-  .signal-tag.rsi{color:#ff6b35;border-color:rgba(255,107,53,0.4);background:rgba(255,107,53,0.06);}
-  .signal-tag.vol{color:var(--warn);border-color:rgba(255,184,0,0.4);background:rgba(255,184,0,0.06);}
-  .signal-tag.bb{color:#a78bfa;border-color:rgba(167,139,250,0.4);background:rgba(167,139,250,0.06);}
-  .signal-tag.macd{color:var(--accent2);border-color:rgba(0,255,136,0.4);background:rgba(0,255,136,0.06);}
-  .signal-tag.other{color:var(--muted);border-color:var(--border);}
-  .alert-analysis{font-size:12px;color:var(--text);line-height:1.6;border-top:1px solid var(--border);padding-top:8px;margin-top:4px;}
-  .alert-values{display:flex;gap:16px;flex-wrap:wrap;margin-top:6px;}
+  .alert-symbol-link{font-family:'Orbitron',monospace;font-size:18px;color:var(--strong);text-decoration:none;display:flex;align-items:center;gap:8px;}
+  .alert-symbol-link:hover{color:var(--accent);}
+  .alert-signals{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0;}
+  .signal-tag{font-family:'Share Tech Mono',monospace;font-size:9px;padding:3px 8px;border:1px solid rgba(0,212,255,0.3);color:var(--accent);background:rgba(0,212,255,0.03);}
   .alert-val{font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--muted);}
   .alert-val span{color:var(--accent);}
-
-  /* Filter */
-  .filter-bar{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;}
-  .filter-btn{font-family:'Share Tech Mono',monospace;font-size:10px;padding:6px 14px;border:1px solid var(--border);background:var(--surface);color:var(--muted);cursor:pointer;border-radius:2px;transition:all 0.15s;letter-spacing:1px;}
-  .filter-btn:hover,.filter-btn.active{border-color:var(--accent);color:var(--accent);background:rgba(0,212,255,0.06);}
-
-  /* AI Summary */
-  .ai-summary{background:rgba(0,212,255,0.04);border:1px solid rgba(0,212,255,0.2);border-radius:2px;padding:16px;margin-bottom:16px;font-size:13px;line-height:1.8;color:var(--text);display:none;}
-  .ai-summary.visible{display:block;}
-  .ai-summary-title{font-family:'Orbitron',monospace;font-size:11px;color:var(--accent);letter-spacing:2px;margin-bottom:10px;}
-
-  .new-scan-btn{background:transparent;border:1px solid var(--border);color:var(--muted);font-family:'Share Tech Mono',monospace;font-size:10px;padding:6px 14px;cursor:pointer;letter-spacing:2px;transition:all 0.15s;}
-  .new-scan-btn:hover{border-color:var(--accent);color:var(--accent);}
-
-  .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--card);border:1px solid var(--accent2);color:var(--accent2);font-family:'Share Tech Mono',monospace;font-size:11px;letter-spacing:2px;padding:10px 20px;transition:transform 0.3s;z-index:100;}
-  .toast.show{transform:translateX(-50%) translateY(0);}
-  ::-webkit-scrollbar{width:4px;}
-  ::-webkit-scrollbar-track{background:var(--bg);}
-  ::-webkit-scrollbar-thumb{background:var(--border);}
+  
+  .ai-summary{background:rgba(0,212,255,0.05);border:1px solid rgba(0,212,255,0.2);padding:15px;margin-bottom:20px;font-size:13px;line-height:1.6;display:none;}
+  .results-section{display:none;}
 </style>
 </head>
 <body>
-<div class="container">
 
+<div class="container">
   <div class="header">
-    <div class="header-badge">AI-POWERED MARKET INTELLIGENCE</div>
+    <div class="header-badge">REAL-TIME DATA PROCESSING</div>
     <h1>APEX <span>SCANNER</span></h1>
-    <div class="header-sub">CLAUDE AI + GEMINI AI — CHOOSE YOUR ENGINE</div>
+    <div class="header-sub">TECHNICAL ANALYSIS v2.0 — HIGH PERFORMANCE</div>
   </div>
 
-  <div id="errorBox" style="display:none;background:rgba(255,51,102,0.1);border:1px solid var(--danger);border-radius:2px;padding:14px;margin-bottom:14px;font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--danger);line-height:1.7;word-break:break-all;"></div>
-
   <div id="setupPanel">
-
-    <!-- AI Engine -->
-    <div class="section-label">00 — SELECT AI ENGINE</div>
+    <div class="section-label">00 — AI INSIGHT ENGINE</div>
     <div class="card">
       <div class="engine-grid">
         <button class="engine-btn" id="engineClaude" onclick="selectEngine('claude')">
-          <div class="engine-logo">🤖</div>
-          <div class="engine-name claude">CLAUDE</div>
-          <div class="engine-desc">Anthropic's Claude Sonnet<br>Superior reasoning & analysis</div>
-          <div class="engine-badge paid">$5 MIN CREDIT</div>
+          <div class="engine-name claude">CLAUDE SONNET</div>
+          <div class="engine-desc">Professional deep analysis</div>
         </button>
         <button class="engine-btn active-gemini" id="engineGemini" onclick="selectEngine('gemini')">
-          <div class="engine-logo">✨</div>
-          <div class="engine-name gemini">GEMINI</div>
-          <div class="engine-desc">Gemini Flash via OpenRouter<br>Free tier, works everywhere</div>
-          <div class="engine-badge free">FREE TIER AVAILABLE</div>
+          <div class="engine-name gemini">GEMINI FLASH</div>
+          <div class="engine-desc">Fast results (OpenRouter)</div>
         </button>
       </div>
     </div>
 
-    <!-- API Keys -->
-    <div class="section-label">01 — API KEY</div>
+    <div class="section-label">01 — API ACCESS</div>
     <div class="card">
-      <!-- Claude Key -->
       <div class="api-field" id="claudeField">
         <div class="api-label">CLAUDE API KEY</div>
-        <input type="password" class="api-input" id="claudeKey"
-               placeholder="sk-ant-... or sk-or-v1-..."
-               oninput="saveKey('claude', this.value)" />
-        <div class="api-actions">
-          <button class="api-clear-btn" onclick="clearKey('claude')">✕ CLEAR KEY</button>
-          <a href="https://console.anthropic.com" target="_blank"
-             style="font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--accent);padding:5px 10px;border:1px solid rgba(0,212,255,0.3);text-decoration:none;">
-            GET KEY →
-          </a>
-        </div>
-        <div class="api-note">Use your Anthropic key (sk-ant-...) from <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a>, or an OpenRouter key (sk-or-...) from <a href="https://openrouter.ai/keys" target="_blank">openrouter.ai/keys</a>.</div>
+        <input type="password" class="api-input" id="claudeKey" placeholder="sk-ant-...">
       </div>
-
-      <!-- Gemini Key -->
       <div class="api-field visible" id="geminiField">
-        <div class="api-label">GEMINI API KEY</div>
-        <input type="password" class="api-input" id="geminiKey"
-               placeholder="sk-or-v1-..."
-               oninput="saveKey('gemini', this.value)" />
-        <div class="api-actions">
-          <button class="api-clear-btn" onclick="clearKey('gemini')">✕ CLEAR KEY</button>
-          <a href="https://aistudio.google.com/app/apikey" target="_blank"
-             style="font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--accent);padding:5px 10px;border:1px solid rgba(0,212,255,0.3);text-decoration:none;">
-            GET FREE KEY →
-          </a>
-        </div>
-        <div class="api-note">Paste your OpenRouter key (sk-or-...) from <a href="https://openrouter.ai/keys" target="_blank">openrouter.ai/keys</a> — free tier available for Gemini Flash.</div>
+        <div class="api-label">OPENROUTER KEY (For Gemini)</div>
+        <input type="password" class="api-input" id="geminiKey" placeholder="sk-or-v1-...">
       </div>
-
     </div>
 
-    <!-- Markets -->
-    <div class="section-label">02 — SELECT MARKETS</div>
+    <div class="section-label">02 — TARGET MARKETS</div>
     <div class="card">
-      <div class="market-grid">
-        <button class="market-btn active" data-market="crypto_top500" onclick="toggleMarket(this)">
-          <span class="icon">₿</span><div class="name">CRYPTO TOP 500</div><div class="desc">By market cap</div>
-        </button>
-        <button class="market-btn" data-market="crypto_top1000" onclick="toggleMarket(this)">
-          <span class="icon">🪙</span><div class="name">CRYPTO TOP 1000</div><div class="desc">By market cap</div>
-        </button>
-        <button class="market-btn" data-market="sp500" onclick="toggleMarket(this)">
-          <span class="icon">📈</span><div class="name">S&amp;P 500</div><div class="desc">US large cap</div>
-        </button>
-        <button class="market-btn" data-market="nasdaq100" onclick="toggleMarket(this)">
-          <span class="icon">💻</span><div class="name">NASDAQ 100</div><div class="desc">Tech index</div>
-        </button>
-        <button class="market-btn" data-market="russell2000" onclick="toggleMarket(this)">
-          <span class="icon">🏭</span><div class="name">RUSSELL 2000</div><div class="desc">Small cap</div>
-        </button>
-        <button class="market-btn" data-market="defi" onclick="toggleMarket(this)">
-          <span class="icon">⛓</span><div class="name">DEFI TOKENS</div><div class="desc">Top DeFi</div>
-        </button>
+      <div class="grid-list">
+        <button class="btn-item active" data-market="crypto_top50" onclick="toggleBtn(this)">CRYPTO TOP 50</button>
+        <button class="btn-item" data-market="nasdaq100" onclick="toggleBtn(this)">NASDAQ 100</button>
+        <button class="btn-item" data-market="sp500" onclick="toggleBtn(this)">S&P 500</button>
       </div>
     </div>
 
-    <!-- Indicators -->
-    <div class="section-label">03 — INDICATORS</div>
-    <div class="card">
-      <div class="ind-grid">
-        <button class="ind-btn active" data-ind="WaveTrend" onclick="toggleInd(this)">
-          <div class="ind-name">WAVETREND</div><div class="ind-desc">WT1 cross WT2 oversold</div><div class="ind-check">✓</div>
-        </button>
-        <button class="ind-btn active" data-ind="RSI Combo" onclick="toggleInd(this)">
-          <div class="ind-name">RSI COMBO</div><div class="ind-desc">🟢 green / 🔴 red dot signal</div><div class="ind-check">✓</div>
-        </button>
-        <button class="ind-btn" data-ind="MACD Crossover" onclick="toggleInd(this)">
-          <div class="ind-name">MACD</div><div class="ind-desc">Bullish crossover</div><div class="ind-check"></div>
-        </button>
-        <button class="ind-btn active" data-ind="Bollinger Band Lower Touch" onclick="toggleInd(this)">
-          <div class="ind-name">BOLLINGER BANDS</div><div class="ind-desc">Price at lower band</div><div class="ind-check">✓</div>
-        </button>
-        <button class="ind-btn" data-ind="Stochastic RSI" onclick="toggleInd(this)">
-          <div class="ind-name">STOCH RSI</div><div class="ind-desc">K cross D in oversold</div><div class="ind-check"></div>
-        </button>
-        <button class="ind-btn" data-ind="200 EMA proximity" onclick="toggleInd(this)">
-          <div class="ind-name">200 EMA</div><div class="ind-desc">Price near 200 EMA</div><div class="ind-check"></div>
-        </button>
-        <button class="ind-btn active" data-ind="Volume Spike" onclick="toggleInd(this)">
-          <div class="ind-name">VOLUME SPIKE</div><div class="ind-desc">1.5x average surge</div><div class="ind-check">✓</div>
-        </button>
-        <button class="ind-btn" data-ind="VWAP" onclick="toggleInd(this)">
-          <div class="ind-name">VWAP</div><div class="ind-desc">Price below VWAP</div><div class="ind-check"></div>
-        </button>
-        <button class="ind-btn" data-ind="ATR Expansion" onclick="toggleInd(this)">
-          <div class="ind-name">ATR</div><div class="ind-desc">Volatility expansion</div><div class="ind-check"></div>
-        </button>
-        <button class="ind-btn" data-ind="OBV Rising" onclick="toggleInd(this)">
-          <div class="ind-name">OBV</div><div class="ind-desc">Accumulation signal</div><div class="ind-check"></div>
-        </button>
-      </div>
-    </div>
-
-    <!-- Timeframe -->
-    <div class="section-label">04 — TIMEFRAME</div>
-    <div class="card">
-      <div style="display:flex;gap:8px;flex-wrap:wrap;" id="tfBtns">
-        <button class="filter-btn" data-tf="4h" data-interval="4h" data-limit="300" onclick="selectTF(this)">4H</button>
-        <button class="filter-btn" data-tf="1d" data-interval="1d" data-limit="210" onclick="selectTF(this)">DAILY</button>
-        <button class="filter-btn active" data-tf="1w" data-interval="1w" data-limit="210" onclick="selectTF(this)">WEEKLY</button>
-      </div>
-    </div>
-
-    <!-- Thresholds -->
-    <div class="section-label">04b — THRESHOLDS</div>
+    <div class="section-label">03 — THRESHOLDS</div>
     <div class="card">
       <div class="slider-grid">
         <div class="slider-item">
-          <label>WT OVERSOLD <span id="wtVal">-53</span></label>
-          <input type="range" min="-90" max="-20" value="-53" step="1" oninput="document.getElementById('wtVal').textContent=this.value">
+          <label>RSI OVERSOLD <span id="rsiVal">30</span></label>
+          <input type="range" min="10" max="50" value="30" oninput="document.getElementById('rsiVal').textContent=this.value">
         </div>
         <div class="slider-item">
-          <label>RSI OVERSOLD <span id="rsiVal">35</span></label>
-          <input type="range" min="10" max="50" value="35" step="1" oninput="document.getElementById('rsiVal').textContent=this.value">
-        </div>
-        <div class="slider-item">
-          <label>VOLUME MULTIPLIER <span id="volVal">1.5x</span></label>
-          <input type="range" min="10" max="50" value="15" step="1" oninput="document.getElementById('volVal').textContent=(this.value/10).toFixed(1)+'x'">
-        </div>
-        <div class="slider-item">
-          <label>MIN CONDITIONS <span id="minVal">2</span></label>
-          <input type="range" min="1" max="5" value="2" step="1" oninput="document.getElementById('minVal').textContent=this.value" id="minT">
+          <label>MIN INDICATORS <span id="minVal">1</span></label>
+          <input type="range" min="1" max="5" value="1" oninput="document.getElementById('minVal').textContent=this.value" id="minT">
         </div>
       </div>
     </div>
 
-    <!-- Market Cap Filter -->
-    <div class="section-label">04b — STOCK MARKET CAP FILTER</div>
-    <div class="card">
-      <div style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--muted);margin-bottom:10px;">Only applies to stock markets. Crypto is unaffected.</div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;" id="mcapBtns">
-        <button class="filter-btn active" data-mcap="0" onclick="selectMcap(this)">ALL</button>
-        <button class="filter-btn" data-mcap="200" onclick="selectMcap(this)">&lt; $200B</button>
-        <button class="filter-btn" data-mcap="50" onclick="selectMcap(this)">&lt; $50B</button>
-        <button class="filter-btn" data-mcap="10" onclick="selectMcap(this)">&lt; $10B</button>
-        <button class="filter-btn" data-mcap="5" onclick="selectMcap(this)">&lt; $5B</button>
-        <button class="filter-btn" data-mcap="1" onclick="selectMcap(this)">&lt; $1B</button>
-      </div>
-    </div>
-
-    <!-- Telegram -->
-  <div class="section-label">05 — TELEGRAM ALERTS (OPTIONAL)</div>
-  <div class="api-card">
-    <div class="api-field visible">
-      <div class="api-label">BOT TOKEN</div>
-      <input type="password" class="api-input" id="tgToken" placeholder="123456789:ABCdef..." oninput="saveKey('tgToken',this.value)" />
-    </div>
-    <div class="api-field visible" style="margin-top:8px;">
-      <div class="api-label">CHAT ID</div>
-      <input type="text" class="api-input" id="tgChatId" placeholder="Your chat ID from @userinfobot" oninput="saveKey('tgChatId',this.value)" />
-    </div>
-    <div class="api-note" style="margin-top:6px;">Leave blank to skip. Get bot from @BotFather, chat ID from @userinfobot.</div>
-    <button onclick="testTelegram()" style="margin-top:8px;background:transparent;border:1px solid #ffb800;color:#ffb800;font-family:Share Tech Mono,monospace;font-size:10px;padding:8px 16px;cursor:pointer;letter-spacing:2px;width:100%;">✉ TEST TELEGRAM</button>
-    <div id="tgTestResult" style="display:none;margin-top:6px;font-family:Share Tech Mono,monospace;font-size:10px;padding:6px;"></div>
+    <button class="scan-btn" onclick="runScan()">⚡ INITIALIZE SCAN</button>
   </div>
 
-  <button class="scan-btn" id="scanBtn" onclick="runScan()">⚡ ANALYZE WITH AI</button>
-  </div>
-
-  <!-- Loading -->
   <div class="loading" id="loading">
-    <div id="engineLabel">AI IS ANALYZING MARKETS...</div>
+    <div id="loadingStatus">Scanning Global Liquidity...</div>
     <div class="loading-bar"></div>
-    <div id="loadingStatus" style="font-size:10px;color:var(--muted);margin-top:8px;">Initializing...</div>
   </div>
 
-  <!-- Results -->
   <div class="results-section" id="resultsSection">
-    <div class="results-header">
-      <div class="section-label" style="margin:0;flex:1">SCAN RESULTS</div>
-      <button class="new-scan-btn" onclick="newScan()">↺ NEW SCAN</button>
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+      <div class="section-label" style="margin:0;">SCAN RESULTS</div>
+      <button onclick="location.reload()" style="background:transparent; border:1px solid var(--border); color:var(--muted); padding:6px 14px; font-family:'Share Tech Mono'; font-size:10px; cursor:pointer;">↺ RESET</button>
     </div>
-    <div class="results-stats">
-      <div class="stat-box"><div class="stat-val" id="statTotal">0</div><div class="stat-label">TOTAL</div></div>
-      <div class="stat-box"><div class="stat-val" id="statStrong" style="color:var(--accent2)">0</div><div class="stat-label">STRONG</div></div>
-      <div class="stat-box"><div class="stat-val" id="statMod" style="color:var(--warn)">0</div><div class="stat-label">MODERATE</div></div>
-      <div class="stat-box"><div class="stat-val" id="statEngine" style="font-size:14px">—</div><div class="stat-label">AI ENGINE</div></div>
-    </div>
+    
     <div class="ai-summary" id="aiSummary">
-      <div class="ai-summary-title">⚡ AI MARKET ANALYSIS</div>
-      <div id="aiSummaryText"></div>
+      <div style="font-family:'Orbitron'; font-size:10px; color:var(--accent); margin-bottom:10px;">⚡ AI MARKET SYNTHESIS</div>
+      <div id="aiSummaryText">Processing data...</div>
     </div>
-    <div class="filter-bar">
-      <button class="filter-btn result-filter active" onclick="filterAlerts('all',this)">ALL</button>
-      <button class="filter-btn result-filter" onclick="filterAlerts('strong',this)">🔥 STRONG</button>
-      <button class="filter-btn result-filter" onclick="filterAlerts('moderate',this)">⚡ MODERATE</button>
-      <button class="filter-btn result-filter" onclick="filterAlerts('crypto',this)">₿ CRYPTO</button>
-      <button class="filter-btn result-filter" onclick="filterAlerts('stocks',this)">📈 STOCKS</button>
-    </div>
+
     <div id="alertsContainer"></div>
   </div>
 </div>
 
-<div class="toast" id="toast"></div>
-
 <script>
   let selectedEngine = 'gemini';
-  let selectedMarkets = ['crypto_top500'];
-  let selectedInds = ['WaveTrend','RSI Combo','Bollinger Band Lower Touch','Volume Spike'];
-  let allAlerts = [];
-  let selectedMcap = 0;
-  let selectedTF = {tf:'1w', interval:'1w', limit:210, label:'1W'}; // 0 = no filter, otherwise max billion USD
-
-  function selectMcap(btn) {
-    document.querySelectorAll('#mcapBtns .filter-btn').forEach(b=>b.classList.remove('active'));
-    btn.classList.add('active');
-    selectedMcap = parseFloat(btn.dataset.mcap);
-  }
-
-  function selectTF(btn) {
-    document.querySelectorAll('#tfBtns .filter-btn').forEach(b=>b.classList.remove('active'));
-    btn.classList.add('active');
-    selectedTF = {
-      tf: btn.dataset.tf,
-      interval: btn.dataset.interval,
-      limit: parseInt(btn.dataset.limit),
-      label: btn.dataset.tf==='1w'?'1W': btn.dataset.tf==='1d'?'1D':'4H'
-    };
-  }
-
-  const MARKET_TICKERS = {
-    crypto_top500:{label:'Crypto Top 500',type:'crypto',tickers:null},   // fetched live
-    crypto_top1000:{label:'Crypto Top 1000',type:'crypto',tickers:null}, // fetched live
-    sp500:{label:'S&P 500',type:'stock',tickers:['AAPL','MSFT','AMZN','NVDA','GOOGL','META','TSLA','BRK-B','UNH','LLY','JPM','V','XOM','MA','PG','JNJ','HD','AVGO','MRK','CVX','PEP','ABBV','COST','KO','WMT','ADBE','CRM','BAC','MCD','PFE','TMO','CSCO','ABT','ACN','NKE','DHR','LIN','CMCSA','TXN','VZ','PM','NEE','RTX','HON','AMGN','IBM','UNP','INTC','QCOM','INTU','SBUX','GE','LOW','AMD','CAT','DE','SPGI','MS','GS','BLK']},
-    nasdaq100:{label:'Nasdaq 100',type:'stock',tickers:['AAPL','MSFT','AMZN','NVDA','GOOGL','GOOG','META','TSLA','AVGO','ADBE','CSCO','CMCSA','INTC','AMD','INTU','QCOM','HON','AMAT','SBUX','MDLZ','GILD','REGN','VRTX','ISRG','KLAC','LRCX','SNPS','CDNS','MRVL','PANW','CRWD','NFLX','PYPL','ADP','MELI','ASML','COST','PDD','KDP','ORLY','PCAR','CTAS','FTNT','FAST','CPRT','MNST','DDOG','ROST','PAYX','ODFL']},
-    russell2000:{label:'Russell 2000',type:'stock',tickers:['SMCI','SAIA','GTLS','CHRD','RMBS','HALO','MGNI','CSWI','UFPI','PLXS','ITRI','ESAB','AAON','SPSC','ACLS','SFBS','CABO','ALRM','KTOS','AEIS','CPRX','MSGS','IRTC','MGPI','HTLF','PTCT','FORM','NSIT','TGTX','IDEX','AGIO','CARG','PRGS','DFIN','NEOG','HLIO','DNOW','BOOT','REPX','ARCH','AORT','INVA','DXPE','LQDT','MYRG','CNXN','PAHC','RELY','HTLD','PZZA']},
-    defi:{label:'DeFi Tokens',type:'crypto',tickers:null} // fetched live
+  const TICKERS = {
+    crypto_top50: ['BTC','ETH','SOL','BNB','XRP','ADA','AVAX','DOT','LINK','MATIC','NEAR','ATOM','ICP','LTC','UNI','BCH','ETC','STX','FIL','ARB'],
+    nasdaq100: ['AAPL','MSFT','NVDA','AMZN','META','GOOGL','TSLA','AVGO','COST','ADBE'],
+    sp500: ['JPM','V','MA','PG','JNJ','HD','XOM','CVX','LLY','MRK']
   };
 
-  // Stablecoins and wrapped tokens to exclude from crypto scans
-  const EXCLUDE_SYMBOLS = new Set(['USDT','USDC','BUSD','TUSD','USDD','USDP','FDUSD','DAI','FRAX','LUSD','PYUSD','GUSD','SUSD','USDB','USDX','EURC','WBTC','WETH','WBNB','STETH','WSTETH','CBETH','RETH','BETH','SOLVBTC','BTCB','HBTC','RENBTC']);
+  function selectEngine(e) {
+    selectedEngine = e;
+    document.querySelectorAll('.engine-btn').forEach(b => b.classList.remove('active-claude','active-gemini'));
+    document.getElementById('engine'+e.charAt(0).toUpperCase()+e.slice(1)).classList.add('active-'+e);
+    document.getElementById('claudeField').className = 'api-field' + (e==='claude'?' visible':'');
+    document.getElementById('geminiField').className = 'api-field' + (e==='gemini'?' visible':'');
+  }
 
-  // ── Fetch live top-N crypto from CoinGecko ────────
-  async function fetchLiveCryptoList(limit){
-    const pages=Math.ceil(limit/250);
-    const symbols=[];
-    for(let p=1;p<=pages;p++){
-      try{
-        const perPage=Math.min(250,limit-(p-1)*250);
-        const url=`https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=${perPage}&page=${p}&sparkline=false`;
-        const res=await fetch(url);
-        if(!res.ok) break;
-        const data=await res.json();
-        data.forEach(coin=>{
-          const sym=coin.symbol.toUpperCase();
-          if(!EXCLUDE_SYMBOLS.has(sym)) symbols.push(sym);
-        });
-      }catch(e){ break; }
+  function toggleBtn(btn) { btn.classList.toggle('active'); }
+
+  // --- Core Calculation Logic ---
+  function calculateRSI(closes, period=14) {
+    if(closes.length < period + 1) return null;
+    let gains = 0, losses = 0;
+    for(let i=1; i<=period; i++) {
+      let diff = closes[i] - closes[i-1];
+      if(diff >= 0) gains += diff; else losses -= diff;
     }
-    return symbols;
+    let avgG = gains/period, avgL = losses/period;
+    for(let i=period+1; i<closes.length; i++) {
+      let diff = closes[i] - closes[i-1];
+      avgG = (avgG * (period-1) + (diff > 0 ? diff : 0)) / period;
+      avgL = (avgL * (period-1) + (diff < 0 ? -diff : 0)) / period;
+    }
+    return 100 - (100 / (1 + avgG/avgL));
   }
 
-  // ── Engine selection ──────────────────────────────
-  function selectEngine(engine) {
-    selectedEngine = engine;
-    document.getElementById('engineClaude').className = 'engine-btn' + (engine==='claude' ? ' active-claude' : '');
-    document.getElementById('engineGemini').className = 'engine-btn' + (engine==='gemini' ? ' active-gemini' : '');
-    document.getElementById('claudeField').className = 'api-field' + (engine==='claude' ? ' visible' : '');
-    document.getElementById('geminiField').className = 'api-field' + (engine==='gemini' ? ' visible' : '');
-  }
-
-  // ── Key storage ───────────────────────────────────
-  function saveKey(engine, val) {
-    try { localStorage.setItem('apex_key_'+engine, val); } catch(e) {}
-  }
-
-  function clearKey(engine) {
+  async function fetchCryptoData(symbol) {
     try {
-      localStorage.removeItem('apex_key_'+engine);
-      document.getElementById(engine+'Key').value = '';
-      showToast('KEY CLEARED');
-    } catch(e) {}
+      const res = await fetch(`https://api.binance.com/api/v3/klines?symbol=${symbol}USDT&interval=1d&limit=50`);
+      const data = await res.json();
+      const closes = data.map(d => parseFloat(d[4]));
+      const rsi = calculateRSI(closes);
+      return { symbol, price: closes[closes.length-1], rsi, type:'crypto' };
+    } catch(e) { return null; }
   }
 
-  function loadKeys() {
-    try {
-      const ck = localStorage.getItem('apex_key_claude');
-      const gk = localStorage.getItem('apex_key_gemini');
-      if (ck) document.getElementById('claudeKey').value = ck;
-      if (gk) document.getElementById('geminiKey').value = gk;
-      const tgt=localStorage.getItem('apex_key_tgToken');
-      const tgc=localStorage.getItem('apex_key_tgChatId');
-      if(tgt&&document.getElementById('tgToken')) document.getElementById('tgToken').value=tgt;
-      if(tgc&&document.getElementById('tgChatId')) document.getElementById('tgChatId').value=tgc;
-    } catch(e) {}
-  }
-
-  window.addEventListener('load', loadKeys);
-
-  // ── Market / indicator toggles ────────────────────
-  function toggleMarket(btn) {
-    btn.classList.toggle('active');
-    const m = btn.dataset.market;
-    selectedMarkets = selectedMarkets.includes(m) ? selectedMarkets.filter(x=>x!==m) : [...selectedMarkets,m];
-  }
-
-  function toggleInd(btn) {
-    btn.classList.toggle('active');
-    const ind = btn.dataset.ind;
-    const check = btn.querySelector('.ind-check');
-    if (selectedInds.includes(ind)) { selectedInds=selectedInds.filter(x=>x!==ind); check.textContent=''; }
-    else { selectedInds.push(ind); check.textContent='✓'; }
-  }
-
-  function showToast(msg) {
-    const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show');
-    setTimeout(()=>t.classList.remove('show'),8000);
-  }
-
-  function showError(msg) {
-    const box = document.getElementById('errorBox');
-    box.textContent = msg;
-    box.style.display = 'block';
-    document.getElementById('loading').classList.remove('visible');
-    document.getElementById('setupPanel').style.display = 'block';
-  }
-
-  function newScan() {
-    document.getElementById('resultsSection').classList.remove('visible');
-    document.getElementById('setupPanel').style.display='block';
-    allAlerts=[];
-  }
-
-  // ── API calls via OpenRouter (no backend needed) ────
-  async function callAI(prompt) {
-    const keyFieldId = selectedEngine === 'claude' ? 'claudeKey' : 'geminiKey';
-    const apiKey = document.getElementById(keyFieldId).value.trim();
-    if (!apiKey) throw new Error('Enter your ' + (selectedEngine === 'claude' ? 'Claude' : 'Gemini') + ' API key in Section 01');
-
-    // Anthropic direct (sk-ant-...)
-    if (apiKey.startsWith('sk-ant-')) {
-      const response = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': apiKey,
-          'anthropic-version': '2023-06-01',
-          'anthropic-dangerous-direct-browser-access': 'true'
-        },
-        body: JSON.stringify({
-          model: 'claude-haiku-4-5',
-          max_tokens: 4096,
-          messages: [{ role: 'user', content: prompt }]
-        })
-      });
-      const rawText = await response.text();
-      let data;
-      try { data = JSON.parse(rawText); } catch(e) { throw new Error('Invalid response: ' + rawText.substring(0,200)); }
-      if (!response.ok || data.error) throw new Error(data.error?.message || 'Anthropic API error');
-      return data.content[0].text;
-    }
-
-    // OpenRouter fallback (sk-or-...)
-    const model = selectedEngine === 'claude' ? 'anthropic/claude-haiku-4-5' : 'google/gemini-2.0-flash-exp:free';
-    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + apiKey,
-        'HTTP-Referer': 'https://apex-scanner.app',
-        'X-Title': 'APEX SCANNER'
-      },
-      body: JSON.stringify({ model, max_tokens: 4096, messages: [{ role: 'user', content: prompt }] })
-    });
-    const rawText = await response.text();
-    let data;
-    try { data = JSON.parse(rawText); } catch(e) { throw new Error('Invalid response: ' + rawText.substring(0,200)); }
-    if (!response.ok || data.error) throw new Error(data.error?.message || JSON.stringify(data.error) || 'API error');
-    return data.choices[0].message.content;
-  }
-
-  // ── Telegram functions ────────────────────────────────
-  async function testTelegram() {
-    const token=document.getElementById('tgToken').value.trim();
-    const chatId=document.getElementById('tgChatId').value.trim();
-    const result=document.getElementById('tgTestResult');
-    result.style.display='block';
-    if(!token){result.style.color='#ff3366';result.textContent='ERROR: Enter bot token first';return;}
-    if(!chatId){result.style.color='#ff3366';result.textContent='ERROR: Enter chat ID first';return;}
-    result.style.color='#ffb800';result.textContent='Testing...';
-    try{
-      const botRes=await fetch('https://api.telegram.org/bot'+token+'/getMe');
-      const botData=await botRes.json();
-      if(!botData.ok){result.style.color='#ff3366';result.textContent='ERROR: Invalid bot token. Get from @BotFather';return;}
-      const parsedId=isNaN(chatId)?chatId:parseInt(chatId);
-      const msgRes=await fetch('https://api.telegram.org/bot'+token+'/sendMessage',{
-        method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({chat_id:parsedId,text:'APEX SCANNER: Connection test successful!'})
-      });
-      const msgData=await msgRes.json();
-      if(msgData.ok){result.style.color='#00ff88';result.textContent='SUCCESS! Check your Telegram for the test message.';}
-      else{result.style.color='#ff3366';result.textContent='ERROR: '+msgData.description+' — Check your Chat ID';}
-    }catch(e){result.style.color='#ff3366';result.textContent='ERROR: '+e.message;}
-  }
-
-  async function sendTelegram(alerts,sentimentMap,liqData){
-    const token=document.getElementById('tgToken').value.trim();
-    const chatId=document.getElementById('tgChatId').value.trim();
-    if(!token||!chatId) return;
-    const parsedId=isNaN(chatId)?chatId:parseInt(chatId);
-    const strong=alerts.filter(a=>a.score>=3);
-    if(strong.length===0) return;
-    let msg='APEX SCANNER RESULTS\n'+new Date().toLocaleString()+'\n\nSTRONG SIGNALS ('+strong.length+'):\n\n';
-    strong.forEach(a=>{
-      msg+=a.symbol+' - '+a.score+' signals\n';
-      msg+='Signals: '+(a.signals||[]).join(', ')+'\n';
-      if(sentimentMap&&sentimentMap[a.symbol]) msg+='Reddit: '+sentimentMap[a.symbol].label+' ('+sentimentMap[a.symbol].posts+' posts)\n';
-      const liq=liqData&&liqData[a.symbol];
-      if(liq&&liq.alert) msg+='LIQ ZONE: '+(liq.alertType==='NEAR_LONG_LIQ'?'Long':'Short')+' '+(liq.alertType==='NEAR_LONG_LIQ'?liq.distLong:liq.distShort)+'% away | Funding: '+liq.bias+'\n';
-      msg+='\n';
-    });
-    // Split into chunks
-    const chunks=[];
-    while(msg.length>4000){chunks.push(msg.substring(0,4000));msg=msg.substring(4000);}
-    chunks.push(msg);
-    for(const chunk of chunks){
-      try{
-        await fetch('https://api.telegram.org/bot'+token+'/sendMessage',{
-          method:'POST',headers:{'Content-Type':'application/json'},
-          body:JSON.stringify({chat_id:parsedId,text:chunk})
-        });
-      }catch(e){console.log('Telegram error:',e);}
-    }
-  }
-
-  // ── Render ────────────────────────────────────────
-  function getSignalClass(s) {
-    s=s.toLowerCase();
-    if(s.includes('wt')||s.includes('wave')) return 'wt';
-    if(s.includes('rsi')) return 'rsi';
-    if(s.includes('vol')) return 'vol';
-    if(s.includes('bb')||s.includes('bolling')) return 'bb';
-    if(s.includes('macd')) return 'macd';
-    return 'other';
-  }
-
-  function renderAlerts(alerts) {
-    const c=document.getElementById('alertsContainer');
-    c.innerHTML='';
-    if(alerts.length===0){
-      c.innerHTML='<div style="text-align:center;padding:40px;font-family:Share Tech Mono,monospace;font-size:12px;color:var(--muted);">NO ALERTS FOR CURRENT FILTER</div>';
-      return;
-    }
-    alerts.forEach(function(a){
-      const isStrong=a.score>=3;
-      const card=document.createElement('div');
-      card.className='alert-card '+(isStrong?'strong':'moderate');
-      card.dataset.type=a.type||'';
-      card.dataset.strength=isStrong?'strong':'moderate';
-      const signals=a.signals||[];
-      let sigsHtml='';
-      signals.forEach(function(s){
-        const label=s.includes(':')?s.split(':').slice(1).join(':'):s;
-        sigsHtml+='<span class="signal-tag '+getSignalClass(label)+'">'+label+'</span>';
-      });
-
-      // Reddit sentiment badge
-      let sentHtml='';
-      if(a.sentiment){
-        const clr=a.sentimentEmoji==='green'?'color:#00ff88;border-color:rgba(0,255,136,0.4);background:rgba(0,255,136,0.06)':
-                  a.sentimentEmoji==='red'?'color:#ff3366;border-color:rgba(255,51,102,0.4);background:rgba(255,51,102,0.06)':
-                  'color:#ffb800;border-color:rgba(255,184,0,0.4);background:rgba(255,184,0,0.06)';
-        sentHtml='<div style="margin-top:8px;font-family:Share Tech Mono,monospace;font-size:10px;padding:4px 10px;display:inline-block;border-radius:2px;border:1px solid;'+clr+'">REDDIT: '+a.sentiment+'</div>';
-      }
-
-      // Liquidation proximity (always show for crypto if data exists)
-      let liqHtml='';
-      if(a.distLong!==undefined){
-        const longColor=a.distLong<=8?'#ff3366':a.distLong<=15?'#ffb800':'#4a6070';
-        const shortColor=a.distShort<=8?'#ff3366':a.distShort<=15?'#ffb800':'#4a6070';
-        const nearWarn=a.nearLiq?'<span style="color:#ff3366;margin-left:8px;font-size:9px;animation:pulse-border 1s infinite;">⚠ NEAR LIQ</span>':'';
-        const biasColor=a.fundingBias==='LONGS_CROWDED'?'#ff6b35':a.fundingBias==='SHORTS_CROWDED'?'#00ff88':'#4a6070';
-        liqHtml=
-          '<div style="margin-top:8px;padding:8px 10px;border:1px solid #0e2033;border-radius:2px;background:rgba(255,51,102,0.03);">'+
-            '<div style="font-family:Share Tech Mono,monospace;font-size:9px;color:var(--muted);letter-spacing:2px;margin-bottom:6px;">LIQ ZONES'+nearWarn+'</div>'+
-            '<div style="display:flex;gap:16px;flex-wrap:wrap;">'+
-              '<div style="font-family:Share Tech Mono,monospace;font-size:10px;">🔴 LONG LIQ <span style="color:'+longColor+';">'+a.distLong+'% below</span></div>'+
-              '<div style="font-family:Share Tech Mono,monospace;font-size:10px;">🟢 SHORT LIQ <span style="color:'+shortColor+';">'+a.distShort+'% above</span></div>'+
-              '<div style="font-family:Share Tech Mono,monospace;font-size:10px;">FUNDING <span style="color:'+biasColor+';">'+a.fundingBias+'</span></div>'+
-            '</div>'+
-          '</div>';
-      }
-
-      // RSI Combo badges
-      let rsiComboHtml='';
-      if(a.rsiCombo){
-        const rc=a.rsiCombo;
-        const badges=[];
-        if(rc.mup)   badges.push('<span style="font-family:Share Tech Mono,monospace;font-size:9px;padding:3px 8px;border-radius:2px;border:1px solid;color:#00ff88;border-color:rgba(0,255,136,0.4);background:rgba(0,255,136,0.08);">🟢 RSI GREEN DOT — Bullish Exhaustion</span>');
-        if(rc.mdown) badges.push('<span style="font-family:Share Tech Mono,monospace;font-size:9px;padding:3px 8px;border-radius:2px;border:1px solid;color:#ff3366;border-color:rgba(255,51,102,0.4);background:rgba(255,51,102,0.08);">🔴 RSI RED DOT — Bearish Exhaustion</span>');
-        if(badges.length) rsiComboHtml='<div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:7px;">'+badges.join('')+'</div>';
-      }
-      const isLive = a.dataSource === 'live';
-      const dataBadge = '<span style="font-family:Share Tech Mono,monospace;font-size:8px;padding:2px 7px;border-radius:2px;border:1px solid;margin-left:8px;'+(isLive?'color:#00ff88;border-color:rgba(0,255,136,0.4);background:rgba(0,255,136,0.06)':'color:#ffb800;border-color:rgba(255,184,0,0.4);background:rgba(255,184,0,0.06)')+'">'+(isLive?'● LIVE':'◌ AI EST')+'</span>';
-
-      card.innerHTML =
-        '<div class="alert-top">'+
-          '<div>'+
-            '<div class="alert-symbol">'+a.symbol+dataBadge+'</div>'+
-            '<div class="alert-market">'+(a.market||'')+' &bull; '+((a.type||'').toUpperCase())+'</div>'+
-          '</div>'+
-          '<div style="text-align:right">'+
-            '<div class="alert-score '+(isStrong?'':'moderate')+'">'+Math.min(a.score,selectedInds.length)+'/'+selectedInds.length+'</div>'+
-            '<div style="font-family:Share Tech Mono,monospace;font-size:9px;color:var(--muted);margin-top:2px;">'+(isStrong?'🔥 STRONG':'⚡ MODERATE')+'</div>'+
-          '</div>'+
-        '</div>'+
-        '<div class="alert-signals">'+sigsHtml+'</div>'+
-        rsiComboHtml+
-        '<div class="alert-analysis">'+(a.analysis||'')+'</div>'+
-        sentHtml+liqHtml+
-        '<div class="alert-values">'+
-          (a.price!==undefined?'<div class="alert-val">PRICE <span>$'+parseFloat(a.price).toPrecision(5)+'</span></div>':'')+
-          (a.marketCap?'<div class="alert-val">MCAP <span>'+(a.marketCap>=1e9?(a.marketCap/1e9).toFixed(2)+'B':(a.marketCap/1e6).toFixed(0)+'M')+'</span></div>':'')+
-          (a.vsEma200!==undefined&&a.vsEma200!==null?'<div class="alert-val" title="% above/below 200 EMA">EMA200 <span style="color:'+(a.vsEma200<0?'#00ff88':'#ff6b35')+';">'+(a.vsEma200>0?'+':'')+a.vsEma200+'%</span></div>':'')+
-          (a.wt1!==undefined&&a.wt1!==null?'<div class="alert-val">WT1 <span style="color:'+(a.wt1<-53?'#00ff88':a.wt1>53?'#ff3366':'var(--accent)')+';">'+a.wt1+'</span></div>':'')+
-          (a.wt2!==undefined&&a.wt2!==null?'<div class="alert-val">WT2 <span>'+a.wt2+'</span></div>':'')+
-          (a.wtCrossed?'<div class="alert-val"><span style="color:'+(a.wtCrossType==='bullish'?'#00ff88':'#ff3366')+';font-weight:700;">'+(a.wtCrossType==='bullish'?'▲ BULL CROSS':'▼ BEAR CROSS')+'</span></div>':'')+
-          (a.rsi!==undefined?'<div class="alert-val">RSI <span>'+a.rsi+'</span></div>':'')+
-          (a.rsiCombo&&a.rsiCombo.adx!==null?'<div class="alert-val">ADX <span style="color:var(--warn);">'+a.rsiCombo.adx+'</span></div>':'')+
-          '<div class="alert-val">TF <span style="color:var(--accent);">'+selectedTF.label+'</span></div>'+
-        '</div>';
-      c.appendChild(card);
-    });
-  }
-
-  function filterAlerts(type,btn) {
-    document.querySelectorAll('.result-filter').forEach(b=>b.classList.remove('active'));
-    btn.classList.add('active');
-    let f=allAlerts;
-    if(type==='strong') f=allAlerts.filter(a=>a.score>=3);
-    else if(type==='moderate') f=allAlerts.filter(a=>a.score===2);
-    else if(type==='crypto') f=allAlerts.filter(a=>a.type==='crypto');
-    else if(type==='stocks') f=allAlerts.filter(a=>a.type==='stock');
-    renderAlerts(f);
-  }
-
-  const BACKEND='https://apex-backend-k8kw.onrender.com';
-
-  // ── RSI Combo [by Marco] exact implementation ────────
-  // RMA (Rolling Moving Average) = Pine's rma() — same as Wilder's smoothing
-  function calcRMASeries(src, period){
-    const out=new Array(src.length).fill(null);
-    // seed with SMA of first `period` values
-    let sum=0, count=0;
-    for(let i=0;i<src.length;i++){
-      if(src[i]===null||src[i]===undefined) continue;
-      sum+=src[i]; count++;
-      if(count===period){
-        out[i]=sum/period;
-      } else if(count>period){
-        const prev=out[i-1];
-        out[i]=(prev*(period-1)+src[i])/period;
-      }
-    }
-    return out;
-  }
-
-  // RSI using RMA (matches Pine's rsi() exactly)
-  // up = rma(max(change(src),0), len)
-  // down = rma(-min(change(src),0), len)
-  // rsi = down==0 ? 100 : up==0 ? 0 : 100-(100/(1+up/down))
-  function calcRSIComboSeries(closes, len=14){
-    const n=closes.length;
-    const changes=new Array(n).fill(null);
-    for(let i=1;i<n;i++) changes[i]=closes[i]-closes[i-1];
-    const gains=changes.map(v=>v===null?null:Math.max(v,0));
-    const losses=changes.map(v=>v===null?null:Math.max(-v,0));
-    const upSeries=calcRMASeries(gains,len);
-    const downSeries=calcRMASeries(losses,len);
-    const rsiSeries=upSeries.map((up,i)=>{
-      if(up===null) return null;
-      const down=downSeries[i];
-      if(down===0) return 100;
-      if(up===0) return 0;
-      return 100-(100/(1+up/down));
-    });
-    return{rsiSeries,upSeries,downSeries};
-  }
-
-  // SMA series
-  function calcSMASeries(src, period){
-    const out=new Array(src.length).fill(null);
-    for(let i=period-1;i<src.length;i++){
-      if(src[i]===null) continue;
-      let s=0,c=0;
-      for(let j=i-period+1;j<=i;j++){if(src[j]!==null){s+=src[j];c++;}}
-      if(c===period) out[i]=s/period;
-    }
-    return out;
-  }
-
-  // Momentum: mom(src, length) = src - src[length]
-  function calcMomSeries(src, period){
-    const out=new Array(src.length).fill(null);
-    for(let i=period;i<src.length;i++){
-      if(src[i]!==null&&src[i-period]!==null) out[i]=src[i]-src[i-period];
-    }
-    return out;
-  }
-
-  // Full RSI Combo — returns all signals from Marco's script
-  function calcRSICombo(closes){
-    const n=closes.length;
-    if(n<35) return null;
-
-    // ── Core RSI (RMA-based) ──
-    const {rsiSeries,upSeries,downSeries}=calcRSIComboSeries(closes,14);
-
-    // ── ADX of RSI ──
-    // sum = up + down
-    // adx = 100 * rma(abs(up-down)/(sum==0?1:sum), 6)
-    const adxInput=upSeries.map((up,i)=>{
-      if(up===null||downSeries[i]===null) return null;
-      const sum=up+downSeries[i];
-      return Math.abs(up-downSeries[i])/(sum===0?1:sum);
-    });
-    const adxRma=calcRMASeries(adxInput,6);
-    const adxSeries=adxRma.map(v=>v===null?null:100*v);
-
-    // ── Momentum of ADX ──
-    const amSeries=calcMomSeries(adxSeries,5);  // am = mom(adx,5)
-    const rsiMom6=calcMomSeries(rsiSeries,6);    // mom(rsi,6)
-
-    // ── RSI Exhaustion signals ──
-    // mup:  rsi<42 AND am>0 AND mom(rsi,6)<0  → oversold exhaustion (bullish)
-    // mdown: rsi>58 AND am>0 AND mom(rsi,6)>0 → overbought exhaustion (bearish)
-    const last=n-1;
-    const rsi=rsiSeries[last];
-    const am=amSeries[last];
-    const rsiM6=rsiMom6[last];
-    const mup=rsi!==null&&am!==null&&rsiM6!==null && rsi<42&&am>0&&rsiM6<0;
-    const mdown=rsi!==null&&am!==null&&rsiM6!==null && rsi>58&&am>0&&rsiM6>0;
-
-    // ── RSS — Relative Spread Strength ──
-    // E1=ema(close,10), E2=ema(close,40)
-    // Spread=E1-E2, RS=rsi(Spread,5), Smooth=sma(RS,3)
-    const e1=calcEMASeries(closes,10);
-    const e2=calcEMASeries(closes,40);
-    const spread=e1.map((v,i)=>v!==null&&e2[i]!==null?v-e2[i]:null);
-    const spreadCloses=spread.filter(v=>v!==null);
-    const {rsiSeries:rsSeries}=calcRSIComboSeries(spreadCloses,5);
-    const rsSmoothRaw=calcSMASeries(rsSeries,3);
-    const smooth=rsSmoothRaw.filter(v=>v!==null);
-    const smoothVal=smooth.length?smooth[smooth.length-1]:null;
-    // Fill signals: smooth<18 → oversold zone, smooth>82 → overbought zone
-    const rssOversold=smoothVal!==null&&smoothVal<18;
-    const rssOverbought=smoothVal!==null&&smoothVal>82;
-
-    // ── Swing 350 ──
-    // rs=rsi(close,3), mrs=sma(rs,3)
-    // BUY:  crossunder(sma(rs,3), 20) → mrs just crossed below 20
-    // SELL: crossover(sma(rs,3), 80)  → mrs just crossed above 80
-    const {rsiSeries:rs3Series}=calcRSIComboSeries(closes,3);
-    const mrs=calcSMASeries(rs3Series,3);
-    const mrsLast=mrs[last];
-    const mrsPrev=mrs[last-1];
-    const swing350Buy=mrsLast!==null&&mrsPrev!==null&&mrsPrev>=20&&mrsLast<20;
-    const swing350Sell=mrsLast!==null&&mrsPrev!==null&&mrsPrev<=80&&mrsLast>80;
-
-    return{
-      rsi:rsi!==null?parseFloat(rsi.toFixed(1)):null,
-      adx:adxSeries[last]!==null?parseFloat(adxSeries[last].toFixed(1)):null,
-      am:am!==null?parseFloat(am.toFixed(2)):null,
-      mup,    // RSI down-exhaustion bullish signal
-      mdown,  // RSI up-exhaustion bearish signal
-      smoothRSS:smoothVal!==null?parseFloat(smoothVal.toFixed(1)):null,
-      rssOversold,
-      rssOverbought,
-      swing350Buy,
-      swing350Sell,
-      mrs:mrsLast!==null?parseFloat(mrsLast.toFixed(1)):null
-    };
-  }
-
-  // Simple RSI (kept for backward compat with stock backend data)
-  function calcRSI(closes,period){
-    const {rsiSeries}=calcRSIComboSeries(closes,period);
-    const valid=rsiSeries.filter(v=>v!==null);
-    return valid.length?parseFloat(valid[valid.length-1].toFixed(1)):null;
-  }
-
-  // EMA returning full series (needed for WaveTrend chained EMAs)
-  function calcEMASeries(src, period){
-    if(!src||src.length<period) return [];
-    const k=2/(period+1);
-    const out=new Array(src.length).fill(null);
-    // seed with SMA of first `period` values
-    let seed=0; for(let i=0;i<period;i++) seed+=src[i];
-    out[period-1]=seed/period;
-    for(let i=period;i<src.length;i++) out[i]=src[i]*k+out[i-1]*(1-k);
-    return out;
-  }
-
-  // SMA of last N values of a series
-  function smaLast(series, period){
-    const valid=series.filter(v=>v!==null);
-    if(valid.length<period) return null;
-    const last=valid.slice(-period);
-    return last.reduce((a,b)=>a+b,0)/period;
-  }
-
-  function calcEMA(closes,period){
-    const s=calcEMASeries(closes,period);
-    const last=s.filter(v=>v!==null);
-    return last.length?parseFloat(last[last.length-1].toFixed(4)):null;
-  }
-
-  function calcVolSpike(vols){
-    if(!vols||vols.length<20) return null;
-    const avg=vols.slice(-20,-1).reduce((a,b)=>a+b,0)/19;
-    return avg>0?parseFloat((vols[vols.length-1]/avg).toFixed(2)):null;
-  }
-
-  // ── WaveTrend [LazyBear] exact implementation ────
-  // n1=10 (Channel Length), n2=21 (Average Length)
-  // ap  = hlc3
-  // esa = ema(ap, n1)
-  // d   = ema(abs(ap - esa), n1)
-  // ci  = (ap - esa) / (0.015 * d)
-  // tci = ema(ci, n2)
-  // wt1 = tci
-  // wt2 = sma(wt1, 4)
-  function calcWaveTrend(highs, lows, closes, n1=10, n2=21){
-    if(!highs||closes.length<n1+n2+4) return {wt1:null,wt2:null,crossed:false,crossType:null};
-    // hlc3
-    const ap=closes.map((c,i)=>(highs[i]+lows[i]+c)/3);
-    // esa = EMA(ap, n1)
-    const esa=calcEMASeries(ap, n1);
-    // d = EMA(|ap - esa|, n1)
-    const apMinusEsa=ap.map((v,i)=>esa[i]!==null?Math.abs(v-esa[i]):null);
-    const validStart=apMinusEsa.findIndex(v=>v!==null);
-    const dInput=apMinusEsa.slice(validStart);
-    const dSeries=calcEMASeries(dInput, n1);
-    // rebuild d aligned to original length
-    const d=new Array(validStart).fill(null).concat(dSeries);
-    // ci = (ap - esa) / (0.015 * d)
-    const ci=ap.map((v,i)=>{
-      if(esa[i]===null||d[i]===null||d[i]===0) return null;
-      return (v-esa[i])/(0.015*d[i]);
-    });
-    // tci = EMA(ci, n2)  — strip leading nulls first
-    const ciStart=ci.findIndex(v=>v!==null);
-    const tciSeries=calcEMASeries(ci.slice(ciStart), n2);
-    const wt1Series=new Array(ciStart).fill(null).concat(tciSeries);
-    // wt2 = SMA(wt1, 4)
-    const wt1Last=wt1Series.filter(v=>v!==null);
-    const wt1=wt1Last.length?parseFloat(wt1Last[wt1Last.length-1].toFixed(2)):null;
-    const wt2=wt1Last.length>=4?parseFloat(smaLast(wt1Last,4).toFixed(2)):null;
-    // Detect cross — check candle[n-2] vs candle[n-1] (confirmed, not just current)
-    // Require wt1 to have actually crossed wt2 with separation > 0.5 to avoid noise
-    let crossed=false, crossType=null;
-    if(wt1Last.length>=6 && wt2!==null){
-      // current bar values
-      const curWt1=wt1Last[wt1Last.length-1];
-      const curWt2=smaLast(wt1Last,4);
-      // previous bar values (1 candle back)
-      const prevWt1=wt1Last[wt1Last.length-2];
-      const prevWt2=smaLast(wt1Last.slice(0,-1),4);
-      // bar before that (2 candles back — to confirm cross happened last bar)
-      const prev2Wt1=wt1Last[wt1Last.length-3];
-      const prev2Wt2=smaLast(wt1Last.slice(0,-2),4);
-      if(prevWt1!==null&&prevWt2!==null&&prev2Wt1!==null&&prev2Wt2!==null){
-        // Bullish cross: 2 bars ago wt1 was below wt2, last bar wt1 crossed above wt2
-        // AND current bar wt1 still above wt2 (confirmation), AND both in oversold territory
-        const bullishCross = prev2Wt1<prev2Wt2 && prevWt1>prevWt2 && curWt1>curWt2;
-        // Bearish cross: 2 bars ago wt1 was above wt2, last bar crossed below
-        const bearishCross = prev2Wt1>prev2Wt2 && prevWt1<prevWt2 && curWt1<curWt2;
-        // Minimum separation to filter noise (WT scale is ~-100 to 100)
-        const separation=Math.abs(curWt1-curWt2);
-        if(separation>=0.5){
-          if(bullishCross){ crossed=true; crossType='bullish'; }
-          else if(bearishCross){ crossed=true; crossType='bearish'; }
-        }
-      }
-    }
-    return{wt1,wt2,crossed,crossType};
-  }
-
-  // Per-session caches so repeated scans skip known-failing sources
-  const BINANCE_FUTURES_OK  = new Set();
-  const BINANCE_SPOT_OK     = new Set();
-  const NO_BINANCE          = new Set(); // confirmed absent from both Binance endpoints
-
-  // Fetch with hard timeout — no more hanging requests blocking batches
-  async function fetchWithTimeout(url, ms=6000){
-    const ctrl = new AbortController();
-    const timer = setTimeout(()=>ctrl.abort(), ms);
-    try{
-      const res = await fetch(url, {signal:ctrl.signal});
-      clearTimeout(timer);
-      return res;
-    }catch(e){ clearTimeout(timer); return null; }
-  }
-
-  // ── Fetch crypto: Binance Futures → Spot → Gate.io → CoinGecko ──
-  async function fetchCryptoData(symbol){
-    function processKlines(c){
-      if(!c||c.length<35) return null;
-      const highs=c.map(x=>parseFloat(x[2]));
-      const lows=c.map(x=>parseFloat(x[3]));
-      const closes=c.map(x=>parseFloat(x[4]));
-      const volumes=c.map(x=>parseFloat(x[5]));
-      const price=closes[closes.length-1];
-      const ema200=calcEMA(closes,200);
-      const wt=calcWaveTrend(highs,lows,closes);
-      const rsiCombo=calcRSICombo(closes);
-      return{
-        price, rsi:rsiCombo?rsiCombo.rsi:null, rsiCombo, ema200,
-        ema50:calcEMA(closes,50), volSpike:calcVolSpike(volumes),
-        vsEma200:ema200?parseFloat(((price/ema200-1)*100).toFixed(2)):null,
-        wt1:wt.wt1, wt2:wt.wt2, wtCrossed:wt.crossed, wtCrossType:wt.crossType,
-        type:'crypto'
-      };
-    }
-
-    // 1️⃣ Binance Futures
-    if(!NO_BINANCE.has(symbol)){
-      const res=await fetchWithTimeout(`https://fapi.binance.com/fapi/v1/klines?symbol=${symbol}USDT&interval=${selectedTF.interval}&limit=${selectedTF.limit}`, 6000);
-      if(res&&res.ok){
-        const c=await res.json().catch(()=>null);
-        if(Array.isArray(c)&&c.length>0){
-          const r=processKlines(c);
-          if(r){ BINANCE_FUTURES_OK.add(symbol); return r; }
-        }
-      }
-
-      // 2️⃣ Binance Spot
-      const res2=await fetchWithTimeout(`https://api.binance.com/api/v3/klines?symbol=${symbol}USDT&interval=${selectedTF.interval}&limit=${selectedTF.limit}`, 6000);
-      if(res2&&res2.ok){
-        const c=await res2.json().catch(()=>null);
-        if(Array.isArray(c)&&c.length>0){
-          const r=processKlines(c);
-          if(r){ BINANCE_SPOT_OK.add(symbol); return r; }
-        }
-      }
-      NO_BINANCE.add(symbol); // mark as not on Binance — skip both next scan
-    }
-
-    // 3️⃣ Gate.io — only reaches here for non-Binance coins
-    const gateInterval=selectedTF.tf==='1w'?'604800':selectedTF.tf==='1d'?'86400':'14400';
-    const gRes=await fetchWithTimeout(`https://api.gateio.ws/api/v4/spot/candlesticks?currency_pair=${symbol}_USDT&interval=${gateInterval}&limit=${selectedTF.limit}`, 8000);
-    if(gRes&&gRes.ok){
-      const c=await gRes.json().catch(()=>null);
-      if(Array.isArray(c)&&c.length>0){
-        const converted=c.map(x=>[parseInt(x[0])*1000,parseFloat(x[5]),parseFloat(x[3]),parseFloat(x[4]),parseFloat(x[2]),parseFloat(x[1])]);
-        const r=processKlines(converted);
-        if(r) return r;
-      }
-    }
-
-    // 4️⃣ CoinGecko — absolute last resort
-    try{
-      const sRes=await fetchWithTimeout(`https://api.coingecko.com/api/v3/search?query=${encodeURIComponent(symbol)}`, 8000);
-      if(!sRes) return null;
-      const sd=await sRes.json();
-      const match=sd.coins?.find(c=>c.symbol?.toUpperCase()===symbol.toUpperCase());
-      if(!match) return null;
-      const days=selectedTF.tf==='1w'?365:selectedTF.tf==='1d'?210:60;
-      const oRes=await fetchWithTimeout(`https://api.coingecko.com/api/v3/coins/${match.id}/ohlc?vs_currency=usd&days=${days}`, 10000);
-      if(!oRes) return null;
-      const raw=await oRes.json();
-      if(!raw||raw.length<35) return null;
-      let klines=raw.map(c=>[c[0],c[1],c[2],c[3],c[4],0]);
-      if(selectedTF.tf==='1w'){
-        const wk=[];
-        for(let i=0;i<klines.length;i+=7){
-          const w=klines.slice(i,i+7);
-          if(w.length<3) continue;
-          wk.push([w[0][0],w[0][1],Math.max(...w.map(c=>c[2])),Math.min(...w.map(c=>c[3])),w[w.length-1][4],0]);
-        }
-        klines=wk;
-      }
-      return processKlines(klines);
-    }catch(e){}
-    return null;
-  }
-
-  // ── Fetch liquidation data from Binance ──────────
-  async function fetchLiqData(symbol){
-    try{
-      const [oiRes,frRes,prRes]=await Promise.all([
-        fetch('https://fapi.binance.com/fapi/v1/openInterest?symbol='+symbol+'USDT'),
-        fetch('https://fapi.binance.com/fapi/v1/fundingRate?symbol='+symbol+'USDT&limit=1'),
-        fetch('https://fapi.binance.com/fapi/v1/ticker/price?symbol='+symbol+'USDT')
-      ]);
-      if(!oiRes.ok||!frRes.ok||!prRes.ok) return null;
-      const oi=await oiRes.json();
-      const fr=await frRes.json();
-      const pr=await prRes.json();
-      const price=parseFloat(pr.price);
-      const fundingRate=parseFloat(fr[0]?.fundingRate||0);
-      const openInterest=parseFloat(oi.openInterest);
-      const absFR=Math.abs(fundingRate);
-      let lev=absFR>0.003?25:absFR>0.001?15:absFR>0.0005?10:absFR>0.0002?7:5;
-      const longDist=fundingRate>=0?1/lev:1/(lev*0.6);
-      const shortDist=fundingRate<0?1/lev:1/(lev*0.6);
-      const longLiq=price*(1-longDist);
-      const shortLiq=price*(1+shortDist);
-      const distLong=parseFloat(((price-longLiq)/price*100).toFixed(2));
-      const distShort=parseFloat(((shortLiq-price)/price*100).toFixed(2));
-      const nearLong=distLong<=12;
-      const nearShort=distShort<=12;
-      const bias=fundingRate>0.0005?'LONGS_CROWDED':fundingRate<-0.0005?'SHORTS_CROWDED':'NEUTRAL';
-      return{price,fundingRate,openInterest,longLiq:longLiq.toFixed(4),shortLiq:shortLiq.toFixed(4),
-        distLong,distShort,nearLong,nearShort,bias,
-        alert:nearLong||nearShort,alertType:nearLong?'NEAR_LONG_LIQ':'NEAR_SHORT_LIQ'};
-    }catch(e){return null;}
-  }
-
-  // ── Fetch stocks from Render backend ─────────────
-  async function fetchStocksBatch(symbols){
-    try{
-      const res=await fetch(BACKEND+'/stocks?symbols='+symbols.join(','),{signal:AbortSignal.timeout(20000)});
-      if(!res.ok) return {};
-      const data=await res.json();
-      Object.keys(data).forEach(k=>{data[k].type='stock';});
-      return data;
-    }catch(e){console.log('Backend error:',e.message);return{};}
-  }
-
-  // ── Fetch market cap from Yahoo Finance (free, no key) ──
-  async function fetchMarketCaps(symbols){
-    const caps={};
-    await Promise.all(symbols.map(async sym=>{
-      try{
-        const url='https://query2.finance.yahoo.com/v8/finance/chart/'+sym+'?interval=1d&range=1d';
-        const res=await fetch(url,{signal:AbortSignal.timeout(8000)});
-        if(!res.ok) return;
-        const data=await res.json();
-        const mc=data?.chart?.result?.[0]?.meta?.marketCap;
-        if(mc) caps[sym]=mc;
-      }catch(e){}
-    }));
-    return caps;
-  }
-  async function wakeBackend(){
-    const maxWait=75000; // 75 seconds max
-    const interval=5000; // retry every 5 seconds
-    const start=Date.now();
-    let attempt=0;
-    while(Date.now()-start<maxWait){
-      attempt++;
-      const elapsed=Math.round((Date.now()-start)/1000);
-      document.getElementById('loadingStatus').textContent=
-        attempt===1
-          ? 'Waking stock data server (Render free tier sleeps — please wait up to 60s)...'
-          : `Still waking server... (${elapsed}s elapsed, retrying)`;
-      try{
-        const res=await fetch(BACKEND+'/health',{signal:AbortSignal.timeout(interval)});
-        if(res.ok){
-          document.getElementById('loadingStatus').textContent='Stock server is online! Fetching data...';
-          return true;
-        }
-      }catch(e){}
-      await new Promise(r=>setTimeout(r,1000));
-    }
-    return false;
-  }
-
-  // ── Fetch Reddit sentiment ────────────────────────
-  async function fetchRedditSentiment(symbols){
-    const sentimentMap={};
-    const topSymbols=symbols.slice(0,20);
-    const bullish=['moon','pump','bullish','buy','long','breakout','surge','rally','up','gain','beat','upgrade','outperform','oversold','accumulate','undervalued','strong','ath','breakout'];
-    const bearish=['dump','bearish','sell','short','crash','drop','down','fall','loss','rug','miss','downgrade','overbought','overvalued','weak','avoid','layoffs','scam','fraud'];
-    await Promise.all(topSymbols.map(async sym=>{
-      try{
-        const url='https://www.reddit.com/search.json?q='+encodeURIComponent(sym)+'&sort=hot&limit=20&t=week';
-        const res=await fetch(url,{headers:{'User-Agent':'ApexScanner/1.0'}});
-        if(!res.ok) return;
-        const data=await res.json();
-        const posts=data?.data?.children||[];
-        let b=0,bear=0,total=posts.length,ups=0;
-        posts.forEach(p=>{
-          const text=(p.data.title||'').toLowerCase();
-          const u=p.data.ups||0;
-          ups+=u;
-          bullish.forEach(w=>{if(text.includes(w))b+=1+(u>100?1:0);});
-          bearish.forEach(w=>{if(text.includes(w))bear+=1+(u>100?1:0);});
-        });
-        const score=b-bear;
-        sentimentMap[sym]={
-          label:score>1?'BULLISH':score<-1?'BEARISH':'NEUTRAL',
-          emoji:score>1?'green':score<-1?'red':'yellow',
-          posts:total,ups
-        };
-      }catch(e){}
-    }));
-    return sentimentMap;
-  }
-
-
-
-  // ── Main scan ─────────────────────────────────────
   async function runScan() {
-    if(selectedMarkets.length===0){showToast('SELECT AT LEAST ONE MARKET');return;}
-    if(selectedInds.length===0){showToast('SELECT AT LEAST ONE INDICATOR');return;}
-
-    const wtT=document.getElementById('wtVal').textContent;
-    const rsiT=document.getElementById('rsiVal').textContent;
-    const volT=document.getElementById('volVal').textContent;
-    const minT=document.getElementById('minT').value;
-    const engineName=selectedEngine==='claude'?'CLAUDE':'GEMINI';
+    const activeMarkets = Array.from(document.querySelectorAll('.btn-item.active')).map(b => b.dataset.market);
+    if(!activeMarkets.length) return alert('Select a market first.');
 
     document.getElementById('setupPanel').style.display='none';
     document.getElementById('loading').classList.add('visible');
-    document.getElementById('resultsSection').classList.remove('visible');
-    document.getElementById('engineLabel').textContent=`${engineName} IS ANALYZING MARKETS...`;
-    allAlerts=[];
+    
+    let allData = [];
+    const tickersToScan = [];
+    activeMarkets.forEach(m => tickersToScan.push(...TICKERS[m]));
+
+    for(let sym of tickersToScan) {
+      document.getElementById('loadingStatus').textContent = `Crunching Data: ${sym}...`;
+      const d = await fetchCryptoData(sym);
+      if(d) allData.push(d);
+    }
+
+    const minRSI = parseInt(document.getElementById('rsiVal').textContent);
+    const qualified = allData.filter(d => d.rsi < minRSI);
+
+    renderResults(qualified);
+    
+    if(qualified.length > 0) {
+      document.getElementById('aiSummary').style.display = 'block';
+      generateAISummary(qualified);
+    }
+    
+    document.getElementById('loading').classList.remove('visible');
+    document.getElementById('resultsSection').style.display = 'block';
+  }
+
+  function renderResults(data) {
+    const container = document.getElementById('alertsContainer');
+    container.innerHTML = data.length ? '' : '<div class="card">No assets currently oversold. Try raising the RSI threshold.</div>';
+    
+    data.sort((a,b) => a.rsi - b.rsi).forEach(item => {
+      const card = document.createElement('div');
+      card.className = 'alert-card strong';
+      const tvLink = `https://www.tradingview.com/chart/?symbol=BINANCE:${item.symbol}USDT`;
+      
+      card.innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:start;">
+          <a href="${tvLink}" target="_blank" class="alert-symbol-link">${item.symbol} ↗</a>
+          <div style="text-align:right">
+            <div style="font-family:'Orbitron'; color:var(--accent2); font-size:18px;">${item.rsi.toFixed(1)}</div>
+            <div class="stat-label">RSI VALUE</div>
+          </div>
+        </div>
+        <div class="alert-signals">
+          <span class="signal-tag">DAILY RSI OVERSOLD</span>
+          <span class="signal-tag">BINANCE DATA</span>
+        </div>
+        <div style="display:flex; gap:15px; margin-top:10px;">
+          <div class="alert-val">LAST PRICE <span>$${item.price.toLocaleString()}</span></div>
+        </div>
+      `;
+      container.appendChild(card);
+    });
+  }
+
+  async function generateAISummary(qualified) {
+    const key = document.getElementById(selectedEngine==='claude'?'claudeKey':'geminiKey').value;
+    if(!key) {
+        document.getElementById('aiSummaryText').textContent = "API Key missing. UI rendered, but AI summary skipped.";
+        return;
+    }
 
     try {
-      // ── Fetch live crypto lists from CoinGecko if needed ──
-      const needsCrypto = selectedMarkets.some(m => MARKET_TICKERS[m]?.type === 'crypto');
-      if(needsCrypto){
-        document.getElementById('loadingStatus').textContent = 'Fetching live top crypto list from CoinGecko...';
-        const needs1000 = selectedMarkets.includes('crypto_top1000');
-        const needs500  = selectedMarkets.includes('crypto_top500');
-        const needsDefi = selectedMarkets.includes('defi');
-
-        if(needs1000 || needs500){
-          const limit = needs1000 ? 1000 : 500;
-          const liveSymbols = await fetchLiveCryptoList(limit);
-          if(liveSymbols.length > 0){
-            if(needs1000) MARKET_TICKERS.crypto_top1000.tickers = liveSymbols.slice(0, 1000);
-            if(needs500)  MARKET_TICKERS.crypto_top500.tickers  = liveSymbols.slice(0, 500);
-          } else {
-            // CoinGecko rate limited — use a minimal fallback
-            showToast('CoinGecko rate limited — using cached list');
-            if(!MARKET_TICKERS.crypto_top500.tickers)  MARKET_TICKERS.crypto_top500.tickers  = ['BTC','ETH','BNB','XRP','SOL','ADA','DOGE','TRX','DOT','LTC','SHIB','AVAX','LINK','ATOM','UNI','XLM','BCH','ALGO','ICP','HBAR','APT','ARB','NEAR','GRT','AAVE','MKR','SNX','INJ','OP','SUI','SEI','TIA','RUNE','PENDLE','JUP','WIF','BONK','FLOKI','PEPE','TON','KAS','TAO','IMX','RNDR','FIL','THETA','EOS','EGLD','FLOW','MINA','SAND','MANA','AXS','CHZ','ENJ','GALA','APE','GMT','GMX','DYDX','LDO','CRV','COMP','BAL','YFI','SUSHI','CVX','STX','BLUR','ARB','HNT','MOVR','KDA','KAVA','ROSE','ANKR','BAND','RVN','ZIL','ICX','ONT','WAVES','ZEC','DASH','DCR','XMR','ETC','NEO','VET','QTUM','IOTA'];
-            if(!MARKET_TICKERS.crypto_top1000.tickers) MARKET_TICKERS.crypto_top1000.tickers = MARKET_TICKERS.crypto_top500.tickers;
-          }
-          document.getElementById('loadingStatus').textContent = `Got ${MARKET_TICKERS[needs1000?'crypto_top1000':'crypto_top500'].tickers.length} live tickers. Starting scan...`;
-        }
-
-        if(needsDefi && !MARKET_TICKERS.defi.tickers){
-          // Fetch DeFi category from CoinGecko
-          try{
-            const res = await fetch('https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&category=decentralized-finance-defi&order=market_cap_desc&per_page=50&page=1');
-            if(res.ok){
-              const data = await res.json();
-              MARKET_TICKERS.defi.tickers = data.map(c=>c.symbol.toUpperCase()).filter(s=>!EXCLUDE_SYMBOLS.has(s));
-            }
-          }catch(e){}
-          if(!MARKET_TICKERS.defi.tickers) MARKET_TICKERS.defi.tickers = ['UNI','AAVE','MKR','COMP','CRV','SNX','BAL','YFI','SUSHI','1INCH','CAKE','RUNE','LDO','CVX','GMX','DYDX','GNS','PERP','PENDLE','JOE'];
-        }
-      }
-
-      // ── Build ticker list ──────────────────────────────
-      let allTickers=[];
-      selectedMarkets.forEach(m=>{
-        if(MARKET_TICKERS[m]&&MARKET_TICKERS[m].tickers){
-          MARKET_TICKERS[m].tickers.forEach(t=>{
-            allTickers.push({symbol:t,market:MARKET_TICKERS[m].label,type:MARKET_TICKERS[m].type});
-          });
-        }
-      });
-      const seen=new Set();
-      allTickers=allTickers.filter(t=>{if(seen.has(t.symbol))return false;seen.add(t.symbol);return true;});
-
-      const marketsList=selectedMarkets.map(m=>MARKET_TICKERS[m]?.label).join(', ');
-      // ── Main data fetch ───────────────────────────────
-      const realData={};
-      const cryptoTickers=allTickers.filter(t=>t.type==='crypto');
-      const stockTickers=allTickers.filter(t=>t.type==='stock');
-
-      // Crypto — fetch 50 at a time in parallel (Binance has no strict public rate limit)
-      const BATCH = 50;
-      for(let i=0;i<cryptoTickers.length;i+=BATCH){
-        const batch=cryptoTickers.slice(i,i+BATCH);
-        const pct=Math.round((i/cryptoTickers.length)*100);
-        document.getElementById('loadingStatus').textContent=`Scanning crypto ${i+1}–${Math.min(i+BATCH,cryptoTickers.length)} of ${cryptoTickers.length} (${pct}%)...`;
-        await Promise.all(batch.map(async t=>{
-          const d=await fetchCryptoData(t.symbol);
-          if(d) realData[t.symbol]=d;
-        }));
-      }
-
-      // Stocks from Render backend (with wake-up for free tier)
-      if(stockTickers.length>0){
-        const isAwake=await wakeBackend();
-        if(isAwake){
-          for(let i=0;i<stockTickers.length;i+=20){
-            const batch=stockTickers.slice(i,i+20).map(t=>t.symbol);
-            document.getElementById('loadingStatus').textContent='Fetching stock data '+(i+1)+'-'+Math.min(i+20,stockTickers.length)+' of '+stockTickers.length+'...';
-            const batchData=await fetchStocksBatch(batch);
-            Object.assign(realData,batchData);
-            await new Promise(r=>setTimeout(r,300));
-          }
-          const stocksLoaded=stockTickers.filter(t=>realData[t.symbol]).length;
-          document.getElementById('loadingStatus').textContent=stocksLoaded+' of '+stockTickers.length+' stocks loaded with real data.';
-          await new Promise(r=>setTimeout(r,800));
-        } else {
-          document.getElementById('loadingStatus').textContent='⚠ Stock server timed out. AI will estimate from training data — results may not reflect current prices.';
-          await new Promise(r=>setTimeout(r,3000));
-        }
-      }
-
-      // Market cap fetch & filter for stocks
-      const marketCapData={};
-      if(stockTickers.length>0 && selectedMcap>0){
-        const stocksWithData=stockTickers.filter(t=>realData[t.symbol]);
-        document.getElementById('loadingStatus').textContent='Fetching market caps for '+stocksWithData.length+' stocks...';
-        // Batch in groups of 10 to avoid hammering Yahoo
-        for(let i=0;i<stocksWithData.length;i+=10){
-          const batch=stocksWithData.slice(i,i+10).map(t=>t.symbol);
-          const caps=await fetchMarketCaps(batch);
-          Object.assign(marketCapData,caps);
-          await new Promise(r=>setTimeout(r,200));
-        }
-        const filtered=stocksWithData.filter(t=>{
-          const cap=marketCapData[t.symbol];
-          if(!cap) return true; // include if we couldn't fetch cap
-          return cap<selectedMcap*1e9;
+        const prompt = `Analyze these oversold assets: ${qualified.map(q=>q.symbol+'(RSI:'+q.rsi.toFixed(1)+')').join(', ')}. Write a very short, 2-sentence tactical outlook. No fluff.`;
+        const model = selectedEngine === 'claude' ? 'anthropic/claude-3-sonnet' : 'google/gemini-flash-1.5';
+        
+        const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+                'Authorization': 'Bearer ' + key,
+                'Content-Type': 'application/json',
+                'HTTP-Referer': 'http://localhost'
+            },
+            body: JSON.stringify({
+                model: model,
+                messages: [{role:'user', content:prompt}]
+            })
         });
-        document.getElementById('loadingStatus').textContent=filtered.length+' stocks pass <$'+selectedMcap+'B market cap filter.';
-        await new Promise(r=>setTimeout(r,600));
-      }
-
-      // Liquidation data for crypto
-      document.getElementById('loadingStatus').textContent='Fetching liquidation zone data...';
-      const liqData={};
-      const cryptoWithData=cryptoTickers.filter(t=>realData[t.symbol]).slice(0,100);
-      for(let i=0;i<cryptoWithData.length;i+=10){
-        const batch=cryptoWithData.slice(i,i+10);
-        await Promise.all(batch.map(async t=>{
-          const d=await fetchLiqData(t.symbol);
-          if(d) liqData[t.symbol]=d;
-        }));
-        await new Promise(r=>setTimeout(r,200));
-      }
-
-      // Pre-filter with real data
-      const qualified=[];
-      allTickers.forEach(t=>{
-        const d=realData[t.symbol];
-        if(!d) return;
-        // Market cap filter for stocks
-        if(selectedMcap>0 && t.type==='stock'){
-          const cap=marketCapData[t.symbol];
-          if(cap && cap>=selectedMcap*1e9) return; // skip if over cap limit
-        }
-        const sigs=[];
-        // WaveTrend [LazyBear]
-        if(d.wt1!==null&&d.wt2!==null){
-          if(d.wt1<-60) sigs.push('WaveTrend:WT Deeply Oversold ('+d.wt1+')');
-          else if(d.wt1<parseFloat(wtT)) sigs.push('WaveTrend:WT Oversold ('+d.wt1+')');
-          if(d.wtCrossed&&d.wtCrossType==='bullish'&&d.wt1<0) sigs.push('WaveTrend:WT Bullish Cross ('+d.wt1+')');
-          if(d.wt1>60) sigs.push('WaveTrend:WT Deeply Overbought ('+d.wt1+')');
-          else if(d.wt1>53) sigs.push('WaveTrend:WT Overbought ('+d.wt1+')');
-          if(d.wtCrossed&&d.wtCrossType==='bearish'&&d.wt1>0) sigs.push('WaveTrend:WT Bearish Cross ('+d.wt1+')');
-        }
-        // RSI Combo [Marco] — fires on green dot (mup) or red dot (mdown)
-        if(d.rsiCombo){
-          const rc=d.rsiCombo;
-          if(rc.mup)   sigs.push('RSI Combo:🟢 RSI Green Dot (RSI:'+rc.rsi+' ADXm:'+rc.am+')');
-          if(rc.mdown) sigs.push('RSI Combo:🔴 RSI Red Dot (RSI:'+rc.rsi+' ADXm:'+rc.am+')');
-        }
-        // Plain RSI oversold fallback for stocks without rsiCombo
-        if(!d.rsiCombo&&d.rsi!==null&&d.rsi<parseFloat(rsiT)) sigs.push('RSI Combo:RSI Oversold ('+d.rsi+')');
-        if(d.volSpike!==null&&d.volSpike>=parseFloat(volT)) sigs.push('Volume Spike:Volume Spike '+d.volSpike+'x');
-        if(d.vsEma200!==null&&Math.abs(d.vsEma200)<=5) sigs.push('200 EMA proximity:Near 200 EMA ('+d.vsEma200+'%)');
-        if(d.vsEma200!==null&&d.vsEma200>20) sigs.push('200 EMA proximity:Extended above 200 EMA ('+d.vsEma200+'%)');
-        if(d.vsHigh52!==null&&d.vsHigh52>-5) sigs.push('200 EMA proximity:Near 52W High ('+d.vsHigh52+'%)');
-        const liq=liqData[t.symbol];
-        if(liq&&liq.alert){
-          const dist=liq.alertType==='NEAR_LONG_LIQ'?liq.distLong:liq.distShort;
-          sigs.push('Liq Zone:'+(liq.alertType==='NEAR_LONG_LIQ'?'🔴 Long Liq Zone':'🟢 Short Liq Zone')+' '+dist+'% away');
-        }
-        // Count how many selected indicators are triggered
-        const triggeredInds=new Set(sigs.map(s=>s.split(':')[0]));
-        const matchCount=[...triggeredInds].filter(k=>selectedInds.includes(k)).length;
-        if(matchCount>=parseInt(minT)) qualified.push({...t,sigs,d,liq:liq||null,marketCap:marketCapData[t.symbol]||null});
-      });
-
-      // Sort by number of triggered selected indicators (descending), cap at 20
-      qualified.sort((a,b)=>{
-        const aScore=[...new Set(a.sigs.map(s=>s.split(':')[0]))].filter(k=>selectedInds.includes(k)).length;
-        const bScore=[...new Set(b.sigs.map(s=>s.split(':')[0]))].filter(k=>selectedInds.includes(k)).length;
-        return bScore-aScore;
-      });
-      const topQualified=qualified.slice(0,20);
-
-      // Reddit sentiment for qualified assets
-      document.getElementById('loadingStatus').textContent='Fetching Reddit sentiment...';
-      const qualSymbols=topQualified.map(q=>q.symbol);
-      const sentimentMap=await fetchRedditSentiment(qualSymbols);
-
-      const realCount=Object.keys(realData).length;
-      const stockReal=Object.values(realData).filter(d=>d.type==='stock').length;
-      document.getElementById('loadingStatus').textContent=realCount+' assets scanned ('+stockReal+' stocks real data) on '+selectedTF.label+'. '+topQualified.length+' qualify (top '+Math.min(topQualified.length,20)+' by score). Formatting with AI...';
-      await new Promise(r=>setTimeout(r,300));
-
-      // Build AI prompt — only with real qualified data, never fall back to AI picking
-      if(topQualified.length===0){
-        document.getElementById('loading').classList.remove('visible');
-        document.getElementById('setupPanel').style.display='block';
-        showError('No assets qualified with real data on '+selectedTF.label+'. Try loosening your thresholds or selecting more indicators.');
-        return;
-      }
-
-      const aiTickers=topQualified.map(q=>{
-            const rc=q.d.rsiCombo;
-            const rsiInfo=rc
-              ? `RSI:${rc.rsi},ADX:${rc.adx},mup:${rc.mup},mdown:${rc.mdown},RSSsmooth:${rc.smoothRSS},Swing350Buy:${rc.swing350Buy},Swing350Sell:${rc.swing350Sell}`
-              : `RSI:${q.d.rsi}`;
-            return `${q.symbol}(WT1:${q.d.wt1},WT2:${q.d.wt2},WTCross:${q.d.wtCrossed?q.d.wtCrossType:'none'},${rsiInfo},vsEMA200:${q.d.vsEma200}%,VolSpike:${q.d.volSpike}x${q.liq?',LiqZone:'+q.liq.distLong+'%away':''})`;
-          }).join(',');
-
-      const dataNote=`The following ${topQualified.length} assets have REAL live calculated data on the ${selectedTF.label} timeframe and already pass all screening criteria. Your job is ONLY to format them as JSON — do NOT add, remove or reorder assets, do NOT invent new ones:`;
-
-      document.getElementById('loadingStatus').textContent=`Formatting ${qualified.length} qualified assets with AI...`;
-
-      const prompt=`You are a technical analyst formatter. Today is ${new Date().toDateString()}.
-Timeframe: ${selectedTF.label}
-Market: ${marketsList}
-
-These assets passed REAL screening on the ${selectedTF.label} timeframe:
-${dataNote}
-${aiTickers}
-
-Format EACH asset above as a JSON object. Include ALL of them. Do not skip any. Do not add any not listed above.
-
-IMPORTANT: Respond with ONLY a raw JSON array. No markdown. No backticks. Start with [ end with ]. Keep "analysis" under 12 words.
-[{"symbol":"BTC","market":"${marketsList}","type":"crypto","score":2,"signals":["WaveTrend Oversold","Volume Spike"],"wt1":-45.2,"wt2":-48.1,"rsi":32.1,"timeframe":"${selectedTF.label}","analysis":"12 words max describing ${selectedTF.label} conditions"}]
-
-Rules:
-- timeframe field MUST be "${selectedTF.label}" for every entry
-- score = number of triggered indicators from the data provided
-- analysis must reference ${selectedTF.label} chart conditions, not weekly or any other timeframe
-- Return [] only if the asset list above is empty`;
-
-      document.getElementById('loadingStatus').textContent='Analyzing chart patterns...';
-      const response=await callAI(prompt);
-
-      let parsed=[];
-      console.log('Raw AI response:', response);
-      try {
-        let clean=response.replace(/```json|```/gi,'').trim();
-        const s=clean.indexOf('[');
-        let e=clean.lastIndexOf(']');
-        if(s===-1){ showError('No JSON array found in response. Raw: '+response.substring(0,400)); }
-        else {
-          // If no closing ] (truncated), try to salvage complete objects
-          if(e===-1||e<s){
-            // Find last complete object — last occurrence of '}' before truncation
-            const lastBrace=clean.lastIndexOf('}');
-            if(lastBrace>s){
-              clean=clean.slice(s,lastBrace+1)+']';
-              e=clean.length-1;
-            }
-          } else {
-            clean=clean.slice(s,e+1);
-          }
-          try{
-            parsed=JSON.parse(clean);
-          } catch(e2){
-            // Last resort: extract each {...} object individually
-            const objMatches=clean.match(/\{[^{}]*\}/g)||[];
-            const recovered=[];
-            objMatches.forEach(obj=>{
-              try{ recovered.push(JSON.parse(obj)); }catch(e3){}
-            });
-            if(recovered.length>0){
-              parsed=recovered;
-              console.warn('Recovered '+recovered.length+' objects from malformed JSON');
-            } else {
-              showError('Parse error: '+e2.message+' | Raw: '+response.substring(0,400));
-            }
-          }
-        }
-      } catch(err){
-        console.error('Parse error:',err);
-        showError('Parse error: '+err.message+' | Raw: '+response.substring(0,400));
-        parsed=[];
-      }
-
-      // Override AI score and timeframe with deterministic real values
-      parsed.forEach(function(a){
-        const q=topQualified.find(q=>q.symbol===a.symbol);
-        if(q){
-          // Recalculate score from actual triggered indicators
-          const triggeredInds=new Set(q.sigs.map(s=>s.split(':')[0]));
-          a.score=[...triggeredInds].filter(k=>selectedInds.includes(k)).length;
-          // Always use the signals from real data, not AI guesses
-          a.signals=q.sigs.map(s=>s.includes(':')?s.split(':').slice(1).join(':'):s);
-        }
-        // Always stamp correct timeframe — never trust AI on this
-        a.timeframe = selectedTF.label;
-      });
-      parsed.forEach(function(a){
-        a.timeframe = selectedTF.label; // enforce again after real data attachment
-        // Tag whether this has real live data or is AI-estimated
-        const rd=realData[a.symbol];
-        if(rd){
-          a.dataSource='live';
-          a.price=rd.price;
-          a.vsEma200=rd.vsEma200;
-          if(rd.rsi!==null) a.rsi=rd.rsi;
-          if(rd.wt1!==null) a.wt1=rd.wt1;
-          if(rd.wt2!==null) a.wt2=rd.wt2;
-          a.wtCrossed=rd.wtCrossed;
-          a.wtCrossType=rd.wtCrossType;
-          if(rd.rsiCombo) a.rsiCombo=rd.rsiCombo;
-          const qMatch=topQualified.find(q=>q.symbol===a.symbol);
-          if(qMatch&&qMatch.marketCap) a.marketCap=qMatch.marketCap;
-        } else {
-          a.dataSource='ai';
-        }
-        if(sentimentMap&&sentimentMap[a.symbol]){
-          const s=sentimentMap[a.symbol];
-          a.sentiment=s.label+' ('+s.posts+' posts, '+s.ups+' upvotes)';
-          a.sentimentEmoji=s.emoji;
-        }
-        const liq=liqData&&liqData[a.symbol];
-        if(liq){
-          a.distLong=liq.distLong;
-          a.distShort=liq.distShort;
-          a.fundingBias=liq.bias;
-          a.nearLiq=liq.alert;
-          a.nearLiqType=liq.alertType;
-          // Legacy liqAlert for Telegram
-          if(liq.alert){
-            const dist=liq.alertType==='NEAR_LONG_LIQ'?liq.distLong:liq.distShort;
-            a.liqAlert=(liq.alertType==='NEAR_LONG_LIQ'?'🔴 Long Liq Zone':'🟢 Short Liq Zone')+' '+dist+'% away | Funding: '+liq.bias;
-          }
-        }
-      });
-      allAlerts=parsed;
-      sendTelegram(parsed,sentimentMap,liqData);
-
-      document.getElementById('loadingStatus').textContent='Generating market summary...';
-
-      const topAssets=parsed.slice(0,5).map(a=>
-        `${a.symbol}: RSI=${a.rsi}, vsEMA200=${a.vsEma200 !== undefined ? a.vsEma200+'%' : 'N/A'}, signals=[${(a.signals||[]).join(', ')}]`
-      ).join('\n');
-
-      const summaryPrompt=`You are a trading analyst. Based on this REAL scanned data from ${marketsList} on ${new Date().toDateString()}, write a 3-sentence market summary:
-
-TOP QUALIFYING ASSETS (real data):
-${topAssets || 'No assets qualified'}
-
-Write:
-1. Overall market sentiment based on the data above
-2. Which assets/sectors look most interesting and why
-3. Key risk to watch
-
-Be direct and specific. Reference the actual assets and numbers above. No disclaimers about not having real-time data — you have it above.`;
-
-      const summary=await callAI(summaryPrompt);
-
-      document.getElementById('loading').classList.remove('visible');
-      document.getElementById('resultsSection').classList.add('visible');
-
-      const strong=allAlerts.filter(a=>a.score>=3).length;
-      document.getElementById('statTotal').textContent=allAlerts.length;
-      document.getElementById('statStrong').textContent=strong;
-      document.getElementById('statMod').textContent=allAlerts.length-strong;
-      document.getElementById('statEngine').textContent=engineName;
-      // Simple markdown renderer for the summary
-      const renderMarkdown = text => text
-          .replace(/^#{1,3}\s+(.+)$/gm, '<strong style="font-family:Orbitron,monospace;font-size:11px;color:var(--accent);letter-spacing:1px;">$1</strong>')
-          .replace(/\*\*(.+?)\*\*/g, '<strong style="color:var(--strong);">$1</strong>')
-          .replace(/\*(.+?)\*/g, '<em>$1</em>')
-          .replace(/\n\n/g, '<br><br>')
-          .replace(/\n/g, '<br>');
-      document.getElementById('aiSummaryText').innerHTML = renderMarkdown(summary);
-      document.getElementById('aiSummary').classList.add('visible');
-
-      allAlerts.sort((a,b)=>b.score-a.score);
-      renderAlerts(allAlerts);
-
-    } catch(err) {
-      showError('ERROR: ' + err.message);
-      console.error(err);
+        const data = await res.json();
+        document.getElementById('aiSummaryText').textContent = data.choices[0].message.content;
+    } catch(e) {
+        document.getElementById('aiSummaryText').textContent = "AI Summary failed (Check your key). UI results are still accurate.";
     }
   }
 </script>
