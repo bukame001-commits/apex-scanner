@@ -1373,16 +1373,27 @@
       if(stockTickers.length>0){
         const isAwake=await wakeBackend();
         if(isAwake){
-          for(let i=0;i<stockTickers.length;i+=20){
-            const batch=stockTickers.slice(i,i+20).map(t=>t.symbol);
-            document.getElementById('loadingStatus').textContent='Fetching stock data '+(i+1)+'-'+Math.min(i+20,stockTickers.length)+' of '+stockTickers.length+'...';
-            const batchData=await fetchStocksBatch(batch);
-            Object.assign(realData,batchData);
-            await new Promise(r=>setTimeout(r,300));
+          // Fetch 5 batches of 50 in parallel — much faster than sequential 20s
+          const STOCK_BATCH = 50;
+          const CONCURRENCY  = 5;
+          const stockSymbols = stockTickers.map(t=>t.symbol);
+          const batches = [];
+          for(let i=0;i<stockSymbols.length;i+=STOCK_BATCH){
+            batches.push(stockSymbols.slice(i,i+STOCK_BATCH));
+          }
+          let done = 0;
+          for(let i=0;i<batches.length;i+=CONCURRENCY){
+            const chunk = batches.slice(i, i+CONCURRENCY);
+            const pct = Math.round((i/batches.length)*100);
+            document.getElementById('loadingStatus').textContent=
+              `Fetching stocks ${done*STOCK_BATCH+1}–${Math.min((done+chunk.length)*STOCK_BATCH,stockSymbols.length)} of ${stockSymbols.length} (${pct}%)...`;
+            const results = await Promise.all(chunk.map(b=>fetchStocksBatch(b)));
+            results.forEach(r=>Object.assign(realData,r));
+            done += chunk.length;
           }
           const stocksLoaded=stockTickers.filter(t=>realData[t.symbol]).length;
-          document.getElementById('loadingStatus').textContent=stocksLoaded+' of '+stockTickers.length+' stocks loaded with real data.';
-          await new Promise(r=>setTimeout(r,800));
+          document.getElementById('loadingStatus').textContent=stocksLoaded+' of '+stockTickers.length+' stocks loaded.';
+          await new Promise(r=>setTimeout(r,400));
         } else {
           document.getElementById('loadingStatus').textContent='⚠ Stock server timed out. AI will estimate from training data — results may not reflect current prices.';
           await new Promise(r=>setTimeout(r,3000));
