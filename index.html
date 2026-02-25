@@ -1451,6 +1451,19 @@
       }
 
       // Pre-filter with real data
+      const stocksWithRealData = Object.keys(realData).filter(k=>realData[k].type==='stock');
+      const cryptoWithRealData = Object.keys(realData).filter(k=>realData[k].type==='crypto');
+      console.log(`[APEX] Real data loaded: ${stocksWithRealData.length} stocks, ${cryptoWithRealData.length} crypto`);
+      if(stocksWithRealData.length>0){
+        const sample = realData[stocksWithRealData[0]];
+        console.log(`[APEX] Sample stock (${stocksWithRealData[0]}):`, JSON.stringify({
+          wt1:sample.wt1, wt2:sample.wt2, rsi:sample.rsi, ema200:sample.ema200,
+          vsEma200:sample.vsEma200, volSpike:sample.volSpike, wtCrossed:sample.wtCrossed
+        }));
+      }
+      console.log(`[APEX] Selected indicators:`, selectedInds);
+      console.log(`[APEX] Min match threshold:`, minT);
+
       const qualified=[];
       allTickers.forEach(t=>{
         const d=realData[t.symbol];
@@ -1492,6 +1505,28 @@
         const matchCount=[...triggeredInds].filter(k=>selectedInds.includes(k)).length;
         if(matchCount>=parseInt(minT)) qualified.push({...t,sigs,d,liq:liq||null,marketCap:marketCapData[t.symbol]||null});
       });
+
+      // Log qualification results for debugging
+      console.log(`[APEX] Qualified: ${qualified.length} assets`);
+      if(qualified.length===0 && allTickers.length>0){
+        // Sample 3 stocks to show why they failed
+        let checked=0;
+        allTickers.forEach(t=>{
+          if(checked>=3) return;
+          const d=realData[t.symbol];
+          if(!d) return;
+          const sigs=[];
+          if(d.wt1!==null) sigs.push(`WT1=${d.wt1}`);
+          if(d.rsi!==null) sigs.push(`RSI=${d.rsi}`);
+          if(d.vsEma200!==null) sigs.push(`vsEMA=${d.vsEma200}%`);
+          if(d.volSpike!==null) sigs.push(`volSpike=${d.volSpike}x`);
+          console.log(`[APEX] ${t.symbol} data:`, sigs.join(', '), '| wtCrossed:', d.wtCrossed, d.wtCrossType);
+          checked++;
+        });
+        console.log(`[APEX] WaveTrend threshold: <${wtT} or >53`);
+        console.log(`[APEX] RSI threshold: <${rsiT}`);
+        console.log(`[APEX] Vol spike threshold: >${volT}x`);
+      }
 
       // Sort by number of triggered selected indicators (descending), cap at 20
       qualified.sort((a,b)=>{
