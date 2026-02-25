@@ -1065,26 +1065,32 @@
     }catch(e){ clearTimeout(timer); return null; }
   }
 
+  // ── Shared kline processor — used by both crypto and stock fetchers ──
+  function processKlines(c, assetType){
+    if(!c||c.length<35) return null;
+    const highs  = c.map(x=>parseFloat(x[2]));
+    const lows   = c.map(x=>parseFloat(x[3]));
+    const closes = c.map(x=>parseFloat(x[4]));
+    const volumes= c.map(x=>parseFloat(x[5]));
+    const price  = closes[closes.length-1];
+    const ema200 = calcEMA(closes,200);
+    const wt     = calcWaveTrend(highs,lows,closes);
+    const rsiCombo = calcRSICombo(closes);
+    const recent52 = closes.slice(-52);
+    const high52   = recent52.length ? Math.max(...recent52) : null;
+    const vsHigh52 = high52 ? parseFloat(((price/high52-1)*100).toFixed(2)) : null;
+    return {
+      price, rsi: rsiCombo?rsiCombo.rsi:null, rsiCombo, ema200,
+      ema50: calcEMA(closes,50), volSpike: calcVolSpike(volumes),
+      vsEma200: ema200 ? parseFloat(((price/ema200-1)*100).toFixed(2)) : null,
+      vsHigh52,
+      wt1: wt.wt1, wt2: wt.wt2, wtCrossed: wt.crossed, wtCrossType: wt.crossType,
+      type: assetType || 'crypto'
+    };
+  }
+
   // ── Fetch crypto: Binance Futures → Spot → Gate.io → CoinGecko ──
   async function fetchCryptoData(symbol){
-    function processKlines(c){
-      if(!c||c.length<35) return null;
-      const highs=c.map(x=>parseFloat(x[2]));
-      const lows=c.map(x=>parseFloat(x[3]));
-      const closes=c.map(x=>parseFloat(x[4]));
-      const volumes=c.map(x=>parseFloat(x[5]));
-      const price=closes[closes.length-1];
-      const ema200=calcEMA(closes,200);
-      const wt=calcWaveTrend(highs,lows,closes);
-      const rsiCombo=calcRSICombo(closes);
-      return{
-        price, rsi:rsiCombo?rsiCombo.rsi:null, rsiCombo, ema200,
-        ema50:calcEMA(closes,50), volSpike:calcVolSpike(volumes),
-        vsEma200:ema200?parseFloat(((price/ema200-1)*100).toFixed(2)):null,
-        wt1:wt.wt1, wt2:wt.wt2, wtCrossed:wt.crossed, wtCrossType:wt.crossType,
-        type:'crypto'
-      };
-    }
 
     // 1️⃣ Binance Futures
     if(!NO_BINANCE.has(symbol)){
@@ -1183,11 +1189,21 @@
   // ── Fetch stocks from Render backend ─────────────
   async function fetchStocksBatch(symbols){
     try{
-      const res=await fetch(BACKEND+'/stocks?symbols='+symbols.join(','),{signal:AbortSignal.timeout(20000)});
+      const res=await fetch(BACKEND+'/stocks?symbols='+symbols.join(',')+'&interval='+selectedTF.interval,{signal:AbortSignal.timeout(30000)});
       if(!res.ok) return {};
-      const data=await res.json();
-      Object.keys(data).forEach(k=>{data[k].type='stock';});
-      return data;
+      const raw=await res.json();
+      const processed={};
+      Object.keys(raw).forEach(sym=>{
+        const item=raw[sym];
+        if(item&&item.klines&&item.klines.length>=35){
+          const d=processKlines(item.klines,'stock');
+          if(d){
+            d.marketCap=item.marketCap||null;
+            processed[sym]=d;
+          }
+        }
+      });
+      return processed;
     }catch(e){console.log('Backend error:',e.message);return{};}
   }
 
