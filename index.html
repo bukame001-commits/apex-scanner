@@ -1094,7 +1094,8 @@
 
     // 1️⃣ Binance Futures
     if(!NO_BINANCE.has(symbol)){
-      const res=await fetchWithTimeout(`https://fapi.binance.com/fapi/v1/klines?symbol=${symbol}USDT&interval=${selectedTF.interval}&limit=${selectedTF.limit}`, 6000);
+      const binanceInterval=selectedTF.interval==='1w'?'1W':selectedTF.interval==='4h'?'4h':'1d';
+      const res=await fetchWithTimeout(`https://fapi.binance.com/fapi/v1/klines?symbol=${symbol}USDT&interval=${binanceInterval}&limit=${selectedTF.limit}`, 6000);
       if(res&&res.ok){
         const c=await res.json().catch(()=>null);
         if(Array.isArray(c)&&c.length>0){
@@ -1104,7 +1105,7 @@
       }
 
       // 2️⃣ Binance Spot
-      const res2=await fetchWithTimeout(`https://api.binance.com/api/v3/klines?symbol=${symbol}USDT&interval=${selectedTF.interval}&limit=${selectedTF.limit}`, 6000);
+      const res2=await fetchWithTimeout(`https://api.binance.com/api/v3/klines?symbol=${symbol}USDT&interval=${binanceInterval}&limit=${selectedTF.limit}`, 6000);
       if(res2&&res2.ok){
         const c=await res2.json().catch(()=>null);
         if(Array.isArray(c)&&c.length>0){
@@ -1189,7 +1190,8 @@
   // ── Fetch stocks from Render backend ─────────────
   async function fetchStocksBatch(symbols){
     try{
-      const res=await fetch(BACKEND+'/stocks?symbols='+symbols.join(',')+'&interval='+selectedTF.interval,{signal:AbortSignal.timeout(30000)});
+      const yahooInterval=selectedTF.interval==='1w'?'1wk':selectedTF.interval==='4h'?'60m':'1d';
+      const res=await fetch(BACKEND+'/stocks?symbols='+symbols.join(',')+'&interval='+yahooInterval,{signal:AbortSignal.timeout(30000)});
       if(!res.ok) return {};
       const raw=await res.json();
       const processed={};
