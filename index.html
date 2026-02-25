@@ -410,7 +410,71 @@
     crypto_top1000:{label:'Crypto Top 1000',type:'crypto',tickers:null}, // fetched live
     sp500:{label:'S&P 500',type:'stock',tickers:['AAPL','MSFT','AMZN','NVDA','GOOGL','META','TSLA','BRK-B','UNH','LLY','JPM','V','XOM','MA','PG','JNJ','HD','AVGO','MRK','CVX','PEP','ABBV','COST','KO','WMT','ADBE','CRM','BAC','MCD','PFE','TMO','CSCO','ABT','ACN','NKE','DHR','LIN','CMCSA','TXN','VZ','PM','NEE','RTX','HON','AMGN','IBM','UNP','INTC','QCOM','INTU','SBUX','GE','LOW','AMD','CAT','DE','SPGI','MS','GS','BLK']},
     nasdaq100:{label:'Nasdaq 100',type:'stock',tickers:['AAPL','MSFT','AMZN','NVDA','GOOGL','GOOG','META','TSLA','AVGO','ADBE','CSCO','CMCSA','INTC','AMD','INTU','QCOM','HON','AMAT','SBUX','MDLZ','GILD','REGN','VRTX','ISRG','KLAC','LRCX','SNPS','CDNS','MRVL','PANW','CRWD','NFLX','PYPL','ADP','MELI','ASML','COST','PDD','KDP','ORLY','PCAR','CTAS','FTNT','FAST','CPRT','MNST','DDOG','ROST','PAYX','ODFL']},
-    russell2000:{label:'Russell 2000',type:'stock',tickers:['SMCI','SAIA','GTLS','CHRD','RMBS','HALO','MGNI','CSWI','UFPI','PLXS','ITRI','ESAB','AAON','SPSC','ACLS','SFBS','CABO','ALRM','KTOS','AEIS','CPRX','MSGS','IRTC','MGPI','HTLF','PTCT','FORM','NSIT','TGTX','IDEX','AGIO','CARG','PRGS','DFIN','NEOG','HLIO','DNOW','BOOT','REPX','ARCH','AORT','INVA','DXPE','LQDT','MYRG','CNXN','PAHC','RELY','HTLD','PZZA']},
+    russell2000:{label:'Russell 2000',type:'stock',tickers:[
+      // Technology
+      'SMCI','RMBS','ACLS','SPSC','ALRM','FORM','PRGS','MGNI','ITRI','PLXS','NSIT','CARG','DFIN',
+      'IRTC','KTOS','AEIS','CABO','POWI','CSGS','TNET','QTWO','AMSF','EBIX','PLUS','CDNA','AGIO',
+      'CNXN','INVA','RELY','BAND','EVBG','DOMO','LPSN','TDOC','MIME','ATEN','DDOG','APPN','HUBS',
+      'ALKT','JAMF','PAYA','BRZE','WEAV','TASK','AGYS','AMSWA','CCSI','SCSC','PCTY','PAYC',
+      'NCNO','AVLR','LMNX','NUAN','QDEL','RBBN','SANM','SMAR','OSPN','NTNX','PUBM','TRMK',
+      // Healthcare / Biotech
+      'HALO','TGTX','PTCT','NEOG','CPRX','AORT','PAHC','MGPI','HTLF','IDEX','MSGS','SFBS',
+      'ACAD','AKRO','ALNY','ANAB','APLS','ARWR','ATRC','AXNX','BCYC','BHVN','BIKE','BMRN',
+      'CABA','CARA','CCCC','CHMA','CNMD','COHU','CPRX','CRSP','CTLT','DAWN','DBTX','DCPH',
+      'EDIT','EIDX','ELAN','ELYM','ENOV','EPZM','ERAS','ESPR','EWTX','EXAS','FATE','FGEN',
+      'FOLD','FWBI','GKOS','GNMK','GOSS','HALO','HIMS','HOOK','HRMY','ICAD','ICLR','IDYA',
+      'IMCR','IMGN','INVA','IONS','IOVA','IRHQ','IRMD','ISEE','ITCI','JAZZ','KALA','KDNY',
+      'KPTI','KROS','KYMR','LBPH','LGND','LNTH','LUNG','MGNX','MGTA','MORF','MRNS','MRUS',
+      'NKTR','NMRA','NRIX','NTLA','NVAX','NVCR','NVRO','NWBO','OCUL','OFIX','ONCE','OPCH',
+      'ORGO','ORMP','OSMT','PCRX','PDCO','PHAT','PRAX','PRLD','PRTA','PTGX','PTLO','RCKT',
+      'RGEN','RLMD','RLYB','RPRX','RUBY','RXRX','RZLT','SAGE','SANA','SBGI','SEER','SENS',
+      'SERA','SGEN','SGMO','SHPH','SIGA','SIOX','SLDB','SMMT','SNDX','SNGX','SPNV','SRPT',
+      'STOK','STRO','SURF','SVRA','SWAV','SYNH','TARS','TBPH','TCMD','TERN','TGTX','TILS',
+      'TLRY','TMDX','TNXP','TPVG','TRIL','TRTX','TRUP','TTOO','TVTX','TXMD','TYRA','UCTT',
+      'URGN','USPH','UTRS','VACC','VCNX','VERY','VKTX','VNDA','VRDN','VRTX','VTRS','WKHS',
+      // Financials / Banks
+      'SFBS','HTLF','MYRG','RELY','HTLD','LQDT','CNXN','DXPE','REPX','ARCH',
+      'ABCB','ACNB','AGIO','AMNB','AMTB','ASRV','ATLO','AUBN','BANF','BANR','BCAL','BCBP',
+      'BCSB','BFIN','BFST','BGCP','BHLB','BMTC','BOCH','BPFH','BRKL','BSVN','BUSE','BYFC',
+      'CADE','CBAN','CBFV','CBNK','CCBG','CFFN','CFFI','CHMG','CHCO','CIVB','CIZN','CLBK',
+      'CNOB','CODI','COLB','CTBI','CZWI','DCOM','EFSC','EGBN','EMCF','ESSA','EVBN','EVLO',
+      'FBIZ','FBMS','FBNC','FBSS','FCCO','FCNCA','FDEF','FDBC','FFBC','FFBH','FFIC','FFIN',
+      'FGBI','FISI','FLIC','FLMN','FLY','FMAO','FMBH','FMBI','FMNB','FNGR','FNWB','FNWD',
+      'FRBA','FRME','FSBW','FULT','FUNC','FXNC','GABC','GCBC','GFED','GLDD','GNBC','GNTY',
+      'GRWG','GSBC','GTBP','GVP','HAFC','HBAN','HBCP','HBMD','HCAT','HFWA','HGBL','HLAN',
+      // Industrials
+      'SAIA','GTLS','CSWI','UFPI','ESAB','AAON','HLIO','DNOW','BOOT','INVA',
+      'AEIS','ACMR','ACCO','AEIS','AGCO','AIMC','AJAX','ALCO','ALGT','ALGM','ALGT','ALRM',
+      'AMWD','APOG','ARCB','ARKO','ASIX','ATSG','AVAV','AXTA','AZPN','BCPC','BFAM','BLDP',
+      'BLMN','BLTH','BMBL','BRBR','BRBS','BRKR','BSIG','BSMX','BSTC','BURL','BWXT','CAKE',
+      'CALM','CATO','CBRL','CBUS','CCAP','CCRN','CDLX','CECO','CENT','CEVA','CFLT','CGEN',
+      'CGNT','CHCT','CHEF','CHGG','CHRS','CLFD','CLLS','CLMT','CLPR','CLPS','CLVT','CMCO',
+      'CMPR','CMRE','CNDT','CNXC','COHU','COOP','CORE','CORT','CPRI','CPRT','CRDO','CRNX',
+      'CRTO','CRUS','CSII','CSTE','CSTM','CSWC','CTAS','CTGO','CTKB','CTRL','CURO','CXDO',
+      // Energy
+      'CHRD','ARCH','REPX','DNOW',
+      'AMPY','BATL','BORR','CEIX','CELP','CLNE','CLR','CODI','CPEN','CPE','CRIS','CRZO',
+      'DINO','DKL','DNN','DRIL','DRQ','EMAN','ENVA','EPIC','ESTE','FLMN','FLY','FMSA',
+      'GPOR','GPRK','GRNT','GTXO','GXII','HESM','HTGC','HUSA','INDO','INFU','IPIX','IRDM',
+      'JAGX','JBLU','JOUT','JOBY','JSPR','KALEYRA','KBAL','KELYA','KFRC','KLIC','KMDA',
+      'KNBE','KNTK','KPLT','KRNY','KRTX','KSCP','KYMR','LBAI','LCII','LCUT','LDOS','LEGH',
+      // Consumer / Retail
+      'BOOT','PZZA','MSGS','CARG','MGPI',
+      'ACMR','ACVA','ADUS','AEHR','AEMD','AESI','AEVA','AFCG','AFRI','AGIO','AGMH','AGRI',
+      'AGTC','AGTI','AGUS','AGYS','AHCO','AHPI','AIOT','AIRG','AIRSP','AIXI','AJRD','AKAM',
+      'AKBA','AKLI','AKTS','AKUS','ALBO','ALCO','ALDX','ALEC','ALEX','ALGT','ALIM','ALJJ',
+      'ALLK','ALLT','ALLR','ALLT','ALMG','ALNT','ALOT','ALPA','ALRM','ALRS','ALSN','ALTI',
+      'ALTR','ALTU','ALVR','ALXO','ALYA','AMAG','AMBC','AMBO','AMBU','AMCI','AMCX','AMEH',
+      'AMGN','AMHC','AMID','AMIX','AMKR','AMNB','AMOT','AMPH','AMPL','AMRK','AMRN','AMRS',
+      'AMSC','AMSF','AMST','AMTB','AMTD','AMTI','AMTX','AMWD','AMWL','AMYT','ANAB','ANAL',
+      // More diversified small caps
+      'ABSI','ABST','ABT','ACBI','ACCD','ACET','ACGLO','ACHC','ACHV','ACIC','ACII','ACLS',
+      'ACMR','ACNB','ACOR','ACRS','ACRV','ACRX','ACST','ACTG','ACVA','ACVF','ACWI','ACXM',
+      'ADAP','ADBE','ADEN','ADEX','ADGM','ADIL','ADIT','ADIX','ADMA','ADMP','ADMS','ADNT',
+      'ADOC','ADPT','ADRA','ADRB','ADRO','ADSK','ADTN','ADTX','ADUS','ADVM','ADXN','AEAC',
+      'AEAEU','AEHR','AEIS','AELX','AEMD','AENZ','AERI','AESI','AEVA','AEVH','AFAR','AFBI',
+      'AFCG','AFGE','AFGH','AFGL','AFIB','AFIN','AFMB','AFMD','AFRI','AFRM','AFTR','AFYA'
+    ]},
     defi:{label:'DeFi Tokens',type:'crypto',tickers:null} // fetched live
   };
 
@@ -1254,6 +1318,27 @@
         }
       }
 
+      // ── Fetch live Russell 2000 constituents from backend (IWM ETF holdings) ──
+      if(selectedMarkets.includes('russell2000')){
+        document.getElementById('loadingStatus').textContent = 'Fetching live Russell 2000 constituents...';
+        try {
+          const res = await Promise.race([
+            fetch(BACKEND + '/russell2000'),
+            new Promise((_,reject) => setTimeout(() => reject(new Error('timeout')), 12000))
+          ]);
+          if(res.ok){
+            const data = await res.json();
+            if(data.tickers && data.tickers.length > 100){
+              MARKET_TICKERS.russell2000.tickers = data.tickers;
+              document.getElementById('loadingStatus').textContent = `Live Russell 2000: ${data.tickers.length} stocks loaded.`;
+            }
+          }
+        } catch(e){
+          // Fall through to hardcoded list silently
+          console.log('Russell 2000 live fetch failed, using built-in list:', e.message);
+        }
+      }
+
       // ── Build ticker list ──────────────────────────────
       let allTickers=[];
       selectedMarkets.forEach(m=>{
@@ -1473,29 +1558,101 @@
       } catch(e){ console.warn('Summary failed:',e.message); }
 
       // ── AI Fundamental Enrichment — knowledge only, no numbers ────
-      // AI is asked ONLY about fundamentals/tech/news — never about chart values
       document.getElementById('loadingStatus').textContent = 'Fetching fundamentals & news intel...';
-      const enrichList = parsed.map(a=>a.symbol).join(', ');
-      const enrichPrompt = `You are a research analyst. For each asset listed, provide a brief research note based on your knowledge up to early 2025.
 
-Assets: ${enrichList}
+      // Company name map so AI can identify obscure tickers (especially Russell 2000 small caps)
+      const STOCK_NAMES = {
+        'SMCI':'Super Micro Computer (AI server infrastructure)',
+        'SAIA':'Saia Inc (LTL freight trucking)',
+        'GTLS':'Chart Industries (industrial gas equipment)',
+        'CHRD':'Chord Energy (Permian oil & gas)',
+        'RMBS':'Rambus (semiconductor IP licensing)',
+        'HALO':'Halozyme Therapeutics (ENHANZE drug delivery platform)',
+        'MGNI':'Magnite (programmatic CTV advertising)',
+        'CSWI':'CSW Industrials (HVAC & plumbing products)',
+        'UFPI':'UFP Industries (engineered wood products)',
+        'PLXS':'Plexus Corp (electronics manufacturing services)',
+        'ITRI':'Itron (smart grid & water utility tech)',
+        'ESAB':'ESAB Corp (welding & cutting equipment)',
+        'AAON':'AAON Inc (commercial HVAC equipment)',
+        'SPSC':'SPS Commerce (supply chain SaaS platform)',
+        'ACLS':'Axcelis Technologies (ion implant semiconductor equipment)',
+        'SFBS':'ServisFirst Bancshares (southeastern US regional bank)',
+        'CABO':'Cable One/Sparklight (rural broadband ISP)',
+        'ALRM':'Alarm.com (smart home & business security SaaS)',
+        'KTOS':'Kratos Defense (unmanned systems & defense electronics)',
+        'AEIS':'Advanced Energy Industries (precision power conversion)',
+        'CPRX':'Catalyst Biosciences (rare disease pharma)',
+        'MSGS':'Madison Square Garden Sports (Knicks, Rangers ownership)',
+        'IRTC':'iRhythm Technologies (Zio cardiac monitoring patch)',
+        'MGPI':'MGP Ingredients (premium distilled spirits & starches)',
+        'HTLF':'Heartland Financial USA (Midwest regional bank)',
+        'PTCT':'PTC Therapeutics (Duchenne muscular dystrophy & rare disease)',
+        'FORM':'FormFactor (semiconductor wafer probe cards)',
+        'NSIT':'Insight Direct (corporate IT products & solutions)',
+        'TGTX':'TG Therapeutics (ublituximab for MS & oncology)',
+        'IDEX':'IDEX Corp (fluidics & pumps for industrial/medical)',
+        'AGIO':'Agios Pharmaceuticals (rare blood disease treatments)',
+        'CARG':'CarGurus (online used car marketplace)',
+        'PRGS':'Progress Software (OpenEdge, Telerik dev tools)',
+        'DFIN':'Donnelley Financial Solutions (SEC filing & compliance SaaS)',
+        'NEOG':'Neogen Corp (food & animal safety testing)',
+        'HLIO':'Helios Technologies (hydraulic & electronic systems)',
+        'DNOW':'NOW Inc (energy sector industrial distribution)',
+        'BOOT':'Boot Barn (Western lifestyle & workwear retail chain)',
+        'REPX':'Riley Exploration Permian (Permian Basin E&P)',
+        'ARCH':'Arch Resources (premium metallurgical coal)',
+        'AORT':'Artivion Inc formerly CryoLife — aortic stent grafts, On-X mechanical heart valves, surgical sealants, cardiac tissue preservation; NYSE-listed med-device company founded 1984 HQ Kennesaw GA; CEO James Patrick Mackin; FY revenue ~$441M, net income ~$9.76M, market cap ~$1.71B, P/E ~187',
+        'INVA':'Innoviva Inc (pharmaceutical royalties, GSK respiratory drugs)',
+        'DXPE':'DXP Enterprises (industrial MRO distribution)',
+        'LQDT':'Liquidity Services (B2B reverse logistics & auctions)',
+        'MYRG':'MYR Group (electrical construction & infrastructure)',
+        'CNXN':'PC Connection/Connection (IT products for businesses)',
+        'PAHC':'Phibro Animal Health (veterinary & animal nutrition)',
+        'RELY':'Remitly Global (digital international money transfers)',
+        'HTLD':'Heartland Express (truckload carrier)',
+        'PZZA':'Papa Johns International (pizza franchise)',
+        'AAPL':'Apple Inc','MSFT':'Microsoft','AMZN':'Amazon','NVDA':'Nvidia',
+        'GOOGL':'Alphabet/Google','META':'Meta Platforms','TSLA':'Tesla',
+        'JPM':'JPMorgan Chase','V':'Visa','MA':'Mastercard',
+        'UNH':'UnitedHealth Group','LLY':'Eli Lilly','AVGO':'Broadcom',
+        'ADBE':'Adobe','CRM':'Salesforce','AMD':'AMD','INTC':'Intel',
+        'QCOM':'Qualcomm','NFLX':'Netflix','AMGN':'Amgen','COST':'Costco',
+        'SBUX':'Starbucks','INTU':'Intuit','HON':'Honeywell'
+      };
+
+      // Build enrichment context — include company name + market cap for stocks
+      const enrichContextLines = parsed.map(a => {
+        if(a.type === 'stock') {
+          const name = STOCK_NAMES[a.symbol] || (a.symbol + ' (NYSE/NASDAQ listed company)');
+          const mcap = a.marketCap ? ' market cap $'+(a.marketCap>=1e9?(a.marketCap/1e9).toFixed(1)+'B':(a.marketCap/1e6).toFixed(0)+'M') : '';
+          return a.symbol + ' = ' + name + (mcap ? ',' + mcap : '');
+        }
+        return a.symbol; // crypto symbols are self-explanatory
+      });
+      const enrichList = enrichContextLines.join('\n');
+
+      const enrichPrompt = `You are a research analyst. For each asset below, provide analysis based on your training knowledge.
+
+Assets (ticker = full company description for context):
+${enrichList}
 
 Return a JSON array. For EACH asset:
 {
   "symbol": "TICKER",
-  "fundamentals": "One sentence: financial health, team quality, adoption, revenue or TVL growth.",
-  "disruptive": "One sentence: is the technology genuinely novel or disruptive vs competitors?",
-  "news": "One to two sentences: notable recent developments, upgrades, partnerships, or red flags as of early 2025.",
+  "fundamentals": "One sentence on financial health, revenue growth, profitability, or adoption trajectory.",
+  "disruptive": "One sentence on whether the technology or business model is genuinely differentiated or disruptive.",
+  "news": "One to two sentences on notable developments, product launches, partnerships, or risks as of early 2025.",
   "verdict": "STRONG" or "NEUTRAL" or "WEAK"
 }
 
-verdict guide:
-- STRONG = solid fundamentals + real innovation + positive recent developments
-- WEAK   = failing fundamentals, abandoned project, major scandal, or rug risk
-- NEUTRAL = mixed picture or insufficient knowledge
+verdict:
+- STRONG = solid financials + real competitive edge + positive momentum
+- WEAK   = deteriorating fundamentals, major scandal, or effectively dead project
+- NEUTRAL = mixed signals or limited recent information
 
-IMPORTANT: If you have limited knowledge of an asset, set verdict "NEUTRAL" and state that honestly. Do NOT invent facts.
-Return ONLY the raw JSON array. No markdown, no backticks, no extra text.`;
+Use the full company description to ensure accurate analysis.
+Return ONLY the raw JSON array. No markdown, no backticks.`;
 
       try {
         const enrichResponse = await callAI(enrichPrompt);
