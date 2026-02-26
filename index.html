@@ -267,7 +267,7 @@
           <div class="ind-name">VOLUME SPIKE</div><div class="ind-desc">1.5x average surge</div><div class="ind-check">✓</div>
         </button>
         <button class="ind-btn" data-ind="VWAP" onclick="toggleInd(this)">
-          <div class="ind-name">VWAP</div><div class="ind-desc">Price below VWAP</div><div class="ind-check"></div>
+          <div class="ind-name">VWAP</div><div class="ind-desc">Anchored VWAP deviation</div><div class="ind-check"></div>
         </button>
         <button class="ind-btn" data-ind="ATR Expansion" onclick="toggleInd(this)">
           <div class="ind-name">ATR</div><div class="ind-desc">Volatility expansion</div><div class="ind-check"></div>
@@ -326,6 +326,27 @@
     </div>
 
     <!-- Telegram -->
+  <!-- VWAP Anchor -->
+  <div class="section-label">04c — VWAP ANCHOR</div>
+  <div class="card">
+    <div style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--muted);margin-bottom:10px;">
+      Crypto trades 24/7 · Stocks trade Mon–Fri only. Choose lookback to match your timeframe.<br>
+      <span style="color:var(--accent);">AUTO</span> = 52 bars weekly · 200 bars daily · smart per asset type.
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;" id="vwapAnchorBtns">
+      <button class="filter-btn active" data-anchor="auto"   onclick="selectVwapAnchor(this)">AUTO</button>
+      <button class="filter-btn" data-anchor="ytd"    onclick="selectVwapAnchor(this)">YTD</button>
+      <button class="filter-btn" data-anchor="52"     onclick="selectVwapAnchor(this)">52 BARS</button>
+      <button class="filter-btn" data-anchor="26"     onclick="selectVwapAnchor(this)">26 BARS</button>
+      <button class="filter-btn" data-anchor="13"     onclick="selectVwapAnchor(this)">13 BARS</button>
+      <button class="filter-btn" data-anchor="crypto" onclick="selectVwapAnchor(this)">CRYPTO 365d</button>
+      <button class="filter-btn" data-anchor="stock"  onclick="selectVwapAnchor(this)">STOCK 252d</button>
+    </div>
+    <div style="font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--muted);margin-top:8px;" id="vwapAnchorDesc">
+      AUTO: 52 bars on weekly (≈1yr), 200 bars on daily (≈9mo crypto / ≈8mo stocks)
+    </div>
+  </div>
+
   <div class="section-label">05 — TELEGRAM ALERTS (OPTIONAL)</div>
   <div class="api-card">
     <div class="api-field visible">
@@ -386,12 +407,29 @@
   let selectedInds = ['WaveTrend','RSI Combo','Bollinger Band Lower Touch','Volume Spike'];
   let allAlerts = [];
   let selectedMcap = 0;
+  let selectedVwapAnchor = 'auto'; // auto | ytd | 52 | 26 | 13 | crypto | stock
   let selectedTF = {tf:'1w', interval:'1w', limit:210, label:'1W'}; // 0 = no filter, otherwise max billion USD
 
   function selectMcap(btn) {
     document.querySelectorAll('#mcapBtns .filter-btn').forEach(b=>b.classList.remove('active'));
     btn.classList.add('active');
     selectedMcap = parseFloat(btn.dataset.mcap);
+  }
+
+  function selectVwapAnchor(btn){
+    document.querySelectorAll('#vwapAnchorBtns .filter-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    selectedVwapAnchor = btn.dataset.anchor;
+    const descs = {
+      'auto':   'AUTO: 52 bars on weekly (≈1yr), 200 bars on daily (≈9mo crypto / ≈8mo stocks)',
+      'ytd':    'YTD: Anchored from Jan 1st of current year',
+      '52':     '52 BARS: Last 52 candles regardless of timeframe or asset type',
+      '26':     '26 BARS: Last 26 candles — ~6 months on weekly',
+      '13':     '13 BARS: Last 13 candles — ~3 months on weekly',
+      'crypto': 'CRYPTO 365d: 365 daily bars (~1 year) — suits 24/7 crypto markets',
+      'stock':  'STOCK 252d: 252 daily bars (~1 trading year) — suits Mon–Fri stock markets'
+    };
+    document.getElementById('vwapAnchorDesc').textContent = descs[selectedVwapAnchor] || '';
   }
 
   function selectTF(btn) {
@@ -1066,6 +1104,175 @@
   }
 
   // ── Shared kline processor — used by both crypto and stock fetchers ──
+
+  // ── Bollinger Bands ──────────────────────────────────────
+  function calcBollingerBands(closes, period=20, mult=2){
+    const n = closes.length;
+    if(n < period) return null;
+    const sma = closes.slice(-period).reduce((a,b)=>a+b,0)/period;
+    const variance = closes.slice(-period).reduce((a,b)=>a+(b-sma)**2,0)/period;
+    const stddev = Math.sqrt(variance);
+    return {
+      upper: parseFloat((sma+mult*stddev).toFixed(4)),
+      mid:   parseFloat(sma.toFixed(4)),
+      lower: parseFloat((sma-mult*stddev).toFixed(4)),
+      price: closes[n-1],
+      atLower: closes[n-1] <= (sma - mult*stddev),
+      atUpper: closes[n-1] >= (sma + mult*stddev),
+      pct:   parseFloat(((closes[n-1]-(sma-mult*stddev))/(4*mult*stddev)*100).toFixed(1))
+    };
+  }
+
+  // ── MACD ─────────────────────────────────────────────────
+  function calcMACD(closes, fast=12, slow=26, signal=9){
+    if(closes.length < slow+signal) return null;
+    const emaFast = calcEMASeries(closes, fast);
+    const emaSlow = calcEMASeries(closes, slow);
+    const macdLine = emaFast.map((v,i)=> v!==null&&emaSlow[i]!==null ? v-emaSlow[i] : null);
+    const validMacd = macdLine.filter(v=>v!==null);
+    if(validMacd.length < signal) return null;
+    const signalSeries = calcEMASeries(validMacd, signal);
+    const sigVal = signalSeries.filter(v=>v!==null);
+    if(sigVal.length < 2) return null;
+    const macdVal  = validMacd[validMacd.length-1];
+    const sigLast  = sigVal[sigVal.length-1];
+    const sigPrev  = sigVal[sigVal.length-2];
+    const macdPrev = validMacd[validMacd.length-2];
+    const histogram = macdVal - sigLast;
+    // Bullish cross: macd crossed above signal last bar
+    const bullishCross = macdPrev < sigPrev && macdVal > sigLast;
+    const bearishCross = macdPrev > sigPrev && macdVal < sigLast;
+    return {
+      macd: parseFloat(macdVal.toFixed(4)),
+      signal: parseFloat(sigLast.toFixed(4)),
+      histogram: parseFloat(histogram.toFixed(4)),
+      bullishCross, bearishCross
+    };
+  }
+
+  // ── Stochastic RSI ───────────────────────────────────────
+  function calcStochRSI(closes, rsiLen=14, stochLen=14, kSmooth=3, dSmooth=3){
+    if(closes.length < rsiLen+stochLen+kSmooth+dSmooth) return null;
+    const {rsiSeries} = calcRSIComboSeries(closes, rsiLen);
+    const validRsi = rsiSeries.filter(v=>v!==null);
+    if(validRsi.length < stochLen) return null;
+    // Stoch of RSI
+    const stochK = [];
+    for(let i=stochLen-1; i<validRsi.length; i++){
+      const window = validRsi.slice(i-stochLen+1, i+1);
+      const lo = Math.min(...window);
+      const hi = Math.max(...window);
+      stochK.push(hi===lo ? 50 : (validRsi[i]-lo)/(hi-lo)*100);
+    }
+    const kSeries = calcSMASeries(stochK, kSmooth);
+    const dSeries = calcSMASeries(kSeries.filter(v=>v!==null), dSmooth);
+    const kValid = kSeries.filter(v=>v!==null);
+    const dValid = dSeries.filter(v=>v!==null);
+    if(kValid.length < 2 || dValid.length < 2) return null;
+    const k = kValid[kValid.length-1];
+    const d = dValid[dValid.length-1];
+    const kPrev = kValid[kValid.length-2];
+    const dPrev = dValid[dValid.length-2];
+    const oversold  = k < 20 && d < 20;
+    const overbought= k > 80 && d > 80;
+    const bullishCross = kPrev < dPrev && k > d && k < 20;
+    const bearishCross = kPrev > dPrev && k < d && k > 80;
+    return { k: parseFloat(k.toFixed(1)), d: parseFloat(d.toFixed(1)), oversold, overbought, bullishCross, bearishCross };
+  }
+
+  // ── ATR (Average True Range) ─────────────────────────────
+  function calcATR(highs, lows, closes, period=14){
+    if(closes.length < period+1) return null;
+    const tr = closes.map((c,i)=>{
+      if(i===0) return highs[i]-lows[i];
+      return Math.max(highs[i]-lows[i], Math.abs(highs[i]-closes[i-1]), Math.abs(lows[i]-closes[i-1]));
+    });
+    // RMA of TR
+    const atrSeries = calcRMASeries(tr, period);
+    const valid = atrSeries.filter(v=>v!==null);
+    if(valid.length < 2) return null;
+    const atrNow  = valid[valid.length-1];
+    const atrPrev = valid[valid.length-2];
+    const atrPct  = parseFloat((atrNow/closes[closes.length-1]*100).toFixed(2));
+    const expanding = atrNow > atrPrev * 1.1; // 10% expansion
+    return { atr: parseFloat(atrNow.toFixed(4)), atrPct, expanding };
+  }
+
+  // ── OBV (On Balance Volume) ──────────────────────────────
+  function calcOBV(closes, volumes){
+    if(closes.length < 20) return null;
+    let obv = 0;
+    const obvSeries = [0];
+    for(let i=1; i<closes.length; i++){
+      if(closes[i] > closes[i-1])      obv += volumes[i];
+      else if(closes[i] < closes[i-1]) obv -= volumes[i];
+      obvSeries.push(obv);
+    }
+    // OBV rising = last 5 bars trend up
+    const recent = obvSeries.slice(-5);
+    const rising = recent[recent.length-1] > recent[0];
+    const obv5SmaStart = obvSeries.slice(-5).reduce((a,b)=>a+b,0)/5;
+    const obv5SmaEnd   = obvSeries.slice(-3).reduce((a,b)=>a+b,0)/3;
+    const strongRising = obv5SmaEnd > obv5SmaStart * 1.01;
+    return { obv: parseFloat(obv.toFixed(0)), rising, strongRising };
+  }
+
+  // ── Anchored VWAP ────────────────────────────────────────────
+  // Lookback is determined by user's anchor selection + asset type + timeframe
+  function resolveVwapLookback(assetType){
+    const anchor = selectedVwapAnchor || 'auto';
+    const isWeekly = selectedTF.tf === '1w';
+    const isDaily  = selectedTF.tf === '1d';
+    const isCrypto = assetType === 'crypto';
+
+    if(anchor === 'auto'){
+      // Weekly: 52 bars ≈ 1 year for both
+      // Daily:  crypto 365 bars (24/7), stocks 252 bars (trading days)
+      if(isWeekly) return 52;
+      if(isDaily)  return isCrypto ? 365 : 252;
+      return 52; // 4H default
+    }
+    if(anchor === 'ytd'){
+      // Bars since Jan 1 of current year
+      const now = new Date();
+      const dayOfYear = Math.floor((now - new Date(now.getFullYear(),0,1)) / 86400000);
+      if(isWeekly) return Math.max(1, Math.floor(dayOfYear / 7));
+      if(isDaily)  return isCrypto ? dayOfYear : Math.floor(dayOfYear * 252/365);
+      return Math.max(1, Math.floor(dayOfYear / 7));
+    }
+    if(anchor === 'crypto') return isWeekly ? 52 : 365;
+    if(anchor === 'stock')  return isWeekly ? 52 : 252;
+    return parseInt(anchor) || 52; // '52', '26', '13'
+  }
+
+  function calcVWAP(highs, lows, closes, volumes, assetType){
+    const n = closes.length;
+    if(n < 10) return null;
+    const lookback = Math.min(n, resolveVwapLookback(assetType));
+    const h = highs.slice(-lookback);
+    const l = lows.slice(-lookback);
+    const c = closes.slice(-lookback);
+    const v = volumes.slice(-lookback);
+    let cumPV = 0, cumV = 0;
+    for(let i = 0; i < h.length; i++){
+      const typical = (h[i] + l[i] + c[i]) / 3;
+      const vol = v[i] || 0;
+      cumPV += typical * vol;
+      cumV  += vol;
+    }
+    if(cumV === 0) return null;
+    const vwap = cumPV / cumV;
+    const price = closes[n-1];
+    const pctFromVwap = parseFloat(((price / vwap - 1) * 100).toFixed(2));
+    const anchorBars = lookback;
+    return {
+      vwap: parseFloat(vwap.toFixed(4)),
+      price, pctFromVwap, anchorBars,
+      belowVwap: price < vwap,
+      aboveVwap: price > vwap
+    };
+  }
+
   function processKlines(c, assetType){
     if(!c||c.length<35) return null;
     const highs  = c.map(x=>parseFloat(x[2]));
@@ -1079,11 +1286,17 @@
     const recent52 = closes.slice(-52);
     const high52   = recent52.length ? Math.max(...recent52) : null;
     const vsHigh52 = high52 ? parseFloat(((price/high52-1)*100).toFixed(2)) : null;
+    const bb       = calcBollingerBands(closes);
+    const macd     = calcMACD(closes);
+    const stochRsi = calcStochRSI(closes);
+    const atr      = calcATR(highs, lows, closes);
+    const obv      = calcOBV(closes, volumes);
+    const vwap     = calcVWAP(highs, lows, closes, volumes, assetType);
     return {
       price, rsi: rsiCombo?rsiCombo.rsi:null, rsiCombo, ema200,
       ema50: calcEMA(closes,50), volSpike: calcVolSpike(volumes),
       vsEma200: ema200 ? parseFloat(((price/ema200-1)*100).toFixed(2)) : null,
-      vsHigh52,
+      vsHigh52, bb, macd, stochRsi, atr, obv, vwap,
       wt1: wt.wt1, wt2: wt.wt2, wtCrossed: wt.crossed, wtCrossType: wt.crossType,
       type: assetType || 'crypto'
     };
@@ -1392,25 +1605,28 @@
         const isAwake=await wakeBackend();
         if(isAwake){
           // Fetch 5 batches of 50 in parallel — much faster than sequential 20s
-          const STOCK_BATCH = 50;
-          const CONCURRENCY  = 5;
+          const STOCK_BATCH = 100;
+          const CONCURRENCY  = 10;
           const stockSymbols = stockTickers.map(t=>t.symbol);
           const batches = [];
           for(let i=0;i<stockSymbols.length;i+=STOCK_BATCH){
             batches.push(stockSymbols.slice(i,i+STOCK_BATCH));
           }
           let done = 0;
+          const scanStart = Date.now();
           for(let i=0;i<batches.length;i+=CONCURRENCY){
             const chunk = batches.slice(i, i+CONCURRENCY);
-            const pct = Math.round((i/batches.length)*100);
+            const pct = Math.round((done*STOCK_BATCH/stockSymbols.length)*100);
+            const elapsed = ((Date.now()-scanStart)/1000).toFixed(0);
             document.getElementById('loadingStatus').textContent=
-              `Fetching stocks ${done*STOCK_BATCH+1}–${Math.min((done+chunk.length)*STOCK_BATCH,stockSymbols.length)} of ${stockSymbols.length} (${pct}%)...`;
+              `Fetching stocks ${Math.min(done*STOCK_BATCH+1,stockSymbols.length)}–${Math.min((done+chunk.length)*STOCK_BATCH,stockSymbols.length)} of ${stockSymbols.length} (${pct}% · ${elapsed}s)...`;
             const results = await Promise.all(chunk.map(b=>fetchStocksBatch(b)));
             results.forEach(r=>Object.assign(realData,r));
             done += chunk.length;
           }
           const stocksLoaded=stockTickers.filter(t=>realData[t.symbol]).length;
-          document.getElementById('loadingStatus').textContent=stocksLoaded+' of '+stockTickers.length+' stocks loaded.';
+          const totalSecs=((Date.now()-scanStart)/1000).toFixed(0);
+          document.getElementById('loadingStatus').textContent=`${stocksLoaded} of ${stockTickers.length} stocks loaded in ${totalSecs}s.`;
           await new Promise(r=>setTimeout(r,400));
         } else {
           document.getElementById('loadingStatus').textContent='⚠ Stock server timed out. AI will estimate from training data — results may not reflect current prices.';
@@ -1419,24 +1635,20 @@
       }
 
       // Market cap fetch & filter for stocks
+      // Build marketCapData from realData (backend already returns marketCap per stock)
       const marketCapData={};
-      if(stockTickers.length>0 && selectedMcap>0){
-        const stocksWithData=stockTickers.filter(t=>realData[t.symbol]);
-        document.getElementById('loadingStatus').textContent='Fetching market caps for '+stocksWithData.length+' stocks...';
-        // Batch in groups of 10 to avoid hammering Yahoo
-        for(let i=0;i<stocksWithData.length;i+=10){
-          const batch=stocksWithData.slice(i,i+10).map(t=>t.symbol);
-          const caps=await fetchMarketCaps(batch);
-          Object.assign(marketCapData,caps);
-          await new Promise(r=>setTimeout(r,200));
-        }
-        const filtered=stocksWithData.filter(t=>{
+      stockTickers.forEach(t=>{
+        const d=realData[t.symbol];
+        if(d&&d.marketCap) marketCapData[t.symbol]=d.marketCap;
+      });
+      if(selectedMcap>0 && stockTickers.length>0){
+        const passing=stockTickers.filter(t=>{
           const cap=marketCapData[t.symbol];
-          if(!cap) return true; // include if we couldn't fetch cap
+          if(!cap) return true; // no cap data — include by default
           return cap<selectedMcap*1e9;
-        });
-        document.getElementById('loadingStatus').textContent=filtered.length+' stocks pass <$'+selectedMcap+'B market cap filter.';
-        await new Promise(r=>setTimeout(r,600));
+        }).length;
+        document.getElementById('loadingStatus').textContent=passing+' stocks pass <$'+selectedMcap+'B market cap filter.';
+        await new Promise(r=>setTimeout(r,500));
       }
 
       // Liquidation data for crypto
@@ -1497,6 +1709,33 @@
         if(d.vsEma200!==null&&Math.abs(d.vsEma200)<=5) sigs.push('200 EMA proximity:Near 200 EMA ('+d.vsEma200+'%)');
         if(d.vsEma200!==null&&d.vsEma200>20) sigs.push('200 EMA proximity:Extended above 200 EMA ('+d.vsEma200+'%)');
         if(d.vsHigh52!==null&&d.vsHigh52>-5) sigs.push('200 EMA proximity:Near 52W High ('+d.vsHigh52+'%)');
+        // Bollinger Bands
+        if(d.bb){
+          if(d.bb.atLower) sigs.push('Bollinger Band Lower Touch:BB Lower Touch (price='+d.bb.price.toPrecision(5)+' lower='+d.bb.lower.toPrecision(5)+')');
+          if(d.bb.atUpper) sigs.push('Bollinger Band Lower Touch:BB Upper Touch (price='+d.bb.price.toPrecision(5)+' upper='+d.bb.upper.toPrecision(5)+')');
+        }
+        // MACD Crossover
+        if(d.macd){
+          if(d.macd.bullishCross) sigs.push('MACD Crossover:MACD Bullish Cross (hist='+d.macd.histogram.toFixed(4)+')');
+          if(d.macd.bearishCross) sigs.push('MACD Crossover:MACD Bearish Cross (hist='+d.macd.histogram.toFixed(4)+')');
+        }
+        // Stochastic RSI
+        if(d.stochRsi){
+          if(d.stochRsi.bullishCross) sigs.push('Stochastic RSI:StochRSI Bullish Cross (K='+d.stochRsi.k+' D='+d.stochRsi.d+')');
+          if(d.stochRsi.bearishCross) sigs.push('Stochastic RSI:StochRSI Bearish Cross (K='+d.stochRsi.k+' D='+d.stochRsi.d+')');
+          if(d.stochRsi.oversold)     sigs.push('Stochastic RSI:StochRSI Oversold (K='+d.stochRsi.k+')');
+        }
+        // ATR Expansion
+        if(d.atr&&d.atr.expanding) sigs.push('ATR Expansion:ATR Expanding ('+d.atr.atrPct+'% of price)');
+        // OBV Rising
+        if(d.obv&&d.obv.strongRising) sigs.push('OBV Rising:OBV Accumulation Rising');
+        // VWAP
+        if(d.vwap){
+          const anchorLabel = d.vwap.anchorBars+'bar anchor';
+          if(d.vwap.belowVwap) sigs.push('VWAP:Below VWAP '+d.vwap.pctFromVwap+'% ('+anchorLabel+' VWAP=$'+d.vwap.vwap.toPrecision(5)+')');
+          if(d.vwap.aboveVwap&&d.vwap.pctFromVwap>10) sigs.push('VWAP:Extended +'+d.vwap.pctFromVwap+'% above VWAP ('+anchorLabel+')');
+        }
+        // Liq Zone (crypto only)
         const liq=liqData[t.symbol];
         if(liq&&liq.alert){
           const dist=liq.alertType==='NEAR_LONG_LIQ'?liq.distLong:liq.distShort;
