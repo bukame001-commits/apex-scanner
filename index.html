@@ -1184,32 +1184,39 @@
 
   // ── Stochastic RSI ───────────────────────────────────────
   function calcStochRSI(closes, rsiLen=14, stochLen=14, kSmooth=3, dSmooth=3){
-    if(closes.length < rsiLen+stochLen+kSmooth+dSmooth) return null;
-    const {rsiSeries} = calcRSIComboSeries(closes, rsiLen);
-    const validRsi = rsiSeries.filter(v=>v!==null);
-    if(validRsi.length < stochLen) return null;
-    // Stoch of RSI
-    const stochK = [];
-    for(let i=stochLen-1; i<validRsi.length; i++){
-      const window = validRsi.slice(i-stochLen+1, i+1);
-      const lo = Math.min(...window);
-      const hi = Math.max(...window);
-      stochK.push(hi===lo ? 50 : (validRsi[i]-lo)/(hi-lo)*100);
-    }
-    const kSeries = calcSMASeries(stochK, kSmooth);
-    const dSeries = calcSMASeries(kSeries.filter(v=>v!==null), dSmooth);
-    const kValid = kSeries.filter(v=>v!==null);
-    const dValid = dSeries.filter(v=>v!==null);
-    if(kValid.length < 2 || dValid.length < 2) return null;
-    const k = kValid[kValid.length-1];
-    const d = dValid[dValid.length-1];
-    const kPrev = kValid[kValid.length-2];
-    const dPrev = dValid[dValid.length-2];
-    const oversold  = k < 20 && d < 20;
-    const overbought= k > 80 && d > 80;
-    const bullishCross = kPrev < dPrev && k > d && k < 20;
-    const bearishCross = kPrev > dPrev && k < d && k > 80;
-    return { k: parseFloat(k.toFixed(1)), d: parseFloat(d.toFixed(1)), oversold, overbought, bullishCross, bearishCross };
+    try {
+      if(closes.length < rsiLen+stochLen+kSmooth+dSmooth+5) return null;
+      const {rsiSeries} = calcRSIComboSeries(closes, rsiLen);
+      const validRsi = rsiSeries.filter(v=>v!==null);
+      if(validRsi.length < stochLen) return null;
+      // Stoch of RSI — using simple SMA smoothing inline (safe, no index mismatch)
+      const rawK = [];
+      for(let i=stochLen-1; i<validRsi.length; i++){
+        const win = validRsi.slice(i-stochLen+1, i+1);
+        const lo = Math.min(...win), hi = Math.max(...win);
+        rawK.push(hi===lo ? 50 : (validRsi[i]-lo)/(hi-lo)*100);
+      }
+      if(rawK.length < kSmooth+dSmooth+2) return null;
+      // Smooth K
+      const kArr = [];
+      for(let i=kSmooth-1; i<rawK.length; i++){
+        kArr.push(rawK.slice(i-kSmooth+1, i+1).reduce((a,b)=>a+b,0)/kSmooth);
+      }
+      // Smooth D
+      const dArr = [];
+      for(let i=dSmooth-1; i<kArr.length; i++){
+        dArr.push(kArr.slice(i-dSmooth+1, i+1).reduce((a,b)=>a+b,0)/dSmooth);
+      }
+      if(kArr.length < 2 || dArr.length < 2) return null;
+      const k = kArr[kArr.length-1], kPrev = kArr[kArr.length-2];
+      const d = dArr[dArr.length-1], dPrev = dArr[dArr.length-2];
+      return {
+        k: parseFloat(k.toFixed(1)), d: parseFloat(d.toFixed(1)),
+        oversold: k < 20 && d < 20, overbought: k > 80 && d > 80,
+        bullishCross: kPrev < dPrev && k > d && k < 20,
+        bearishCross: kPrev > dPrev && k < d && k > 80
+      };
+    } catch(e) { return null; }
   }
 
   // ── ATR (Average True Range) ─────────────────────────────
@@ -1306,6 +1313,7 @@
   }
 
   function processKlines(c, assetType){
+    try {
     if(!c||c.length<35) return null;
     const highs  = c.map(x=>parseFloat(x[2]));
     const lows   = c.map(x=>parseFloat(x[3]));
@@ -1332,6 +1340,7 @@
       wt1: wt.wt1, wt2: wt.wt2, wtCrossed: wt.crossed, wtCrossType: wt.crossType,
       type: assetType || 'crypto'
     };
+    } catch(e) { console.warn('processKlines error:', e.message); return null; }
   }
 
   // ── Fetch crypto: Binance Futures → Spot → Gate.io → CoinGecko ──
