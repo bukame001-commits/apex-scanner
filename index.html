@@ -658,6 +658,38 @@
     return data.choices[0].message.content;
   }
 
+  // ── AI call with web search enabled (Claude direct only) ──
+  async function callAIWithSearch(prompt) {
+    const apiKey = document.getElementById(selectedEngine==='claude'?'claudeKey':'geminiKey').value.trim();
+    // Web search only available on Anthropic direct API
+    if(apiKey.startsWith('sk-ant-')){
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true'
+        },
+        body: JSON.stringify({
+          model: 'claude-haiku-4-5-20251001',
+          max_tokens: 4096,
+          tools: [{ type: 'web_search_20250305', name: 'web_search' }],
+          messages: [{ role: 'user', content: prompt }]
+        })
+      });
+      const rawText = await response.text();
+      let data;
+      try { data = JSON.parse(rawText); } catch(e) { throw new Error('Invalid response: ' + rawText.substring(0,200)); }
+      if(!response.ok || data.error) throw new Error(data.error?.message || 'Anthropic API error');
+      // Extract all text blocks from response (may include tool_use + tool_result + final text)
+      const textBlocks = (data.content||[]).filter(b=>b.type==='text').map(b=>b.text);
+      return textBlocks.join('');
+    }
+    // Fallback to regular call for OpenRouter/Gemini (no web search support)
+    return callAI(prompt);
+  }
+
   // ── Telegram functions ────────────────────────────────
   async function testTelegram() {
     const token=document.getElementById('tgToken').value.trim();
@@ -1635,19 +1667,31 @@
       }
 
       // Market cap fetch & filter for stocks
-      // Build marketCapData from realData (backend already returns marketCap per stock)
+      // Build marketCapData from realData (backend returns marketCap per stock)
       const marketCapData={};
       stockTickers.forEach(t=>{
         const d=realData[t.symbol];
         if(d&&d.marketCap) marketCapData[t.symbol]=d.marketCap;
       });
+
+      // If mcap filter is active, fetch caps for any stocks missing cap data
       if(selectedMcap>0 && stockTickers.length>0){
+        const missingCap = stockTickers.filter(t=>realData[t.symbol]&&!marketCapData[t.symbol]);
+        if(missingCap.length>0){
+          document.getElementById('loadingStatus').textContent='Fetching market caps for '+missingCap.length+' stocks missing cap data...';
+          for(let i=0;i<missingCap.length;i+=20){
+            const batch=missingCap.slice(i,i+20).map(t=>t.symbol);
+            const caps=await fetchMarketCaps(batch);
+            Object.assign(marketCapData,caps);
+          }
+        }
         const passing=stockTickers.filter(t=>{
+          if(!realData[t.symbol]) return false;
           const cap=marketCapData[t.symbol];
-          if(!cap) return true; // no cap data — include by default
+          if(!cap) return false; // still no cap after fetch — exclude to be safe
           return cap<selectedMcap*1e9;
         }).length;
-        document.getElementById('loadingStatus').textContent=passing+' stocks pass <$'+selectedMcap+'B market cap filter.';
+        document.getElementById('loadingStatus').textContent=passing+' of '+stockTickers.filter(t=>realData[t.symbol]).length+' stocks pass <$'+selectedMcap+'B market cap filter.';
         await new Promise(r=>setTimeout(r,500));
       }
 
@@ -1685,7 +1729,8 @@
         // Market cap filter for stocks
         if(selectedMcap>0 && t.type==='stock'){
           const cap=marketCapData[t.symbol];
-          if(cap && cap>=selectedMcap*1e9) return; // skip if over cap limit
+          if(!cap) return; // no cap data — exclude when filter is active (safe default)
+          if(cap>=selectedMcap*1e9) return; // skip if over cap limit
         }
         const sigs=[];
         // WaveTrend [LazyBear]
@@ -1865,63 +1910,254 @@
 
       // Company name map so AI can identify obscure tickers (especially Russell 2000 small caps)
       const STOCK_NAMES = {
-        'SMCI':'Super Micro Computer (AI server infrastructure)',
-        'SAIA':'Saia Inc (LTL freight trucking)',
-        'GTLS':'Chart Industries (industrial gas equipment)',
-        'CHRD':'Chord Energy (Permian oil & gas)',
-        'RMBS':'Rambus (semiconductor IP licensing)',
-        'HALO':'Halozyme Therapeutics (ENHANZE drug delivery platform)',
-        'MGNI':'Magnite (programmatic CTV advertising)',
-        'CSWI':'CSW Industrials (HVAC & plumbing products)',
-        'UFPI':'UFP Industries (engineered wood products)',
-        'PLXS':'Plexus Corp (electronics manufacturing services)',
-        'ITRI':'Itron (smart grid & water utility tech)',
-        'ESAB':'ESAB Corp (welding & cutting equipment)',
-        'AAON':'AAON Inc (commercial HVAC equipment)',
-        'SPSC':'SPS Commerce (supply chain SaaS platform)',
-        'ACLS':'Axcelis Technologies (ion implant semiconductor equipment)',
-        'SFBS':'ServisFirst Bancshares (southeastern US regional bank)',
-        'CABO':'Cable One/Sparklight (rural broadband ISP)',
-        'ALRM':'Alarm.com (smart home & business security SaaS)',
-        'KTOS':'Kratos Defense (unmanned systems & defense electronics)',
-        'AEIS':'Advanced Energy Industries (precision power conversion)',
-        'CPRX':'Catalyst Biosciences (rare disease pharma)',
-        'MSGS':'Madison Square Garden Sports (Knicks, Rangers ownership)',
-        'IRTC':'iRhythm Technologies (Zio cardiac monitoring patch)',
-        'MGPI':'MGP Ingredients (premium distilled spirits & starches)',
-        'HTLF':'Heartland Financial USA (Midwest regional bank)',
-        'PTCT':'PTC Therapeutics (Duchenne muscular dystrophy & rare disease)',
-        'FORM':'FormFactor (semiconductor wafer probe cards)',
-        'NSIT':'Insight Direct (corporate IT products & solutions)',
-        'TGTX':'TG Therapeutics (ublituximab for MS & oncology)',
-        'IDEX':'IDEX Corp (fluidics & pumps for industrial/medical)',
-        'AGIO':'Agios Pharmaceuticals (rare blood disease treatments)',
-        'CARG':'CarGurus (online used car marketplace)',
-        'PRGS':'Progress Software (OpenEdge, Telerik dev tools)',
-        'DFIN':'Donnelley Financial Solutions (SEC filing & compliance SaaS)',
-        'NEOG':'Neogen Corp (food & animal safety testing)',
-        'HLIO':'Helios Technologies (hydraulic & electronic systems)',
-        'DNOW':'NOW Inc (energy sector industrial distribution)',
-        'BOOT':'Boot Barn (Western lifestyle & workwear retail chain)',
-        'REPX':'Riley Exploration Permian (Permian Basin E&P)',
-        'ARCH':'Arch Resources (premium metallurgical coal)',
-        'AORT':'Artivion Inc formerly CryoLife — aortic stent grafts, On-X mechanical heart valves, surgical sealants, cardiac tissue preservation; NYSE-listed med-device company founded 1984 HQ Kennesaw GA; CEO James Patrick Mackin; FY revenue ~$441M, net income ~$9.76M, market cap ~$1.71B, P/E ~187',
-        'INVA':'Innoviva Inc (pharmaceutical royalties, GSK respiratory drugs)',
-        'DXPE':'DXP Enterprises (industrial MRO distribution)',
-        'LQDT':'Liquidity Services (B2B reverse logistics & auctions)',
-        'MYRG':'MYR Group (electrical construction & infrastructure)',
-        'CNXN':'PC Connection/Connection (IT products for businesses)',
-        'PAHC':'Phibro Animal Health (veterinary & animal nutrition)',
-        'RELY':'Remitly Global (digital international money transfers)',
-        'HTLD':'Heartland Express (truckload carrier)',
-        'PZZA':'Papa Johns International (pizza franchise)',
-        'AAPL':'Apple Inc','MSFT':'Microsoft','AMZN':'Amazon','NVDA':'Nvidia',
-        'GOOGL':'Alphabet/Google','META':'Meta Platforms','TSLA':'Tesla',
-        'JPM':'JPMorgan Chase','V':'Visa','MA':'Mastercard',
-        'UNH':'UnitedHealth Group','LLY':'Eli Lilly','AVGO':'Broadcom',
-        'ADBE':'Adobe','CRM':'Salesforce','AMD':'AMD','INTC':'Intel',
-        'QCOM':'Qualcomm','NFLX':'Netflix','AMGN':'Amgen','COST':'Costco',
-        'SBUX':'Starbucks','INTU':'Intuit','HON':'Honeywell'
+        // ── S&P 500 / Nasdaq 100 — Large Caps ──
+        'AAPL':'Apple — iPhone Mac iPad Services ecosystem; revenue ~$400B; highest market cap company; services segment growing',
+        'MSFT':'Microsoft — Azure cloud Office365 Teams GitHub Copilot AI; revenue ~$230B; dominant enterprise software',
+        'AMZN':'Amazon — AWS cloud ecommerce Prime advertising; revenue ~$600B; AWS 17%+ growth',
+        'NVDA':'Nvidia — AI GPU data center H100/H200/Blackwell; revenue ~$130B FY2025; dominant AI infrastructure',
+        'GOOGL':'Alphabet — Google Search YouTube Google Cloud Gemini AI Waymo; revenue ~$340B',
+        'GOOG':'Alphabet Class C — same as GOOGL; Google Search YouTube Cloud AI',
+        'META':'Meta Platforms — Facebook Instagram WhatsApp Threads; revenue ~$165B; AI infrastructure investment',
+        'TSLA':'Tesla — EVs energy storage solar Optimus robot FSD; revenue ~$100B; margin under pressure',
+        'BRK-B':'Berkshire Hathaway — Buffett conglomerate insurance GEICO BNSF energy equity portfolio',
+        'LLY':'Eli Lilly — Mounjaro Zepbound GLP-1 weight loss diabetes drugs; revenue ~$45B growing 50%+ YoY',
+        'JPM':'JPMorgan Chase — largest US bank investment banking consumer; revenue ~$160B',
+        'V':'Visa — global payments network 90%+ margins; revenue ~$36B; network effect moat',
+        'XOM':'ExxonMobil — integrated oil gas refining chemicals; revenue ~$400B; Pioneer acquisition',
+        'MA':'Mastercard — global payments network; revenue ~$27B; international growth',
+        'PG':'Procter & Gamble — consumer staples Tide Pampers Gillette; revenue ~$84B; pricing power',
+        'JNJ':'Johnson & Johnson — pharma MedTech; revenue ~$88B; Kenvue consumer spinoff 2023',
+        'HD':'Home Depot — home improvement retail; revenue ~$153B; Pro contractor focus',
+        'AVGO':'Broadcom — networking AI chips custom accelerators VMware software; revenue ~$55B',
+        'MRK':'Merck — Keytruda cancer immunotherapy Gardasil vaccine; revenue ~$60B',
+        'CVX':'Chevron — integrated oil gas; revenue ~$200B; Hess acquisition pending',
+        'PEP':'PepsiCo — beverages snacks Frito-Lay Quaker; revenue ~$91B',
+        'ABBV':'AbbVie — Humira Skyrizi Rinvoq immunology oncology; revenue ~$56B',
+        'COST':'Costco — warehouse membership retail; revenue ~$240B; extremely loyal members',
+        'KO':'Coca-Cola — global beverages; revenue ~$46B; dividend aristocrat',
+        'WMT':'Walmart — retail ecommerce Flipkart Sam Club; revenue ~$650B; fastest growing segment advertising',
+        'ADBE':'Adobe — Creative Cloud Firefly AI Document Cloud; revenue ~$22B',
+        'CRM':'Salesforce — cloud CRM Agentforce AI Data Cloud; revenue ~$36B',
+        'BAC':'Bank of America — US retail commercial investment bank; assets ~$3.3T',
+        'MCD':'McDonald\'s — global fast food franchise; revenue ~$26B; digital ordering growth',
+        'PFE':'Pfizer — COVID vaccine revenue declining; oncology pipeline Paxlovid; revenue ~$58B',
+        'TMO':'Thermo Fisher Scientific — life science instruments reagents services; revenue ~$42B',
+        'CSCO':'Cisco — networking hardware software security; revenue ~$54B; AI networking upgrade cycle',
+        'ABT':'Abbott Labs — medical devices diagnostics nutrition; revenue ~$40B',
+        'ACN':'Accenture — IT consulting digital transformation; revenue ~$65B',
+        'NKE':'Nike — athletic footwear apparel; revenue ~$51B; DTC focus; turnaround underway',
+        'DHR':'Danaher — life science tools water quality; revenue ~$24B post Veralto spinoff',
+        'LIN':'Linde — industrial gases; revenue ~$33B; clean energy hydrogen',
+        'CMCSA':'Comcast — broadband cable NBCUniversal Peacock; revenue ~$122B',
+        'TXN':'Texas Instruments — analog semiconductors; revenue ~$17B; automotive industrial',
+        'VZ':'Verizon — wireless broadband; revenue ~$134B; 5G build out',
+        'PM':'Philip Morris — IQOS heated tobacco ZYN nicotine pouches international; revenue ~$35B',
+        'NEE':'NextEra Energy — renewable wind solar utilities; revenue ~$24B; largest wind operator',
+        'RTX':'RTX (Raytheon) — defense missiles Pratt Whitney engines Collins aerospace; revenue ~$69B',
+        'HON':'Honeywell — industrial automation aerospace building tech; revenue ~$37B; breakup planned',
+        'AMGN':'Amgen — biologics Repatha Enbrel MariTide obesity; revenue ~$33B',
+        'IBM':'IBM — hybrid cloud AI consulting Red Hat; revenue ~$62B; HashiCorp acquisition',
+        'UNP':'Union Pacific — railroad freight western US; revenue ~$24B',
+        'INTC':'Intel — x86 CPUs foundry services; revenue ~$54B declining; turnaround under Lip-Bu Tan',
+        'QCOM':'Qualcomm — mobile chips Snapdragon automotive PC diversification; revenue ~$39B',
+        'INTU':'Intuit — TurboTax QuickBooks Credit Karma; revenue ~$17B',
+        'SBUX':'Starbucks — global coffee chain; revenue ~$36B; Brian Niccol turnaround',
+        'GE':'GE Aerospace — jet engines CFM LEAP; revenue ~$32B post GE Vernova spinoff',
+        'LOW':'Lowe\'s — home improvement retail; revenue ~$86B; Pro segment focus',
+        'AMD':'AMD — CPUs GPUs MI300X AI accelerator; revenue ~$25B competing with Nvidia',
+        'CAT':'Caterpillar — construction mining equipment; revenue ~$67B; infrastructure spending',
+        'DE':'Deere & Company — agricultural equipment precision ag technology; revenue ~$55B',
+        'SPGI':'S&P Global — credit ratings data analytics Market Intelligence; revenue ~$14B',
+        'MS':'Morgan Stanley — investment banking wealth management; revenue ~$54B',
+        'GS':'Goldman Sachs — investment banking trading asset management; revenue ~$47B',
+        'BLK':'BlackRock — world largest asset manager $10T+ AUM; ETF leader',
+        'NFLX':'Netflix — streaming 300M+ subscribers ad tier gaming; revenue ~$38B',
+        'PYPL':'PayPal — digital payments Venmo Braintree; revenue ~$31B; margin improvement focus',
+        'ADP':'ADP — payroll HR services; revenue ~$18B; steady compounder',
+        'MELI':'MercadoLibre — Latin America ecommerce fintech; revenue ~$20B growing 35%+ YoY',
+        'ASML':'ASML — EUV lithography machines critical semiconductor supply chain; revenue ~$28B',
+        'ISRG':'Intuitive Surgical — Da Vinci robotic surgery; revenue ~$8B growing 15%+ YoY',
+        'KLAC':'KLA Corp — semiconductor process control equipment; revenue ~$10B',
+        'LRCX':'Lam Research — semiconductor etch deposition equipment; revenue ~$17B',
+        'SNPS':'Synopsys — EDA chip design software AI; revenue ~$6.1B; ANSYS acquisition',
+        'CDNS':'Cadence Design — EDA software verification; revenue ~$4.6B',
+        'MRVL':'Marvell Technology — custom AI chips for cloud providers networking; revenue ~$6B',
+        'PANW':'Palo Alto Networks — cybersecurity SASE cloud; revenue ~$8.2B',
+        'CRWD':'CrowdStrike — endpoint security cloud Falcon platform; revenue ~$3.8B; July 2024 outage',
+        'AMAT':'Applied Materials — semiconductor equipment leader; revenue ~$27B',
+        'MDLZ':'Mondelez — snacks Oreo Cadbury; revenue ~$36B international',
+        'GILD':'Gilead Sciences — HIV antivirals Veklury oncology; revenue ~$27B',
+        'REGN':'Regeneron — Dupixent Eylea VEGF Trap; revenue ~$14B; Dupixent dominates',
+        'VRTX':'Vertex Pharmaceuticals — cystic fibrosis drugs Trikafta; revenue ~$10B near monopoly',
+        'FTNT':'Fortinet — network security firewalls; revenue ~$5.6B; OT security growth',
+        'FAST':'Fastenal — industrial distribution fasteners vending; revenue ~$7B',
+        'CPRT':'Copart — vehicle auction salvage online; revenue ~$4B; high moat',
+        'MNST':'Monster Beverage — energy drinks; revenue ~$7.8B; Coca-Cola distribution',
+        'DDOG':'Datadog — cloud observability monitoring; revenue ~$2.7B; AI adoption tailwind',
+        'ROST':'Ross Stores — off-price retail; revenue ~$21B',
+        'PAYX':'Paychex — payroll HR for small business; revenue ~$5.3B',
+        'ODFL':'Old Dominion Freight — premium LTL trucking; revenue ~$6B; best-in-class margins',
+        'PDD':'PDD Holdings — Temu Pinduoduo ecommerce; revenue ~$35B',
+        'KDP':'Keurig Dr Pepper — beverages coffee pods; revenue ~$15B',
+        'ORLY':'O\'Reilly Auto — auto parts retail; revenue ~$16.7B',
+        'PCAR':'PACCAR — Kenworth Peterbilt trucks; revenue ~$35B',
+        'CTAS':'Cintas — uniform services workplace safety; revenue ~$9.8B',
+        // ── Russell 2000 Technology ──
+        'ALKT':'Alkami Technology — cloud digital banking SaaS for credit unions community banks; revenue ~$330M growing 25%+ YoY; sticky enterprise contracts',
+        'AGYS':'Agilysys — hospitality tech PMS POS inventory software for hotels casinos resorts; revenue ~$240M growing 18% YoY; high recurring revenue',
+        'SMCI':'Super Micro Computer — AI server GPU rack infrastructure; revenue ~$15B FY2024; Nvidia partner; accounting investigation risk 2024',
+        'RMBS':'Rambus — semiconductor interface IP licensing DDR5; revenue ~$145M; high-margin royalty model',
+        'ACLS':'Axcelis Technologies — ion implant equipment for semiconductor fabs; revenue ~$1.1B; SiC power chip exposure',
+        'SPSC':'SPS Commerce — supply chain EDI SaaS; revenue ~$600M growing 20%+; B2B network effects',
+        'ALRM':'Alarm.com — smart home commercial security SaaS platform; revenue ~$1B; 10000+ dealer network',
+        'KTOS':'Kratos Defense — unmanned aerial systems drone targets; revenue ~$1B; DoD pipeline strong',
+        'AEIS':'Advanced Energy Industries — precision power for semiconductor equipment; revenue ~$1.8B',
+        'FORM':'FormFactor — semiconductor wafer probe cards; revenue ~$750M; TSMC Samsung critical supplier',
+        'NSIT':'Insight Direct — corporate IT products cloud services; revenue ~$9B value-add reseller',
+        'CARG':'CarGurus — online used car marketplace dealer tools; revenue ~$900M',
+        'PRGS':'Progress Software — OpenEdge Telerik dev tools; revenue ~$600M acqui-growth',
+        'DFIN':'Donnelley Financial — SEC filing compliance SaaS ActiveDisclosure; revenue ~$1B',
+        'ITRI':'Itron — smart meters grid analytics utilities; revenue ~$2.4B; grid modernization beneficiary',
+        'MGNI':'Magnite — programmatic CTV advertising sell-side; revenue ~$600M; streaming tailwinds',
+        'IRTC':'iRhythm Technologies — Zio cardiac monitoring patch 14-day; revenue ~$600M; disruptive vs Holter',
+        'CABO':'Cable One/Sparklight — rural broadband ISP; revenue ~$1.6B; fiber competition risk',
+        'CNXN':'Connection (PC Connection) — corporate IT products; revenue ~$2.9B',
+        'RELY':'Remitly Global — digital international money transfers; revenue ~$1.1B growing 30%+ YoY',
+        'BAND':'Bandwidth — cloud communications CPaaS APIs for enterprises; revenue ~$700M',
+        'APPN':'Appian — low-code process automation platform; revenue ~$420M; government enterprise focus',
+        'JAMF':'Jamf — Apple device management MDM for enterprises; revenue ~$700M; sticky IT contracts',
+        'PCTY':'Paylocity — cloud HR payroll for mid-market; revenue ~$1.2B growing 18% YoY',
+        'PAYC':'Paycom Software — HR payroll automation GONE; revenue ~$1.7B; Beti product differentiation',
+        'NCNO':'nCino — cloud banking software for financial institutions; revenue ~$530M',
+        'SMAR':'Smartsheet — work management collaboration platform; revenue ~$1.1B; Microsoft Teams competition',
+        'NTNX':'Nutanix — hyper-converged infrastructure cloud software; revenue ~$2.2B; subscription transition complete',
+        'PUBM':'PubMatic — programmatic digital advertising sell-side; revenue ~$280M',
+        'QTWO':'Q2 Holdings — digital banking software for community banks; revenue ~$700M',
+        'TNET':'TriNet Group — PEO HR services for SMBs; revenue ~$5.4B',
+        'CSGS':'CSG Systems — revenue management billing SaaS for telecoms; revenue ~$1.1B',
+        'POWI':'Power Integrations — power conversion ICs EV charging; revenue ~$500M',
+        // ── Russell 2000 Healthcare ──
+        'HALO':'Halozyme — ENHANZE drug delivery platform licensed to AbbVie Roche Janssen; royalties ~$800M growing; asset-light',
+        'TGTX':'TG Therapeutics — Briumvi ublituximab for MS launched 2023; revenue growing ~$300M',
+        'PTCT':'PTC Therapeutics — Duchenne muscular dystrophy rare disease; revenue ~$900M',
+        'CPRX':'Catalyst Pharmaceuticals — Firdapse Lambert-Eaton rare disease; revenue ~$340M orphan exclusivity',
+        'AGIO':'Agios Pharmaceuticals — mitapivat sickle cell thalassemia; revenue ~$250M growing',
+        'AORT':'Artivion (CryoLife) — aortic stent grafts On-X heart valves surgical sealants; revenue ~$441M',
+        'PAHC':'Phibro Animal Health — veterinary pharmaceuticals nutrition; revenue ~$1B',
+        'NEOG':'Neogen Corp — food animal safety testing; revenue ~$900M',
+        'HIMS':'Hims & Hers Health — telehealth weight loss hair ED skincare; revenue ~$1.5B growing 60%+',
+        'QDEL':'QuidelOrtho — rapid diagnostics COVID flu RSV; revenue ~$2.8B',
+        'TMDX':'TransMedics Group — Organ Care System warm perfusion transplants; revenue ~$300M growing 80%+',
+        'GKOS':'Glaukos — iStent glaucoma eye implant; revenue ~$380M',
+        'ACAD':'ACADIA Pharmaceuticals — Nuplazid Parkinson psychosis; revenue ~$600M',
+        'SRPT':'Sarepta Therapeutics — Elevidys DMD gene therapy; revenue ~$1.5B',
+        'FOLD':'Amicus Therapeutics — Pompe Fabry rare enzyme therapy; revenue ~$400M',
+        'IONS':'Ionis Pharmaceuticals — antisense oligonucleotide platform 40+ drugs; revenue ~$900M',
+        'IOVA':'Iovance Biotherapeutics — TIL cell therapy lifileucel melanoma first approved 2024',
+        'RXRX':'Recursion Pharmaceuticals — AI drug discovery platform; Roche Bayer partnerships',
+        'CRSP':'CRISPR Therapeutics — Casgevy sickle cell gene editing first approved CRISPR medicine',
+        'SAGE':'Sage Therapeutics — zuranolone depression Biogen partnership; revenue ramping',
+        'NVAX':'Novavax — protein subunit COVID flu vaccine; Sanofi partnership 2024',
+        'SWAV':'ShockWave Medical — coronary lithotripsy; acquired by J&J 2024',
+        'USPH':'U.S. Physical Therapy — outpatient PT clinics nationwide; revenue ~$600M',
+        'MGPI':'MGP Ingredients — premium aged whiskey food-grade starches; revenue ~$800M',
+        'MSGS':'Madison Square Garden Sports — Knicks NBA Rangers NHL trophy asset',
+        'HTLF':'Heartland Financial — Midwest regional bank $22B assets',
+        'SFBS':'ServisFirst Bancshares — Alabama commercial bank $20B assets high ROA',
+        // ── Russell 2000 Financials ──
+        'MYRG':'MYR Group — electrical construction data centers grid; revenue ~$3.5B',
+        'LQDT':'Liquidity Services — B2B reverse logistics auctions; revenue ~$330M',
+        'HTLD':'Heartland Express — truckload carrier; revenue ~$700M',
+        'INVA':'Innoviva — GSK respiratory royalties Advair Breo Anoro; revenue ~$280M high-margin',
+        'DXPE':'DXP Enterprises — industrial MRO distribution; revenue ~$1.7B',
+        'CADE':'Cadence Bank — Southeast commercial bank $50B assets',
+        'COLB':'Columbia Banking — Pacific Northwest $52B assets post-Umpqua',
+        'FFIN':'First Financial Bankshares — Texas community bank $14B assets',
+        'GABC':'German American Bancorp — Indiana community bank $7B assets',
+        'HTGC':'Hercules Capital — BDC venture tech lending; ~10% dividend yield',
+        'CODI':'Compass Diversified — permanent capital niche industrial brands',
+        'WSFS':'WSFS Financial — Delaware bank wealth management $20B assets',
+        'ABCB':'Ameris Bancorp — Southeast US bank $26B assets',
+        'BANF':'BancFirst Corp — Oklahoma community bank $12B assets',
+        'BANR':'Banner Bank — Pacific Northwest bank $15B assets',
+        'BHLB':'Berkshire Hills Bancorp — New England commercial bank $12B assets',
+        'CFFN':'Capitol Federal Financial — Kansas mortgage savings bank',
+        'EFSC':'Enterprise Financial Services — Missouri community bank',
+        'EGBN':'Eagle Bancorp — Washington DC commercial bank $10B assets',
+        'FBNC':'First Bancorp — North Carolina community bank $8B assets',
+        'FFBC':'First Financial Bancorp — Ohio Indiana commercial bank $16B assets',
+        'FISI':'Financial Institutions — New York community bank',
+        'FULT':'Fulton Financial — Pennsylvania mid-Atlantic bank $32B assets',
+        'GABC':'German American Bancorp — Indiana community bank',
+        'HFWA':'Heritage Financial — Pacific Northwest community bank',
+        'TRMK':'Trustmark Corp — Mississippi Alabama regional bank',
+        // ── Russell 2000 Industrials ──
+        'SAIA':'Saia Inc — LTL freight carrier national expansion; revenue ~$3.2B',
+        'GTLS':'Chart Industries — industrial gas equipment LNG heat exchangers; revenue ~$4B',
+        'CSWI':'CSW Industrials — HVAC plumbing contractor products; revenue ~$900M',
+        'UFPI':'UFP Industries — engineered wood construction retail industrial; revenue ~$7B',
+        'ESAB':'ESAB Corp — welding cutting equipment global; revenue ~$2.6B',
+        'AAON':'AAON Inc — commercial HVAC data center cooling; revenue ~$900M premium margins',
+        'HLIO':'Helios Technologies — hydraulic electronic control systems; revenue ~$2B',
+        'BOOT':'Boot Barn — Western workwear retail 400+ stores; revenue ~$1.7B',
+        'MYRG':'MYR Group — electrical contractor data centers grid; revenue ~$3.5B',
+        'AVAV':'AeroVironment — tactical drones military; revenue ~$700M; Ukraine demand',
+        'BWXT':'BWX Technologies — Navy nuclear reactor components; revenue ~$2.6B national security moat',
+        'ARCB':'ArcBest — LTL freight logistics; revenue ~$4.5B',
+        'APOG':'Apogee Enterprises — architectural glass commercial buildings; revenue ~$1.4B',
+        'BRKR':'Bruker — scientific instruments NMR mass spec; revenue ~$2.8B',
+        'CPRT':'Copart — vehicle salvage auction online; revenue ~$4B high moat',
+        'LDOS':'Leidos — IT services US government defense; revenue ~$15B',
+        'PLXS':'Plexus Corp — complex electronics manufacturing; revenue ~$4B',
+        'ESAB':'ESAB Corp — welding cutting equipment; revenue ~$2.6B',
+        // ── Russell 2000 Energy ──
+        'CHRD':'Chord Energy — Permian Williston Basin E&P; revenue ~$2B; strong FCF',
+        'ARCH':'Arch Resources — metallurgical coal steelmaking; revenue ~$2.5B; merging CEIX',
+        'REPX':'Riley Exploration Permian — small cap E&P; revenue ~$350M disciplined',
+        'DNOW':'NOW Inc — energy industrial distribution; revenue ~$2.4B',
+        'CEIX':'CONSOL Energy — met thermal coal Appalachia; revenue ~$2.4B; merging Arch',
+        'DINO':'HF Sinclair — refining marketing midstream; revenue ~$25B',
+        'GPOR':'Gulfport Energy — Utica shale natural gas; revenue ~$1.3B',
+        'BORR':'Borr Drilling — offshore jack-up rigs; dayrates recovering',
+        'CLNE':'Clean Energy Fuels — natural gas vehicle fueling stations; revenue ~$450M',
+        // ── Russell 2000 Consumer ──
+        'PZZA':'Papa Johns — pizza franchise 5500+ locations; revenue ~$2.1B',
+        'BURL':'Burlington Stores — off-price apparel retail; revenue ~$10B',
+        'CAKE':'Cheesecake Factory — casual dining North Italia; revenue ~$3.5B',
+        'CBRL':'Cracker Barrel — highway restaurant retail; revenue ~$3.4B turnaround',
+        'BLMN':'Bloomin Brands — Outback Steakhouse; revenue ~$4.9B',
+        'JBLU':'JetBlue Airways — low-cost carrier; revenue ~$9B high debt',
+        'JOBY':'Joby Aviation — electric air taxi eVTOL pre-revenue; Toyota backed FAA certification',
+        'GRWG':'GrowGeneration — hydroponic garden retail cannabis; revenue ~$230M',
+        'BOOT':'Boot Barn — Western lifestyle workwear; revenue ~$1.7B',
+        'PTLO':'Portillo\'s — Chicago-style fast casual restaurants; revenue ~$700M',
+        'TRUP':'Trupanion — pet insurance subscription; revenue ~$1.3B; growing pet humanization trend',
+        'CHEF':'The Chefs Warehouse — specialty food distribution for restaurants; revenue ~$3.9B',
+        // ── Additional Russell 2000 misc ──
+        'AORT':'Artivion — aortic surgery medical devices; revenue ~$441M',
+        'AAON':'AAON Inc — commercial HVAC; revenue ~$900M',
+        'HTLF':'Heartland Financial — Midwest bank $22B assets',
+        'IDEX':'IDEX Corp — fluidics pumps industrial medical; revenue ~$3.3B',
+        'MSGS':'MSG Sports — Knicks Rangers trophy asset',
+        'LNTH':'Lantheus Holdings — radiopharmaceutical diagnostics PYLARIFY PET imaging; revenue ~$1.4B',
+        'SWAV':'ShockWave Medical — coronary lithotripsy J&J acquisition 2024',
+        'INMD':'InMode — minimally invasive aesthetic medical devices; revenue ~$500M high margin',
+        'GKOS':'Glaukos — iStent glaucoma; revenue ~$380M',
+        'ICAD':'iCAD — AI-powered cancer detection radiology; small cap ~$50M revenue',
+        'IRDM':'Iridium Communications — satellite IoT connectivity global coverage; revenue ~$800M',
+        'JOBY':'Joby Aviation — eVTOL air taxi Toyota partner; pre-revenue FAA path',
+        'RGEN':'Repligen — bioprocessing equipment for biopharma manufacturing; revenue ~$750M',
+        'UCTT':'Ultra Clean Holdings — semiconductor equipment components cleaning; revenue ~$2B',
+        'COHU':'Cohu — semiconductor test handler equipment; revenue ~$500M',
+        'SANM':'Sanmina — electronics manufacturing services; revenue ~$8.5B',
+        'KLIC':'Kulicke & Soffa — semiconductor wire bonding equipment; revenue ~$700M',
+        'FORM':'FormFactor — wafer probe cards; revenue ~$750M TSMC Samsung key',
+        'ACMR':'ACM Research — semiconductor cleaning equipment China exposure; revenue ~$700M',
+        'CRUS':'Cirrus Logic — audio chips for Apple iPhone; revenue ~$1.9B Apple dependent',
+        'SITM':'SiTime — MEMS timing semiconductors; revenue ~$200M growing',
+        'CRDO':'Credo Technology — high-speed connectivity chips for AI data centers; revenue ~$438M',
+        'KSCP':'Knightscope — autonomous security robots; small pre-revenue',
+        'VZIO':'Vizio — smart TVs advertising platform; acquired by Walmart 2024',
       };
 
       // Build enrichment context — include company name + market cap for stocks
@@ -1935,30 +2171,35 @@
       });
       const enrichList = enrichContextLines.join('\n');
 
-      const enrichPrompt = `You are a research analyst. For each asset below, provide analysis based on your training knowledge.
+      const enrichPrompt = `You are a financial research analyst. Analyze each asset below.
 
-Assets (ticker = full company description for context):
+CRITICAL INSTRUCTIONS:
+- A full company description is provided for most assets — USE IT
+- For any asset where you are uncertain, USE YOUR WEB SEARCH TOOL to look up the company/token before responding
+- NEVER respond with "insufficient data" or "unable to determine" — always research and provide real analysis
+- For crypto tokens, provide analysis on the project's technology, adoption, and ecosystem
+
+Assets to analyze (ticker = company/project description):
 ${enrichList}
 
-Return a JSON array. For EACH asset:
+Return a JSON array with one object per asset:
 {
   "symbol": "TICKER",
-  "fundamentals": "One sentence on financial health, revenue growth, profitability, or adoption trajectory.",
-  "disruptive": "One sentence on whether the technology or business model is genuinely differentiated or disruptive.",
-  "news": "One to two sentences on notable developments, product launches, partnerships, or risks as of early 2025.",
+  "fundamentals": "One sentence: financial health, revenue growth, profitability, or for crypto: adoption TVL tokenomics.",
+  "disruptive": "One sentence: is the technology or business model genuinely differentiated vs competitors?",
+  "news": "1-2 sentences: most recent notable developments, launches, partnerships, risks as of early 2025.",
   "verdict": "STRONG" or "NEUTRAL" or "WEAK"
 }
 
-verdict:
-- STRONG = solid financials + real competitive edge + positive momentum
-- WEAK   = deteriorating fundamentals, major scandal, or effectively dead project
-- NEUTRAL = mixed signals or limited recent information
+verdict criteria:
+- STRONG = solid/growing financials + real competitive moat + positive recent momentum
+- WEAK   = deteriorating fundamentals, major scandal, dead project, or structural decline
+- NEUTRAL = mixed signals, stable but uninspiring, or limited differentiation
 
-Use the full company description to ensure accurate analysis.
-Return ONLY the raw JSON array. No markdown, no backticks.`;
+Return ONLY the raw JSON array. No markdown, no backticks, no preamble.`;
 
       try {
-        const enrichResponse = await callAI(enrichPrompt);
+        const enrichResponse = await callAIWithSearch(enrichPrompt);
         let enrichData = [];
         try {
           let clean = enrichResponse.replace(/```json|```/gi,'').trim();
