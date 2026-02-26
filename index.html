@@ -254,7 +254,7 @@
         <button class="ind-btn" data-ind="MACD Crossover" onclick="toggleInd(this)">
           <div class="ind-name">MACD</div><div class="ind-desc">Bullish crossover</div><div class="ind-check"></div>
         </button>
-        <button class="ind-btn active" data-ind="Bollinger Band Lower Touch" onclick="toggleInd(this)">
+        <button class="ind-btn" data-ind="Bollinger Band Lower Touch" onclick="toggleInd(this)">
           <div class="ind-name">BOLLINGER BANDS</div><div class="ind-desc">Price at lower band</div><div class="ind-check">✓</div>
         </button>
         <button class="ind-btn" data-ind="Stochastic RSI" onclick="toggleInd(this)">
@@ -263,7 +263,7 @@
         <button class="ind-btn" data-ind="200 EMA proximity" onclick="toggleInd(this)">
           <div class="ind-name">200 EMA</div><div class="ind-desc">Price near 200 EMA</div><div class="ind-check"></div>
         </button>
-        <button class="ind-btn active" data-ind="Volume Spike" onclick="toggleInd(this)">
+        <button class="ind-btn" data-ind="Volume Spike" onclick="toggleInd(this)">
           <div class="ind-name">VOLUME SPIKE</div><div class="ind-desc">1.5x average surge</div><div class="ind-check">✓</div>
         </button>
         <button class="ind-btn" data-ind="VWAP" onclick="toggleInd(this)">
@@ -293,12 +293,12 @@
     <div class="card">
       <div class="slider-grid">
         <div class="slider-item">
-          <label>WT OVERSOLD <span id="wtVal">-53</span></label>
-          <input type="range" min="-90" max="-20" value="-53" step="1" oninput="document.getElementById('wtVal').textContent=this.value">
+          <label>WT OVERSOLD <span id="wtVal">-45</span></label>
+          <input type="range" min="-90" max="-20" value="-45" step="1" oninput="document.getElementById('wtVal').textContent=this.value">
         </div>
         <div class="slider-item">
-          <label>RSI OVERSOLD <span id="rsiVal">35</span></label>
-          <input type="range" min="10" max="50" value="35" step="1" oninput="document.getElementById('rsiVal').textContent=this.value">
+          <label>RSI OVERSOLD <span id="rsiVal">40</span></label>
+          <input type="range" min="10" max="50" value="40" step="1" oninput="document.getElementById('rsiVal').textContent=this.value">
         </div>
         <div class="slider-item">
           <label>VOLUME MULTIPLIER <span id="volVal">1.5x</span></label>
@@ -306,7 +306,7 @@
         </div>
         <div class="slider-item">
           <label>MIN CONDITIONS <span id="minVal">2</span></label>
-          <input type="range" min="1" max="5" value="2" step="1" oninput="document.getElementById('minVal').textContent=this.value" id="minT">
+          <input type="range" min="1" max="5" value="1" step="1" oninput="document.getElementById('minVal').textContent=this.value" id="minT">
         </div>
       </div>
     </div>
@@ -404,7 +404,7 @@
 <script>
   let selectedEngine = 'gemini';
   let selectedMarkets = ['crypto_top500'];
-  let selectedInds = ['WaveTrend','RSI Combo','Bollinger Band Lower Touch','Volume Spike'];
+  let selectedInds = ['WaveTrend','RSI Combo'];
   let allAlerts = [];
   let selectedMcap = 0;
   let selectedVwapAnchor = 'auto'; // auto | ytd | 52 | 26 | 13 | crypto | stock
