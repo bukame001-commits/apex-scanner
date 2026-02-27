@@ -352,14 +352,14 @@
   <div class="card">
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
       <div>
-        <div class="api-label">TELEGRAM BOT TOKEN</div>
-        <input type="password" class="api-input" id="tgToken" placeholder="123456:ABC-DEF..."
-               oninput="localStorage.setItem('tg_token',this.value)" />
+        <div class="api-label">VOLUME ALERT BOT TOKEN</div>
+        <input type="password" class="api-input" id="tgToken2" placeholder="123456:ABC-DEF..."
+               oninput="localStorage.setItem('tg_token2',this.value)" />
       </div>
       <div>
         <div class="api-label">CHAT ID</div>
-        <input type="text" class="api-input" id="tgChatId" placeholder="-100123456 or @username"
-               oninput="localStorage.setItem('tg_chat_id',this.value)" />
+        <input type="text" class="api-input" id="tgChatId2" placeholder="-100123456 or @username"
+               oninput="localStorage.setItem('tg_chat_id2',this.value)" />
       </div>
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
@@ -752,8 +752,8 @@
 
   // ── Telegram functions ────────────────────────────────
   async function testTelegram() {
-    const token=document.getElementById('tgToken').value.trim();
-    const chatId=document.getElementById('tgChatId').value.trim();
+    const token=document.getElementById('tgToken2').value.trim();
+    const chatId=document.getElementById('tgChatId2').value.trim();
     const result=document.getElementById('tgTestResult');
     result.style.display='block';
     if(!token){result.style.color='#ff3366';result.textContent='ERROR: Enter bot token first';return;}
@@ -768,11 +768,11 @@
   }
 
   async function saveTgToBackend(){
-    const token  = document.getElementById('tgToken').value.trim();
-    const chatId = document.getElementById('tgChatId').value.trim();
+    const token  = document.getElementById('tgToken2').value.trim();
+    const chatId = document.getElementById('tgChatId2').value.trim();
     if(!token || !chatId){ showToast('ENTER BOTH TOKEN AND CHAT ID'); return; }
-    localStorage.setItem('tg_token', token);
-    localStorage.setItem('tg_chat_id', chatId);
+    localStorage.setItem('tg_token2', token);
+    localStorage.setItem('tg_chat_id2', chatId);
     try{
       const res = await fetch(BACKEND+'/monitor/config', {
         method:'POST', headers:{'Content-Type':'application/json'},
@@ -783,8 +783,8 @@
   }
 
   async function triggerScanNow(){
-    const token  = document.getElementById('tgToken').value.trim();
-    const chatId = document.getElementById('tgChatId').value.trim();
+    const token  = document.getElementById('tgToken2').value.trim();
+    const chatId = document.getElementById('tgChatId2').value.trim();
     showToast('TRIGGERING VOLUME SCAN...');
     try{
       const url = BACKEND+'/monitor/scan-now'+(token?'?token='+encodeURIComponent(token)+'&chat_id='+encodeURIComponent(chatId):'');
@@ -816,10 +816,15 @@
 
   // Restore saved Telegram config on load
   window.addEventListener('load', ()=>{
-    const t = localStorage.getItem('tg_token');
-    const c = localStorage.getItem('tg_chat_id');
-    if(t && document.getElementById('tgToken'))  document.getElementById('tgToken').value  = t;
-    if(c && document.getElementById('tgChatId')) document.getElementById('tgChatId').value = c;
+    const t2 = localStorage.getItem('tg_token2');
+    const c2 = localStorage.getItem('tg_chat_id2');
+    if(t2 && document.getElementById('tgToken2'))  document.getElementById('tgToken2').value  = t2;
+    if(c2 && document.getElementById('tgChatId2')) document.getElementById('tgChatId2').value = c2;
+    // Also restore Bot 1 token (scan alerts)
+    const tgt=localStorage.getItem('apex_key_tgToken');
+    const tgc=localStorage.getItem('apex_key_tgChatId');
+    if(tgt&&document.getElementById('tgToken')) document.getElementById('tgToken').value=tgt;
+    if(tgc&&document.getElementById('tgChatId')) document.getElementById('tgChatId').value=tgc;
   });
 
   async function sendTelegram(alerts,sentimentMap,liqData){
@@ -1154,9 +1159,17 @@
     return last.length?parseFloat(last[last.length-1].toFixed(4)):null;
   }
 
-  function calcVolSpike(vols){
-    if(!vols||vols.length<20) return null;
-    const avg=vols.slice(-20,-1).reduce((a,b)=>a+b,0)/19;
+  function calcVolSpike(vols, isWeekly){
+    if(!vols||vols.length<22) return null;
+    if(isWeekly){
+      // On weekly TF: last bar is incomplete (current week not finished)
+      // Use second-to-last as current, compare against 20 bars before that
+      const current = vols[vols.length-2];
+      const avg = vols.slice(-22,-2).reduce((a,b)=>a+b,0)/20;
+      return avg>0?parseFloat((current/avg).toFixed(2)):null;
+    }
+    // Daily/4H: last bar is current, compare against previous 20
+    const avg=vols.slice(-21,-1).reduce((a,b)=>a+b,0)/20;
     return avg>0?parseFloat((vols[vols.length-1]/avg).toFixed(2)):null;
   }
 
@@ -1442,7 +1455,7 @@
     const vwap     = calcVWAP(highs, lows, closes, volumes, assetType);
     return {
       price, rsi: rsiCombo?rsiCombo.rsi:null, rsiCombo, ema200,
-      ema50: calcEMA(closes,50), volSpike: calcVolSpike(volumes),
+      ema50: calcEMA(closes,50), volSpike: calcVolSpike(volumes, assetType!=='stock' && klines.length>0 && selectedTF && selectedTF.tf==='1w'),
       vsEma200: ema200 ? parseFloat(((price/ema200-1)*100).toFixed(2)) : null,
       vsHigh52, bb, macd, stochRsi, atr, obv, vwap,
       wt1: wt.wt1, wt2: wt.wt2, wtCrossed: wt.crossed, wtCrossType: wt.crossType,
