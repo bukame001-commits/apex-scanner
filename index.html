@@ -1735,22 +1735,26 @@
         debugLog(`Cache hit: ${cryptoTickers.length - cryptoToFetch.length} crypto from cache, fetching ${cryptoToFetch.length} new`);
       }
 
-      // Try direct fetch first (fast — parallel Binance calls)
-      for(let i=0;i<cryptoToFetch.length;i+=BATCH){
-        const batch=cryptoToFetch.slice(i,i+BATCH);
-        const pct=Math.round((i/cryptoToFetch.length)*100);
-        document.getElementById('loadingStatus').textContent=`Scanning crypto ${i+1}–${Math.min(i+BATCH,cryptoToFetch.length)} of ${cryptoToFetch.length} (${pct}%)...`;
-        await Promise.all(batch.map(async t=>{
-          const d=await fetchCryptoData(t.symbol);
-          if(d) realData[t.symbol]=d;
+      // Test first 5 symbols directly — if all fail, use backend proxy for everything
+      let useBackendForCrypto = false;
+      if(cryptoToFetch.length > 0){
+        document.getElementById('loadingStatus').textContent='Testing crypto data sources...';
+        const testBatch = cryptoToFetch.slice(0, 5);
+        await Promise.all(testBatch.map(async t=>{
+          const d = await fetchCryptoData(t.symbol);
+          if(d) realData[t.symbol] = d;
         }));
+        const testHits = testBatch.filter(t=>realData[t.symbol]).length;
+        debugLog(`Crypto source test: ${testHits}/${testBatch.length} direct hits`);
+        if(testHits === 0){
+          useBackendForCrypto = true;
+          debugLog(`Direct APIs blocked — switching to backend proxy for all crypto`);
+        }
       }
 
-      // If direct fetch got nothing, fall back to backend proxy (bypasses mobile blocks)
-      const directCryptoCount = cryptoToFetch.filter(t=>realData[t.symbol]).length;
-      if(directCryptoCount === 0 && cryptoToFetch.length > 0){
-        debugLog(`Direct crypto fetch got 0 results — trying backend proxy...`);
-        document.getElementById('loadingStatus').textContent='Direct APIs blocked — routing crypto through server...';
+      if(useBackendForCrypto){
+        // Backend proxy path — Binance server-to-server (not blocked by mobile network)
+        document.getElementById('loadingStatus').textContent='Waking server for crypto proxy...';
         const backendAwake = await wakeBackend();
         if(backendAwake){
           const CBATCH = 50;
@@ -1761,7 +1765,21 @@
             const results = await fetchCryptoBatch(batch);
             Object.assign(realData, results);
           }
-          debugLog(`Backend proxy crypto: ${Object.keys(realData).filter(k=>realData[k]?.type==='crypto').length} fetched`);
+          debugLog(`Backend proxy crypto done: ${Object.keys(realData).filter(k=>realData[k]?.type==='crypto').length} fetched`);
+        } else {
+          debugLog(`Backend proxy unavailable — crypto scan failed`);
+        }
+      } else {
+        // Direct path worked — fetch remaining
+        const remaining = cryptoToFetch.filter(t=>!realData[t.symbol]);
+        for(let i=0;i<remaining.length;i+=BATCH){
+          const batch=remaining.slice(i,i+BATCH);
+          const pct=Math.round((i/remaining.length)*100);
+          document.getElementById('loadingStatus').textContent=`Scanning crypto ${i+1}–${Math.min(i+BATCH,remaining.length)} of ${remaining.length} (${pct}%)...`;
+          await Promise.all(batch.map(async t=>{
+            const d=await fetchCryptoData(t.symbol);
+            if(d) realData[t.symbol]=d;
+          }));
         }
       }
 
