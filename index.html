@@ -408,6 +408,11 @@
   let allAlerts = [];
   let selectedMcap = 0;
   let selectedVwapAnchor = 'auto'; // auto | ytd | 52 | 26 | 13 | crypto | stock
+
+  // ── Per-session data cache — avoids re-fetching on repeated scans ──
+  // Key: timeframe (1d/1w/4h), Value: {symbol: processedData}
+  const DATA_CACHE = {};
+  function getCacheKey(tf){ return tf; }
   let selectedTF = {tf:'1w', interval:'1w', limit:210, label:'1W'}; // 0 = no filter, otherwise max billion USD
 
   function selectMcap(btn) {
@@ -1566,18 +1571,33 @@
         const needsDefi = selectedMarkets.includes('defi');
 
         if(needs1000 || needs500){
-          const limit = needs1000 ? 1000 : 500;
-          const liveSymbols = await fetchLiveCryptoList(limit);
-          if(liveSymbols.length > 0){
-            if(needs1000) MARKET_TICKERS.crypto_top1000.tickers = liveSymbols.slice(0, 1000);
-            if(needs500)  MARKET_TICKERS.crypto_top500.tickers  = liveSymbols.slice(0, 500);
+          // ── Large built-in list — used as fallback and to avoid re-fetching CoinGecko every scan ──
+          const BUILTIN_500 = ['BTC','ETH','BNB','XRP','SOL','ADA','DOGE','TRX','DOT','LTC','SHIB','AVAX','LINK','ATOM','UNI','XLM','BCH','ALGO','ICP','HBAR','APT','ARB','NEAR','GRT','AAVE','MKR','INJ','OP','SUI','SEI','TIA','RUNE','PENDLE','JUP','WIF','BONK','FLOKI','PEPE','TON','KAS','TAO','IMX','RNDR','FIL','THETA','EGLD','FLOW','MINA','SAND','MANA','AXS','CHZ','ENJ','GALA','APE','GMT','GMX','DYDX','LDO','CRV','COMP','BAL','YFI','SUSHI','CVX','STX','BLUR','HNT','KDA','KAVA','ROSE','ANKR','RVN','ZIL','ZEC','DASH','XMR','ETC','NEO','VET','SNX','1INCH','CAKE','BAND','SKL','OGN','CELR','DUSK','PAXG','TUSD','FXS','LQTY','RPL','SSV','ASTR','CFX','CORE','ACH','RAY','ORCA','SRM','MNGO','TULIP','SAMO','STEP','MEDIA','COPE','SLND','PORT','SBR','LIKE','OXY','FIDA','KIN','MAPS','GENE','SOLR','DFL','SLIM','PRISM','LARIX','SUNNY','CWAR','SONAR','CHICKS','CHEEMS','HAMMY','BOKU','SOLPAD','WOOF','MEAN','SHILL','DINO','KURO','NINJA','POLIS','ATLAS','STAR','COPE','CRP','GOFX','REAL','SAMU','SOLFI','DXL','FCON','BSAMO','HGET','TAKI','GST','GFX','VLX','KRILL','CRWNY','BRAY','FRKT','SAIL','USDH','USDR','USDC','USDT','BUSD','DAI','FRAX','LUSD','MIM','CUSD','CEUR','UST','HUSD','OUSD','SUSD','USDP','GUSD','EURS','SEUR','AGEUR','RAI','FLOAT','BEAN','BEANETH','BEAN3CRV','SPELL','ICE','MIM','MULTI','BIFI','POTS','GAME','POLC','CERE','MBOX','PVU','HERO','LAND','NFT','NFTB','NFTART','MUSE','RARI','API3','ALPHA','QUICK','COMBO','REEF','FARM','BANK','BAAS','BABI','BEL','DODO','GXS','HARD','KLAY','ONT','IOTA','ICX','WAVES','DCR','QTUM','BTG','ZEN','KMD','PIVX','NAV','SMART','SYS','STRAT','UBQ','GAME','NLG','BLOCK','XVG','VIA','GRS','MONA','FCT','XEM','LSK','ARK','RISE','SHIFT','CLOAK','DIME','MUSIC','CREA','HTML','XMY','XST','BURST','NXS','UNO','IOP','GRC','OKCASH','MOIN','QORA','BLK','XSH','FLASH','VPN','TRIG','SPHR','OC','LINX','IOC','PUT','XBC','MNX','FRST','BITUSD','BITEUR','BITBTC','BITUSD2','INSTAR','LIFE','SIB','KORE','NYC','GB','EDRC','CHC','PASL','XCPO','BTA','NXBT','VRC','DRACO','BSC','MEC','MRT','EFL','STV','TOPAZ','METAL','VRM','ION','SRC','AMBER','GAIA','LBRY','DBET','PLR','VOX','SAN','IXT','PAI','NGC','MDA','BRD','POE','CTX','EVX','SALT','RCN','FUEL','DNT','AST','PAX','CDT','CND','SNGLS','ADT','XAUR','TAAS','LRC','ENG','REQ','VIB','POWR','MCO','WTC','THETA','ELEC','QSP','APPC','WABI','YOYO','OST','SUB','CAG','TNT','GTO','LINK','ZRX','TKN','LOC','CFI','DAY','ATMS','EDO','ALIS','MGO','SNT','ANT','BAT','MLN','FUN','GNT','OMG','ICN','NMR','MANA','CVC','BNT','STORJ','MCO','STO','AMB','ARN','BCPT','CDT','CHAT','CMT','ELF','ENJ','ETC','FUEL','GNO','IOTA','ICX','KNC','LEND','LINK','LRC','LSK','LUN','MANA','MCO','MDA','MOD','MTL','MTX','NAS','NEO','NMR','OMG','OST','OAX','PAY','POE','POWR','QSP','QTUM','RCN','RDN','REQ','RLC','RPX','SALT','SNGLS','SNM','SNT','SPANK','SRN','STORJ','STX','SUB','TNB','TNT','TRIG','TRX','VEN','VIB','VIU','WABI','WAN','WTC','XVG','YOYO','ZRX','ZEN'];
+
+          // Skip CoinGecko if we already have a valid list (prevents rate limit on repeat scans)
+          const alreadyHave500 = MARKET_TICKERS.crypto_top500.tickers && MARKET_TICKERS.crypto_top500.tickers.length >= 100;
+          const alreadyHave1000 = MARKET_TICKERS.crypto_top1000.tickers && MARKET_TICKERS.crypto_top1000.tickers.length >= 100;
+          const needsFetch = (needs500 && !alreadyHave500) || (needs1000 && !alreadyHave1000);
+
+          if(needsFetch){
+            document.getElementById('loadingStatus').textContent = 'Fetching live crypto list from CoinGecko...';
+            const limit = needs1000 ? 1000 : 500;
+            const liveSymbols = await fetchLiveCryptoList(limit);
+            if(liveSymbols.length >= 50){
+              if(needs1000) MARKET_TICKERS.crypto_top1000.tickers = liveSymbols.slice(0, 1000);
+              if(needs500)  MARKET_TICKERS.crypto_top500.tickers  = liveSymbols.slice(0, 500);
+            } else {
+              // Rate limited — use built-in list, but don't overwrite a good existing list
+              showToast('CoinGecko rate limited — using built-in list (500 coins)');
+              if(!alreadyHave500)  MARKET_TICKERS.crypto_top500.tickers  = BUILTIN_500.slice(0, 500);
+              if(!alreadyHave1000) MARKET_TICKERS.crypto_top1000.tickers = BUILTIN_500;
+            }
           } else {
-            // CoinGecko rate limited — use a minimal fallback
-            showToast('CoinGecko rate limited — using cached list');
-            if(!MARKET_TICKERS.crypto_top500.tickers)  MARKET_TICKERS.crypto_top500.tickers  = ['BTC','ETH','BNB','XRP','SOL','ADA','DOGE','TRX','DOT','LTC','SHIB','AVAX','LINK','ATOM','UNI','XLM','BCH','ALGO','ICP','HBAR','APT','ARB','NEAR','GRT','AAVE','MKR','SNX','INJ','OP','SUI','SEI','TIA','RUNE','PENDLE','JUP','WIF','BONK','FLOKI','PEPE','TON','KAS','TAO','IMX','RNDR','FIL','THETA','EOS','EGLD','FLOW','MINA','SAND','MANA','AXS','CHZ','ENJ','GALA','APE','GMT','GMX','DYDX','LDO','CRV','COMP','BAL','YFI','SUSHI','CVX','STX','BLUR','ARB','HNT','MOVR','KDA','KAVA','ROSE','ANKR','BAND','RVN','ZIL','ICX','ONT','WAVES','ZEC','DASH','DCR','XMR','ETC','NEO','VET','QTUM','IOTA'];
-            if(!MARKET_TICKERS.crypto_top1000.tickers) MARKET_TICKERS.crypto_top1000.tickers = MARKET_TICKERS.crypto_top500.tickers;
+            // Already have a good list — skip CoinGecko entirely
+            document.getElementById('loadingStatus').textContent = `Using cached crypto list (${MARKET_TICKERS[needs1000?'crypto_top1000':'crypto_top500'].tickers.length} coins)...`;
+            await new Promise(r=>setTimeout(r,300));
           }
-          document.getElementById('loadingStatus').textContent = `Got ${MARKET_TICKERS[needs1000?'crypto_top1000':'crypto_top500'].tickers.length} live tickers. Starting scan...`;
+          document.getElementById('loadingStatus').textContent = `Scanning ${MARKET_TICKERS[needs1000?'crypto_top1000':'crypto_top500'].tickers.length} crypto tickers...`;
         }
 
         if(needsDefi && !MARKET_TICKERS.defi.tickers){
@@ -1595,22 +1615,27 @@
 
       // ── Fetch live Russell 2000 constituents from backend (IWM ETF holdings) ──
       if(selectedMarkets.includes('russell2000')){
-        document.getElementById('loadingStatus').textContent = 'Fetching live Russell 2000 constituents...';
-        try {
-          const res = await Promise.race([
-            fetch(BACKEND + '/russell2000'),
-            new Promise((_,reject) => setTimeout(() => reject(new Error('timeout')), 12000))
-          ]);
-          if(res.ok){
-            const data = await res.json();
-            if(data.tickers && data.tickers.length > 100){
-              MARKET_TICKERS.russell2000.tickers = data.tickers;
-              document.getElementById('loadingStatus').textContent = `Live Russell 2000: ${data.tickers.length} stocks loaded.`;
+        const alreadyHaveR2K = MARKET_TICKERS.russell2000.tickers && MARKET_TICKERS.russell2000.tickers.length > 100;
+        if(alreadyHaveR2K){
+          document.getElementById('loadingStatus').textContent = `Using cached Russell 2000 (${MARKET_TICKERS.russell2000.tickers.length} stocks)...`;
+          await new Promise(r=>setTimeout(r,300));
+        } else {
+          document.getElementById('loadingStatus').textContent = 'Fetching live Russell 2000 constituents...';
+          try {
+            const res = await Promise.race([
+              fetch(BACKEND + '/russell2000'),
+              new Promise((_,reject) => setTimeout(() => reject(new Error('timeout')), 12000))
+            ]);
+            if(res.ok){
+              const data = await res.json();
+              if(data.tickers && data.tickers.length > 100){
+                MARKET_TICKERS.russell2000.tickers = data.tickers;
+                document.getElementById('loadingStatus').textContent = `Live Russell 2000: ${data.tickers.length} stocks loaded.`;
+              }
             }
+          } catch(e){
+            console.log('Russell 2000 live fetch failed, using built-in list:', e.message);
           }
-        } catch(e){
-          // Fall through to hardcoded list silently
-          console.log('Russell 2000 live fetch failed, using built-in list:', e.message);
         }
       }
 
@@ -1628,16 +1653,28 @@
 
       const marketsList=selectedMarkets.map(m=>MARKET_TICKERS[m]?.label).join(', ');
       // ── Main data fetch ───────────────────────────────
-      const realData={};
+      // Use cached data if available for this timeframe — skip re-fetch
+      const cacheKey = getCacheKey(selectedTF.tf);
+      const realData = DATA_CACHE[cacheKey] ? Object.assign({}, DATA_CACHE[cacheKey]) : {};
+      const hasCachedData = Object.keys(realData).length > 0;
+      if(hasCachedData){
+        document.getElementById('loadingStatus').textContent =
+          `Using cached data for ${selectedTF.label} (${Object.keys(realData).length} assets). Re-scanning signals...`;
+        await new Promise(r=>setTimeout(r,600));
+      }
       const cryptoTickers=allTickers.filter(t=>t.type==='crypto');
       const stockTickers=allTickers.filter(t=>t.type==='stock');
 
       // Crypto — fetch 50 at a time in parallel (Binance has no strict public rate limit)
       const BATCH = 50;
-      for(let i=0;i<cryptoTickers.length;i+=BATCH){
-        const batch=cryptoTickers.slice(i,i+BATCH);
-        const pct=Math.round((i/cryptoTickers.length)*100);
-        document.getElementById('loadingStatus').textContent=`Scanning crypto ${i+1}–${Math.min(i+BATCH,cryptoTickers.length)} of ${cryptoTickers.length} (${pct}%)...`;
+      const cryptoToFetch = hasCachedData ? cryptoTickers.filter(t=>!realData[t.symbol]) : cryptoTickers;
+      if(hasCachedData && cryptoToFetch.length < cryptoTickers.length){
+        console.log(`[APEX] Cache hit: ${cryptoTickers.length - cryptoToFetch.length} crypto from cache, fetching ${cryptoToFetch.length} new`);
+      }
+      for(let i=0;i<cryptoToFetch.length;i+=BATCH){
+        const batch=cryptoToFetch.slice(i,i+BATCH);
+        const pct=Math.round((i/cryptoToFetch.length)*100);
+        document.getElementById('loadingStatus').textContent=`Scanning crypto ${i+1}–${Math.min(i+BATCH,cryptoToFetch.length)} of ${cryptoToFetch.length} (${pct}%)...`;
         await Promise.all(batch.map(async t=>{
           const d=await fetchCryptoData(t.symbol);
           if(d) realData[t.symbol]=d;
@@ -1645,13 +1682,14 @@
       }
 
       // Stocks from Render backend (with wake-up for free tier)
-      if(stockTickers.length>0){
-        const isAwake=await wakeBackend();
+      const stocksToFetch = hasCachedData ? stockTickers.filter(t=>!realData[t.symbol]) : stockTickers;
+      if(stocksToFetch.length>0){
+        const isAwake = hasCachedData && stocksToFetch.length===0 ? true : await wakeBackend();
         if(isAwake){
           // Fetch 5 batches of 50 in parallel — much faster than sequential 20s
           const STOCK_BATCH = 100;
           const CONCURRENCY  = 10;
-          const stockSymbols = stockTickers.map(t=>t.symbol);
+          const stockSymbols = stocksToFetch.map(t=>t.symbol);
           const batches = [];
           for(let i=0;i<stockSymbols.length;i+=STOCK_BATCH){
             batches.push(stockSymbols.slice(i,i+STOCK_BATCH));
@@ -1671,6 +1709,8 @@
           const stocksLoaded=stockTickers.filter(t=>realData[t.symbol]).length;
           const totalSecs=((Date.now()-scanStart)/1000).toFixed(0);
           document.getElementById('loadingStatus').textContent=`${stocksLoaded} of ${stockTickers.length} stocks loaded in ${totalSecs}s.`;
+          // Save to cache for this timeframe
+          DATA_CACHE[cacheKey] = Object.assign(DATA_CACHE[cacheKey]||{}, realData);
           await new Promise(r=>setTimeout(r,400));
         } else {
           document.getElementById('loadingStatus').textContent='⚠ Stock server timed out. AI will estimate from training data — results may not reflect current prices.';
@@ -1678,6 +1718,10 @@
         }
       }
 
+      // Cache whatever crypto data we got so far
+      if(cryptoToFetch && cryptoToFetch.length > 0){
+        DATA_CACHE[cacheKey] = Object.assign(DATA_CACHE[cacheKey]||{}, realData);
+      }
       // Market cap fetch & filter for stocks
       // Build marketCapData from realData (backend returns marketCap per stock)
       const marketCapData={};
