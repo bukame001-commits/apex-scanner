@@ -471,10 +471,10 @@
   }
 
   const MARKET_TICKERS = {
-    crypto_top500:{label:'Crypto Top 500',type:'crypto',tickers:['BTC','ETH','BNB','XRP','SOL','ADA','DOGE','TRX','DOT','LTC','SHIB','AVAX','LINK','ATOM','UNI','XLM','BCH','ALGO','ICP','HBAR','APT','ARB','NEAR','GRT','AAVE','MKR','INJ','OP','SUI','SEI','TIA','RUNE','PENDLE','JUP','WIF','BONK','FLOKI','PEPE','TON','KAS','TAO','IMX','RNDR','FIL','THETA','EGLD','FLOW','MINA','SAND','MANA','AXS','CHZ','ENJ','GALA','APE','GMT','GMX','DYDX','LDO','CRV','COMP','BAL','YFI','SUSHI','CVX','STX','BLUR','HNT','KDA','KAVA','ROSE','ANKR','RVN','ZIL','ZEC','DASH','XMR','ETC','NEO','VET','SNX','1INCH','CAKE','BAND','ASTR','CFX','CORE','ACH','RAY','ORCA','FTM','MAGIC','GMX','PENDLE','ARB','OP','INJ','TIA','SEI','SUI','JUP','WIF','BONK','PYTH','JTO','TNSR','W','STRK','MANTA','ALT','PIXEL','PORTAL','ZKFAIR','METIS','BICO','API3','PERP','DYDX','SNX','UMA','BAL','POND','MASK','ALICE','TLM','QUICK','DODO','REEF','COMBO','FARM','BANK','POLS','SUPER','GHST','NEAR','ROSE','MOVR','GLMR','KSM','ACA','PARA','ASTR','SDN','BNC','KINT','AIR','KAR','CSM','PHA','TEER','RING','CRUST','DEGO','ERG','CKB','FORCE','VSYS','KMD','ARDR','IGNIS','NXT','BURST','XCP','MONA','VIA','GAME','NLG','BLOCK','HTML','XMY','MUSIC','CREA','XST','NXS','UNO','GRC','OKCASH','BLK','FLASH','TRIG','SPHR','LINX','SIB','KORE','NYC','EDRC','CHC','BTA','VRC','MEC','EFL','TOPAZ','VRM','ION','AMBER','LBRY','DBET','PLR','SAN','PAI','MDA','BRD','POE','EVX','SALT','RCN','DNT','AST','CDT','SNGLS','LRC','ENG','REQ','VIB','POWR','WTC','QSP','APPC','WABI','YOYO','OST','SUB','TNT','GTO','ZRX','SNT','ANT','BAT','FUN','OMG','NMR','CVC','BNT','STORJ','AMB','ELF','ENJ','KNC','MTL','NAS','OAX','PAY','POE','RLC','RPX','SNGLS','SNM','SPANK','SRN','TNB','VEN','XVG','ZEN','WAVES','DCR','QTUM','BTG','ICX','ONT','IOTA','LSK','ARK','ZEC','XEM','FCT'].slice(0,500)},
-    crypto_top1000:{label:'Crypto Top 1000',type:'crypto',tickers:['BTC','ETH','BNB','XRP','SOL','ADA','DOGE','TRX','DOT','LTC','SHIB','AVAX','LINK','ATOM','UNI','XLM','BCH','ALGO','ICP','HBAR','APT','ARB','NEAR','GRT','AAVE','MKR','INJ','OP','SUI','SEI','TIA','RUNE','PENDLE','JUP','WIF','BONK','FLOKI','PEPE','TON','KAS','TAO','IMX','RNDR','FIL','THETA','EGLD','FLOW','MINA','SAND','MANA','AXS','CHZ','ENJ','GALA','APE','GMT','GMX','DYDX','LDO','CRV','COMP','BAL','YFI','SUSHI','CVX','STX','BLUR','HNT','KDA','KAVA','ROSE','ANKR','RVN','ZIL','ZEC','DASH','XMR','ETC','NEO','VET','SNX','1INCH','CAKE','BAND','ASTR','CFX','CORE','ACH','RAY','ORCA','FTM','MAGIC','GMX','PENDLE','ARB','OP','INJ','TIA','SEI','SUI','JUP','WIF','BONK','PYTH','JTO','TNSR','W','STRK','MANTA','ALT','PIXEL','PORTAL','ZKFAIR','METIS','BICO','API3','PERP','DYDX','SNX','UMA','BAL','POND','MASK','ALICE','TLM','QUICK','DODO','REEF','COMBO','FARM','BANK','POLS','SUPER','GHST','NEAR','ROSE','MOVR','GLMR','KSM','ACA','PARA','ASTR','SDN','BNC','KINT','AIR','KAR','CSM','PHA','TEER','RING','CRUST','DEGO','ERG','CKB','FORCE','VSYS','KMD','ARDR','IGNIS','NXT','BURST','XCP','MONA','VIA','GAME','NLG','BLOCK','HTML','XMY','MUSIC','CREA','XST','NXS','UNO','GRC','OKCASH','BLK','FLASH','TRIG','SPHR','LINX','SIB','KORE','NYC','EDRC','CHC','BTA','VRC','MEC','EFL','TOPAZ','VRM','ION','AMBER','LBRY','DBET','PLR','SAN','PAI','MDA','BRD','POE','EVX','SALT','RCN','DNT','AST','CDT','SNGLS','LRC','ENG','REQ','VIB','POWR','WTC','QSP','APPC','WABI','YOYO','OST','SUB','TNT','GTO','ZRX','SNT','ANT','BAT','FUN','OMG','NMR','CVC','BNT','STORJ','AMB','ELF','ENJ','KNC','MTL','NAS','OAX','PAY','POE','RLC','RPX','SNGLS','SNM','SPANK','SRN','TNB','VEN','XVG','ZEN','WAVES','DCR','QTUM','BTG','ICX','ONT','IOTA','LSK','ARK','ZEC','XEM','FCT']}, // upgraded live from CoinGecko
-    sp500:{label:'S&P 500',type:'stock',tickers:['AAPL','MSFT','AMZN','NVDA','GOOGL','META','TSLA','BRK-B','UNH','LLY','JPM','V','XOM','MA','PG','JNJ','HD','AVGO','MRK','CVX','PEP','ABBV','COST','KO','WMT','ADBE','CRM','BAC','MCD','PFE','TMO','CSCO','ABT','ACN','NKE','DHR','LIN','CMCSA','TXN','VZ','PM','NEE','RTX','HON','AMGN','IBM','UNP','INTC','QCOM','INTU','SBUX','GE','LOW','AMD','CAT','DE','SPGI','MS','GS','BLK']},
-    nasdaq100:{label:'Nasdaq 100',type:'stock',tickers:['AAPL','MSFT','AMZN','NVDA','GOOGL','GOOG','META','TSLA','AVGO','ADBE','CSCO','CMCSA','INTC','AMD','INTU','QCOM','HON','AMAT','SBUX','MDLZ','GILD','REGN','VRTX','ISRG','KLAC','LRCX','SNPS','CDNS','MRVL','PANW','CRWD','NFLX','PYPL','ADP','MELI','ASML','COST','PDD','KDP','ORLY','PCAR','CTAS','FTNT','FAST','CPRT','MNST','DDOG','ROST','PAYX','ODFL']},
+    crypto_top500:{label:'Crypto Top 500',type:'crypto',tickers:['BTC', 'ETH', 'BNB', 'XRP', 'SOL', 'ADA', 'DOGE', 'TRX', 'DOT', 'LTC', 'SHIB', 'AVAX', 'LINK', 'ATOM', 'UNI', 'XLM', 'BCH', 'ALGO', 'ICP', 'HBAR', 'APT', 'ARB', 'NEAR', 'GRT', 'AAVE', 'MKR', 'INJ', 'OP', 'SUI', 'SEI', 'TIA', 'RUNE', 'PENDLE', 'JUP', 'WIF', 'BONK', 'FLOKI', 'PEPE', 'TON', 'KAS', 'TAO', 'IMX', 'RNDR', 'FIL', 'THETA', 'EGLD', 'FLOW', 'MINA', 'SAND', 'MANA', 'AXS', 'CHZ', 'ENJ', 'GALA', 'APE', 'GMT', 'GMX', 'DYDX', 'LDO', 'CRV', 'COMP', 'BAL', 'YFI', 'SUSHI', 'CVX', 'STX', 'BLUR', 'HNT', 'KAVA', 'ROSE', 'ANKR', 'ZIL', 'ZEC', 'DASH', 'ETC', 'NEO', 'VET', 'SNX', '1INCH', 'CAKE', 'BAND', 'ASTR', 'CFX', 'CORE', 'ACH', 'FTM', 'MAGIC', 'PYTH', 'JTO', 'W', 'STRK', 'METIS', 'API3', 'PERP', 'UMA', 'MASK', 'ALICE', 'TLM', 'DODO', 'REEF', 'POLS', 'SUPER', 'GLMR', 'KSM', 'CKB', 'KMD', 'ZRX', 'SNT', 'BAT', 'FUN', 'OMG', 'NMR', 'CVC', 'BNT', 'STORJ', 'ELF', 'KNC', 'MTL', 'OAX', 'RLC', 'XVG', 'WAVES', 'QTUM', 'BTG', 'ICX', 'ONT', 'LSK', 'ARK', 'LUNC', 'KDA', 'MOVR', 'BICO', 'POND', 'QUICK', 'COMBO', 'FARM', 'BANK', 'GHST', 'JASMY', 'HIGH', 'LQTY', 'RPL', 'SSV', 'RDNT', 'GNS', 'JOE', 'VELO', 'BIFI', 'HOOK', 'CHESS', 'ACE', 'XAI', 'MANTA', 'ALT', 'PIXEL', 'PORTAL', 'ZETA', 'DYM', 'TNSR', 'OMNI', 'REZ', 'BB', 'NOT', 'IO', 'ZK', 'LISTA', 'ZRO', 'RENDER', 'WLD', 'ETHFI', 'EIGEN', 'HMSTR', 'CATI', 'NEIRO', 'SCR', 'DOGS', 'MAJOR', 'DEGEN', 'PRIME', 'ONDO', 'BEAM', 'ENA', 'SAGA', 'SAFE', 'AEVO', 'BOME', 'SLERF', 'MEW', 'PONKE', 'POPCAT', 'PNUT', 'ACT', 'GOAT', 'MOODENG', 'TURBO', 'BRETT', 'MOG', 'FWOG', 'BANANA', 'MANEKI', 'MYRO', 'SILLY', 'WEN', 'GECKO', 'HARAMBE', 'TREMP', 'MAGA', 'MOTHER', 'TONY', 'AIDOGE', 'BABYDOGE', 'SNEK', 'BGB', 'OKB', 'CRO', 'HT', 'GT', 'MX', 'KCS', 'LEO', 'FTT', 'BNX', 'LUNA', 'UST', 'BTTC', 'WIN', 'TWT', 'VGX', 'CELR', 'SKL', 'OGN', 'DUSK', 'PAXG', 'FXS', 'ID', 'VANRY'].slice(0,500)},
+    crypto_top1000:{label:'Crypto Top 1000',type:'crypto',tickers:['BTC', 'ETH', 'BNB', 'XRP', 'SOL', 'ADA', 'DOGE', 'TRX', 'DOT', 'LTC', 'SHIB', 'AVAX', 'LINK', 'ATOM', 'UNI', 'XLM', 'BCH', 'ALGO', 'ICP', 'HBAR', 'APT', 'ARB', 'NEAR', 'GRT', 'AAVE', 'MKR', 'INJ', 'OP', 'SUI', 'SEI', 'TIA', 'RUNE', 'PENDLE', 'JUP', 'WIF', 'BONK', 'FLOKI', 'PEPE', 'TON', 'KAS', 'TAO', 'IMX', 'RNDR', 'FIL', 'THETA', 'EGLD', 'FLOW', 'MINA', 'SAND', 'MANA', 'AXS', 'CHZ', 'ENJ', 'GALA', 'APE', 'GMT', 'GMX', 'DYDX', 'LDO', 'CRV', 'COMP', 'BAL', 'YFI', 'SUSHI', 'CVX', 'STX', 'BLUR', 'HNT', 'KAVA', 'ROSE', 'ANKR', 'ZIL', 'ZEC', 'DASH', 'ETC', 'NEO', 'VET', 'SNX', '1INCH', 'CAKE', 'BAND', 'ASTR', 'CFX', 'CORE', 'ACH', 'FTM', 'MAGIC', 'PYTH', 'JTO', 'W', 'STRK', 'METIS', 'API3', 'PERP', 'UMA', 'MASK', 'ALICE', 'TLM', 'DODO', 'REEF', 'POLS', 'SUPER', 'GLMR', 'KSM', 'CKB', 'KMD', 'ZRX', 'SNT', 'BAT', 'FUN', 'OMG', 'NMR', 'CVC', 'BNT', 'STORJ', 'ELF', 'KNC', 'MTL', 'OAX', 'RLC', 'XVG', 'WAVES', 'QTUM', 'BTG', 'ICX', 'ONT', 'LSK', 'ARK', 'LUNC', 'KDA', 'MOVR', 'BICO', 'POND', 'QUICK', 'COMBO', 'FARM', 'BANK', 'GHST', 'JASMY', 'HIGH', 'LQTY', 'RPL', 'SSV', 'RDNT', 'GNS', 'JOE', 'VELO', 'BIFI', 'HOOK', 'CHESS', 'ACE', 'XAI', 'MANTA', 'ALT', 'PIXEL', 'PORTAL', 'ZETA', 'DYM', 'TNSR', 'OMNI', 'REZ', 'BB', 'NOT', 'IO', 'ZK', 'LISTA', 'ZRO', 'RENDER', 'WLD', 'ETHFI', 'EIGEN', 'HMSTR', 'CATI', 'NEIRO', 'SCR', 'DOGS', 'MAJOR', 'DEGEN', 'PRIME', 'ONDO', 'BEAM', 'ENA', 'SAGA', 'SAFE', 'AEVO', 'BOME', 'SLERF', 'MEW', 'PONKE', 'POPCAT', 'PNUT', 'ACT', 'GOAT', 'MOODENG', 'TURBO', 'BRETT', 'MOG', 'FWOG', 'BANANA', 'MANEKI', 'MYRO', 'SILLY', 'WEN', 'GECKO', 'HARAMBE', 'TREMP', 'MAGA', 'MOTHER', 'TONY', 'AIDOGE', 'BABYDOGE', 'SNEK', 'BGB', 'OKB', 'CRO', 'HT', 'GT', 'MX', 'KCS', 'LEO', 'FTT', 'BNX', 'LUNA', 'UST', 'BTTC', 'WIN', 'TWT', 'VGX', 'CELR', 'SKL', 'OGN', 'DUSK', 'PAXG', 'FXS', 'ID', 'VANRY']}, // upgraded live from CoinGecko live from CoinGecko live from CoinGecko
+    sp500:{label:'S&P 500',type:'stock',tickers:['AAPL','MSFT','AMZN','NVDA','GOOGL','GOOG','META','TSLA','BRK-B','UNH','LLY','JPM','V','XOM','MA','PG','JNJ','HD','AVGO','MRK','CVX','PEP','ABBV','COST','KO','WMT','ADBE','CRM','BAC','MCD','PFE','TMO','CSCO','ABT','ACN','NKE','DHR','LIN','CMCSA','TXN','VZ','PM','NEE','RTX','HON','AMGN','IBM','UNP','INTC','QCOM','INTU','SBUX','GE','LOW','AMD','CAT','DE','SPGI','MS','GS','BLK','AXP','SCHW','BK','USB','WFC','C','BMY','GILD','VRTX','REGN','ISRG','MDT','BSX','SYK','ELV','HUM','CI','MCK','CVS','MO','CL','GIS','HSY','CPB','CAG','HRL','TSN','PPC','LRCX','KLAC','AMAT','MRVL','PANW','CRWD','NFLX','TGT','F','GM','UBER']},
+    nasdaq100:{label:'Nasdaq 100',type:'stock',tickers:['AAPL','MSFT','AMZN','NVDA','GOOGL','GOOG','META','TSLA','AVGO','ADBE','CSCO','CMCSA','INTC','AMD','INTU','QCOM','HON','AMAT','SBUX','MDLZ','GILD','REGN','VRTX','ISRG','KLAC','LRCX','SNPS','CDNS','MRVL','PANW','CRWD','NFLX','PYPL','ADP','MELI','ASML','COST','PDD','KDP','ORLY','PCAR','CTAS','FTNT','FAST','CPRT','MNST','DDOG','ROST','PAYX','ODFL','VRSK','CTSH','ANSS','GEHC','CEG','IDXX','TEAM','WDAY','DASH','ZS','COIN','TTD','RBLX','ABNB','BKNG','NXPI','MCHP','SWKS','ON','ENPH','FSLR','LULU','BIIB','MRNA','ILMN','ALGN','DXCM','PODD','RMD','NBIX','ALNY','BMRN','MANH','PAYC','PCTY','NCNO','CSGP','SGEN','ZM','OKTA','DOCU','PLTR','RGEN','ACAD','ITCI','INSM','NTRA','EXAS','PCVX','SMAR','TENB','APPF','GTLB','FROG','DLO']},
     russell2000:{label:'Russell 2000',type:'stock',tickers:[
       // Technology
       'SMCI','RMBS','ACLS','SPSC','ALRM','FORM','PRGS','MGNI','ITRI','PLXS','NSIT','CARG','DFIN',
@@ -1546,6 +1546,32 @@
     }catch(e){ console.log('fetchMarketCaps error:',e.message); }
     return caps;
   }
+  // ── Fetch real Binance pairs list from backend ──
+  let _binancePairsFetched = false;
+  async function fetchBinancePairs(){
+    if(_binancePairsFetched) return; // only fetch once per session
+    try{
+      const res = await fetch(BACKEND+'/binance-pairs', {signal: AbortSignal.timeout(15000)});
+      if(!res.ok) return;
+      const data = await res.json();
+      if(data.symbols && data.symbols.length > 100){
+        _binancePairsFetched = true;
+        // Update both crypto lists with real Binance data
+        MARKET_TICKERS.crypto_top500.tickers = data.symbols.slice(0, 500);
+        MARKET_TICKERS.crypto_top500._isLive = true;
+        MARKET_TICKERS.crypto_top1000.tickers = data.symbols;
+        MARKET_TICKERS.crypto_top1000._isLive = true;
+        console.log('[APEX] Binance pairs loaded:', data.symbols.length, 'coins');
+        showToast('Loaded '+data.symbols.length+' Binance pairs');
+      }
+    }catch(e){
+      console.log('[APEX] Binance pairs fetch failed, using built-in list:', e.message);
+    }
+  }
+
+  // Fetch Binance pairs on page load (non-blocking)
+  setTimeout(fetchBinancePairs, 2000);
+
   async function wakeBackend(){
     const maxWait=75000; // 75 seconds max
     const interval=5000; // retry every 5 seconds
@@ -1606,6 +1632,9 @@
 
   // ── Main scan ─────────────────────────────────────
   async function runScan() {
+    // Ensure Binance pairs are loaded (refresh if not yet done)
+    if(!_binancePairsFetched) await fetchBinancePairs();
+
     // Apply TF-appropriate thresholds on every scan start
     const _isWeekly = selectedTF.tf==='1w';
     const _wtSlider = document.getElementById('wtSlider');
@@ -1642,16 +1671,17 @@
 
         if(needs1000 || needs500){
           // Try CoinGecko silently — tickers already initialized with built-in list so failure is OK
-          const alreadyHaveLive = (needs500 && MARKET_TICKERS.crypto_top500._isLive) ||
-                                  (needs1000 && MARKET_TICKERS.crypto_top1000._isLive);
+          // CoinGecko sorts by market cap — upgrade if not already sorted
+          const alreadyHaveLive = (needs500 && MARKET_TICKERS.crypto_top500._isCGSorted) ||
+                                  (needs1000 && MARKET_TICKERS.crypto_top1000._isCGSorted);
           if(!alreadyHaveLive){
             try{
               const limit = needs1000 ? 1000 : 500;
               document.getElementById('loadingStatus').textContent = 'Upgrading crypto list from CoinGecko...';
               const liveSymbols = await fetchLiveCryptoList(limit);
               if(liveSymbols.length >= 50){
-                if(needs500){ MARKET_TICKERS.crypto_top500.tickers = liveSymbols.slice(0,500); MARKET_TICKERS.crypto_top500._isLive=true; }
-                if(needs1000){ MARKET_TICKERS.crypto_top1000.tickers = liveSymbols.slice(0,1000); MARKET_TICKERS.crypto_top1000._isLive=true; }
+                if(needs500){ MARKET_TICKERS.crypto_top500.tickers = liveSymbols.slice(0,500); MARKET_TICKERS.crypto_top500._isCGSorted=true; }
+                if(needs1000){ MARKET_TICKERS.crypto_top1000.tickers = liveSymbols.slice(0,1000); MARKET_TICKERS.crypto_top1000._isCGSorted=true; }
               }
               // If rate limited, silently keep using built-in list — no toast, no crash
             }catch(e){ /* silently use built-in */ }
