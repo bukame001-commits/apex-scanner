@@ -446,6 +446,27 @@
       limit: parseInt(btn.dataset.limit),
       label: btn.dataset.tf==='1w'?'1W': btn.dataset.tf==='1d'?'1D':'4H'
     };
+    // Auto-adjust thresholds for timeframe — weekly bars are smoother so WT/RSI
+    // oscillate in a tighter range; daily/4H are more volatile
+    const isWeekly = btn.dataset.tf === '1w';
+    const wtSlider = document.getElementById('wtSlider');
+    const wtValEl  = document.getElementById('wtVal');
+    const rsiSlider = document.querySelector('input[type=range][oninput*="rsiVal"]');
+    const rsiValEl  = document.getElementById('rsiVal');
+    if(wtSlider && wtValEl){
+      const wtDefault = isWeekly ? '-30' : '-45';
+      wtSlider.value = wtDefault;
+      wtValEl.textContent = wtDefault;
+    }
+    if(rsiSlider && rsiValEl){
+      const rsiDefault = isWeekly ? '45' : '40';
+      rsiSlider.value = rsiDefault;
+      rsiValEl.textContent = rsiDefault;
+    }
+    // Warn about Volume Spike on weekly (incomplete current candle)
+    if(isWeekly){
+      showToast('1W: WT threshold auto-set to -30 (weekly bars are smoother)');
+    }
   }
 
   const MARKET_TICKERS = {
@@ -1802,7 +1823,7 @@
         }
         // Plain RSI oversold fallback for stocks without rsiCombo
         if(!d.rsiCombo&&d.rsi!==null&&d.rsi<parseFloat(rsiT)) sigs.push('RSI Combo:RSI Oversold ('+d.rsi+')');
-        if(d.volSpike!==null&&d.volSpike>=parseFloat(volT)) sigs.push('Volume Spike:Volume Spike '+d.volSpike+'x');
+        if(d.volSpike!==null&&d.volSpike>=parseFloat(volT)&&selectedTF.tf!=='1w') sigs.push('Volume Spike:Volume Spike '+d.volSpike+'x');
         if(d.vsEma200!==null&&Math.abs(d.vsEma200)<=5) sigs.push('200 EMA proximity:Near 200 EMA ('+d.vsEma200+'%)');
         if(d.vsEma200!==null&&d.vsEma200>20) sigs.push('200 EMA proximity:Extended above 200 EMA ('+d.vsEma200+'%)');
         if(d.vsHigh52!==null&&d.vsHigh52>-5) sigs.push('200 EMA proximity:Near 52W High ('+d.vsHigh52+'%)');
