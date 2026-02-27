@@ -1561,8 +1561,9 @@
         MARKET_TICKERS.crypto_top500._isLive = true;
         MARKET_TICKERS.crypto_top1000.tickers = data.symbols;
         MARKET_TICKERS.crypto_top1000._isLive = true;
-        console.log('[APEX] Binance pairs loaded:', data.symbols.length, 'coins');
-        showToast('Loaded '+data.symbols.length+' Binance pairs');
+        const src = data.source || 'exchange';
+        console.log('[APEX] Crypto pairs loaded from', src, ':', data.symbols.length, 'coins');
+        showToast('Loaded '+data.symbols.length+' pairs from '+src.toUpperCase());
       }
     }catch(e){
       console.log('[APEX] Binance pairs fetch failed, using built-in list:', e.message);
