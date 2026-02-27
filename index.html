@@ -1455,7 +1455,7 @@
     const vwap     = calcVWAP(highs, lows, closes, volumes, assetType);
     return {
       price, rsi: rsiCombo?rsiCombo.rsi:null, rsiCombo, ema200,
-      ema50: calcEMA(closes,50), volSpike: calcVolSpike(volumes, assetType!=='stock' && klines.length>0 && selectedTF && selectedTF.tf==='1w'),
+      ema50: calcEMA(closes,50), volSpike: calcVolSpike(volumes, assetType!=='stock' && c.length>0 && selectedTF && selectedTF.tf==='1w'),
       vsEma200: ema200 ? parseFloat(((price/ema200-1)*100).toFixed(2)) : null,
       vsHigh52, bb, macd, stochRsi, atr, obv, vwap,
       wt1: wt.wt1, wt2: wt.wt2, wtCrossed: wt.crossed, wtCrossType: wt.crossType,
