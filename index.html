@@ -295,7 +295,7 @@
       <div class="slider-grid">
         <div class="slider-item">
           <label>WT OVERSOLD <span id="wtVal">-45</span></label>
-          <input type="range" min="-90" max="-20" value="-45" step="1" oninput="document.getElementById('wtVal').textContent=this.value">
+          <input type="range" min="-90" max="-20" value="-45" step="1" oninput="document.getElementById('wtVal').textContent=this.value; this._userSet=true;">
         </div>
         <div class="slider-item">
           <label>RSI OVERSOLD <span id="rsiVal">40</span></label>
@@ -1419,31 +1419,61 @@
       }
     }
 
-    // 4️⃣ CoinGecko — absolute last resort
+    // 4️⃣ CoinGecko — try before backend
     try{
       const sRes=await fetchWithTimeout(`https://api.coingecko.com/api/v3/search?query=${encodeURIComponent(symbol)}`, 8000);
-      if(!sRes) return null;
-      const sd=await sRes.json();
-      const match=sd.coins?.find(c=>c.symbol?.toUpperCase()===symbol.toUpperCase());
-      if(!match) return null;
-      const days=selectedTF.tf==='1w'?365:selectedTF.tf==='1d'?210:60;
-      const oRes=await fetchWithTimeout(`https://api.coingecko.com/api/v3/coins/${match.id}/ohlc?vs_currency=usd&days=${days}`, 10000);
-      if(!oRes) return null;
-      const raw=await oRes.json();
-      if(!raw||raw.length<35) return null;
-      let klines=raw.map(c=>[c[0],c[1],c[2],c[3],c[4],0]);
-      if(selectedTF.tf==='1w'){
-        const wk=[];
-        for(let i=0;i<klines.length;i+=7){
-          const w=klines.slice(i,i+7);
-          if(w.length<3) continue;
-          wk.push([w[0][0],w[0][1],Math.max(...w.map(c=>c[2])),Math.min(...w.map(c=>c[3])),w[w.length-1][4],0]);
+      if(sRes){
+        const sd=await sRes.json();
+        const match=sd.coins?.find(c=>c.symbol?.toUpperCase()===symbol.toUpperCase());
+        if(match){
+          const days=selectedTF.tf==='1w'?365:selectedTF.tf==='1d'?210:60;
+          const oRes=await fetchWithTimeout(`https://api.coingecko.com/api/v3/coins/${match.id}/ohlc?vs_currency=usd&days=${days}`, 10000);
+          if(oRes){
+            const raw=await oRes.json();
+            if(raw&&raw.length>=20){
+              let klines=raw.map(c=>[c[0],c[1],c[2],c[3],c[4],0]);
+              if(selectedTF.tf==='1w'){
+                const wk=[];
+                for(let i=0;i<klines.length;i+=7){
+                  const w=klines.slice(i,i+7);
+                  if(w.length<3) continue;
+                  wk.push([w[0][0],w[0][1],Math.max(...w.map(c=>c[2])),Math.min(...w.map(c=>c[3])),w[w.length-1][4],0]);
+                }
+                klines=wk;
+              }
+              const r=processKlines(klines);
+              if(r) return r;
+            }
+          }
         }
-        klines=wk;
       }
-      return processKlines(klines);
     }catch(e){}
+
+    // 5️⃣ Backend proxy — last resort when mobile network blocks all crypto APIs
+    // Batched at call site, but single-symbol fallback works too
     return null;
+  }
+
+  // ── Fetch crypto via backend proxy (bypasses mobile network blocks) ──
+  async function fetchCryptoBatch(symbols){
+    try{
+      const interval = selectedTF.interval==='1w'?'1w':selectedTF.interval==='4h'?'4h':'1d';
+      const res = await fetch(
+        `${BACKEND}/crypto?symbols=${symbols.join(',')}&interval=${interval}&limit=${selectedTF.limit}`,
+        {signal: AbortSignal.timeout(30000)}
+      );
+      if(!res.ok) return {};
+      const raw = await res.json();
+      const processed = {};
+      Object.keys(raw).forEach(sym=>{
+        const item = raw[sym];
+        if(item && item.klines && item.klines.length >= 20){
+          const r = processKlines(item.klines, 'crypto');
+          if(r) processed[sym] = r;
+        }
+      });
+      return processed;
+    }catch(e){ return {}; }
   }
 
   // ── Fetch liquidation data from Binance ──────────
@@ -1576,6 +1606,14 @@
 
   // ── Main scan ─────────────────────────────────────
   async function runScan() {
+    // Apply TF-appropriate thresholds on every scan start
+    const _isWeekly = selectedTF.tf==='1w';
+    const _wtSlider = document.getElementById('wtSlider');
+    const _wtValEl  = document.getElementById('wtVal');
+    if(_wtSlider && _wtValEl && !_wtSlider._userSet){
+      const _wtDefault = _isWeekly ? '-30' : '-45';
+      _wtSlider.value = _wtDefault; _wtValEl.textContent = _wtDefault;
+    }
     if(selectedMarkets.length===0){showToast('SELECT AT LEAST ONE MARKET');return;}
     if(selectedInds.length===0){showToast('SELECT AT LEAST ONE INDICATOR');return;}
     const has4hStocks = selectedTF.tf==='4h' && selectedMarkets.some(m=>['russell2000','sp500','nasdaq'].includes(m));
@@ -1696,6 +1734,8 @@
       if(hasCachedData && cryptoToFetch.length < cryptoTickers.length){
         debugLog(`Cache hit: ${cryptoTickers.length - cryptoToFetch.length} crypto from cache, fetching ${cryptoToFetch.length} new`);
       }
+
+      // Try direct fetch first (fast — parallel Binance calls)
       for(let i=0;i<cryptoToFetch.length;i+=BATCH){
         const batch=cryptoToFetch.slice(i,i+BATCH);
         const pct=Math.round((i/cryptoToFetch.length)*100);
@@ -1704,6 +1744,25 @@
           const d=await fetchCryptoData(t.symbol);
           if(d) realData[t.symbol]=d;
         }));
+      }
+
+      // If direct fetch got nothing, fall back to backend proxy (bypasses mobile blocks)
+      const directCryptoCount = cryptoToFetch.filter(t=>realData[t.symbol]).length;
+      if(directCryptoCount === 0 && cryptoToFetch.length > 0){
+        debugLog(`Direct crypto fetch got 0 results — trying backend proxy...`);
+        document.getElementById('loadingStatus').textContent='Direct APIs blocked — routing crypto through server...';
+        const backendAwake = await wakeBackend();
+        if(backendAwake){
+          const CBATCH = 50;
+          for(let i=0;i<cryptoToFetch.length;i+=CBATCH){
+            const batch = cryptoToFetch.slice(i,i+CBATCH).map(t=>t.symbol);
+            const pct = Math.round((i/cryptoToFetch.length)*100);
+            document.getElementById('loadingStatus').textContent=`Backend crypto ${i+1}–${Math.min(i+CBATCH,cryptoToFetch.length)} of ${cryptoToFetch.length} (${pct}%)...`;
+            const results = await fetchCryptoBatch(batch);
+            Object.assign(realData, results);
+          }
+          debugLog(`Backend proxy crypto: ${Object.keys(realData).filter(k=>realData[k]?.type==='crypto').length} fetched`);
+        }
       }
 
       // Stocks from Render backend (with wake-up for free tier)
