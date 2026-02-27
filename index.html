@@ -157,6 +157,7 @@
   </div>
 
   <div id="errorBox" style="display:none;background:rgba(255,51,102,0.1);border:1px solid var(--danger);border-radius:2px;padding:14px;margin-bottom:14px;font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--danger);line-height:1.7;word-break:break-all;"></div>
+  <div id="debugBox" style="display:none;background:rgba(0,212,255,0.04);border:1px solid rgba(0,212,255,0.2);border-radius:2px;padding:14px;margin-bottom:14px;font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--muted);line-height:1.8;word-break:break-all;white-space:pre-wrap;"></div>
 
   <div id="setupPanel">
 
@@ -615,6 +616,16 @@
     const check = btn.querySelector('.ind-check');
     if (selectedInds.includes(ind)) { selectedInds=selectedInds.filter(x=>x!==ind); check.textContent=''; }
     else { selectedInds.push(ind); check.textContent='✓'; }
+  }
+
+  // ── On-screen debug log (visible without DevTools) ──
+  const _debugLines = [];
+  function debugLog(...args){
+    const msg = args.map(a=>typeof a==='object'?JSON.stringify(a):String(a)).join(' ');
+    console.log('[APEX]', msg);
+    _debugLines.push(msg);
+    const box = document.getElementById('debugBox');
+    if(box){ box.style.display='block'; box.textContent = _debugLines.slice(-30).join('\n'); }
   }
 
   function showToast(msg) {
@@ -1683,7 +1694,7 @@
       const BATCH = 50;
       const cryptoToFetch = hasCachedData ? cryptoTickers.filter(t=>!realData[t.symbol]) : cryptoTickers;
       if(hasCachedData && cryptoToFetch.length < cryptoTickers.length){
-        console.log(`[APEX] Cache hit: ${cryptoTickers.length - cryptoToFetch.length} crypto from cache, fetching ${cryptoToFetch.length} new`);
+        debugLog(`Cache hit: ${cryptoTickers.length - cryptoToFetch.length} crypto from cache, fetching ${cryptoToFetch.length} new`);
       }
       for(let i=0;i<cryptoToFetch.length;i+=BATCH){
         const batch=cryptoToFetch.slice(i,i+BATCH);
@@ -1736,6 +1747,10 @@
       if(cryptoToFetch && cryptoToFetch.length > 0){
         DATA_CACHE[cacheKey] = Object.assign(DATA_CACHE[cacheKey]||{}, realData);
       }
+      const _cryptoDone = Object.keys(realData).filter(k=>realData[k]?.type==='crypto').length;
+      const _stockDone  = Object.keys(realData).filter(k=>realData[k]?.type==='stock').length;
+      debugLog(`Fetch complete: ${_cryptoDone} crypto, ${_stockDone} stocks with real data`);
+      debugLog(`TF=${selectedTF.label} | inds=${selectedInds.join(',')} | minT=${document.getElementById('minT').value}`);
       // Market cap fetch & filter for stocks
       // Build marketCapData from realData (backend returns marketCap per stock)
       const marketCapData={};
@@ -1781,9 +1796,9 @@
       // Pre-filter with real data
       const stocksWithRealData = Object.keys(realData).filter(k=>realData[k].type==='stock');
       const cryptoWithRealData = Object.keys(realData).filter(k=>realData[k].type==='crypto');
-      console.log(`[APEX] Real data loaded: ${stocksWithRealData.length} stocks, ${cryptoWithRealData.length} crypto`);
-      if(stocksWithRealData.length===0 && stockTickers.length>0) console.warn('[APEX] ⚠ No stocks got real data — backend may be down or returning empty');
-      if(cryptoWithRealData.length===0 && cryptoTickers.length>0) console.warn('[APEX] ⚠ No crypto got real data — Binance/Gate.io may be blocked');
+      debugLog(`Real data loaded: ${stocksWithRealData.length} stocks, ${cryptoWithRealData.length} crypto`);
+      if(stocksWithRealData.length===0 && stockTickers.length>0) debugLog('⚠ No stocks got real data — backend may be down or returning empty');
+      if(cryptoWithRealData.length===0 && cryptoTickers.length>0) debugLog('⚠ No crypto got real data — Binance/Gate.io may be blocked');
       if(stocksWithRealData.length>0){
         const sample = realData[stocksWithRealData[0]];
         console.log(`[APEX] Sample stock (${stocksWithRealData[0]}):`, JSON.stringify({
@@ -1791,8 +1806,8 @@
           vsEma200:sample.vsEma200, volSpike:sample.volSpike, wtCrossed:sample.wtCrossed
         }));
       }
-      console.log(`[APEX] Selected indicators:`, selectedInds);
-      console.log(`[APEX] Min match threshold:`, minT);
+      debugLog(`Selected indicators:`, selectedInds);
+      debugLog(`Min match threshold:`, minT);
 
       const qualified=[];
       allTickers.forEach(t=>{
@@ -1866,7 +1881,7 @@
       });
 
       // Log qualification results for debugging
-      console.log(`[APEX] Qualified: ${qualified.length} assets`);
+      debugLog(`Qualified: ${qualified.length} assets`);
       if(qualified.length===0 && allTickers.length>0){
         // Sample 3 stocks to show why they failed
         let checked=0;
@@ -1882,14 +1897,14 @@
           console.log(`[APEX] ${t.symbol} data:`, sigs.join(', '), '| wtCrossed:', d.wtCrossed, d.wtCrossType);
           checked++;
         });
-        console.log(`[APEX] WaveTrend threshold: <${wtT} or >53`);
-        console.log(`[APEX] RSI threshold: <${rsiT}`);
-        console.log(`[APEX] Vol spike threshold: >${volT}x`);
+        debugLog(`WaveTrend threshold: <${wtT} or >53`);
+        debugLog(`RSI threshold: <${rsiT}`);
+        debugLog(`Vol spike threshold: >${volT}x`);
         // Log sample WT1/RSI values to diagnose threshold mismatches
         const sampleAssets = allTickers.filter(t=>realData[t.symbol]).slice(0,5);
         sampleAssets.forEach(t=>{
           const sd=realData[t.symbol];
-          console.log(`[APEX] ${t.symbol}: wt1=${sd.wt1}, rsi=${sd.rsi}, volSpike=${sd.volSpike}, bb=${sd.bb?.atLower}`);
+          debugLog(`${t.symbol}: wt1=${sd.wt1}, rsi=${sd.rsi}, vol=${sd.volSpike}, bb=${sd.bb?.atLower}`);
         });
       }
 
