@@ -295,7 +295,7 @@
       <div class="slider-grid">
         <div class="slider-item">
           <label>WT OVERSOLD <span id="wtVal">-45</span></label>
-          <input type="range" min="-90" max="-20" value="-45" step="1" oninput="document.getElementById('wtVal').textContent=this.value; this._userSet=true;">
+          <input type="range" id="wtSlider" min="-90" max="-20" value="-45" step="1" oninput="document.getElementById('wtVal').textContent=this.value; this._userSet=true;">
         </div>
         <div class="slider-item">
           <label>RSI OVERSOLD <span id="rsiVal">40</span></label>
@@ -1542,22 +1542,39 @@
   async function fetchCryptoBatch(symbols){
     try{
       const interval = selectedTF.interval==='1w'?'1w':selectedTF.interval==='4h'?'4h':'1d';
-      const res = await fetch(
-        `${BACKEND}/crypto?symbols=${symbols.join(',')}&interval=${interval}&limit=${selectedTF.limit}`,
-        {signal: (()=>{const c=new AbortController();setTimeout(()=>c.abort(),30000);return c.signal;})()}
-      );
-      if(!res.ok) return {};
+      const url = `${BACKEND}/crypto?symbols=${symbols.join(',')}&interval=${interval}&limit=${selectedTF.limit}`;
+      debugLog(`Backend crypto request: ${url.substring(0,120)}`);
+      const res = await fetch(url, {signal:(()=>{const c=new AbortController();setTimeout(()=>c.abort(),30000);return c.signal;})()});
+      debugLog(`Backend crypto response: HTTP ${res.status} ${res.statusText}`);
+      if(!res.ok){
+        const errText = await res.text().catch(()=>'');
+        debugLog(`Backend error body: ${errText.substring(0,300)}`);
+        return {};
+      }
       const raw = await res.json();
+      const totalKeys = Object.keys(raw).length;
+      const sampleKey = Object.keys(raw)[0];
+      const sampleKlines = raw[sampleKey]?.klines?.length ?? 'no klines';
+      debugLog(`Backend returned ${totalKeys} symbols. Sample: ${sampleKey} → ${sampleKlines} klines`);
       const processed = {};
+      let dropped = 0;
       Object.keys(raw).forEach(sym=>{
         const item = raw[sym];
         if(item && item.klines && item.klines.length >= 20){
           const r = processKlines(item.klines, 'crypto');
           if(r) processed[sym] = r;
+          else { debugLog(`processKlines null: ${sym}`); dropped++; }
+        } else {
+          if(dropped < 5) debugLog(`Dropped ${sym}: klines=${item?.klines?.length ?? 'missing'}`);
+          dropped++;
         }
       });
+      debugLog(`fetchCryptoBatch: ${Object.keys(processed).length} processed, ${dropped} dropped`);
       return processed;
-    }catch(e){ return {}; }
+    }catch(e){
+      debugLog(`fetchCryptoBatch EXCEPTION: ${e.message}`);
+      return {};
+    }
   }
 
   // ── Fetch liquidation data from Binance ──────────
