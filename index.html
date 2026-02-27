@@ -449,8 +449,8 @@
   }
 
   const MARKET_TICKERS = {
-    crypto_top500:{label:'Crypto Top 500',type:'crypto',tickers:null},   // fetched live
-    crypto_top1000:{label:'Crypto Top 1000',type:'crypto',tickers:null}, // fetched live
+    crypto_top500:{label:'Crypto Top 500',type:'crypto',tickers:['BTC','ETH','BNB','XRP','SOL','ADA','DOGE','TRX','DOT','LTC','SHIB','AVAX','LINK','ATOM','UNI','XLM','BCH','ALGO','ICP','HBAR','APT','ARB','NEAR','GRT','AAVE','MKR','INJ','OP','SUI','SEI','TIA','RUNE','PENDLE','JUP','WIF','BONK','FLOKI','PEPE','TON','KAS','TAO','IMX','RNDR','FIL','THETA','EGLD','FLOW','MINA','SAND','MANA','AXS','CHZ','ENJ','GALA','APE','GMT','GMX','DYDX','LDO','CRV','COMP','BAL','YFI','SUSHI','CVX','STX','BLUR','HNT','KDA','KAVA','ROSE','ANKR','RVN','ZIL','ZEC','DASH','XMR','ETC','NEO','VET','SNX','1INCH','CAKE','BAND','ASTR','CFX','CORE','ACH','RAY','ORCA','FTM','MAGIC','GMX','PENDLE','ARB','OP','INJ','TIA','SEI','SUI','JUP','WIF','BONK','PYTH','JTO','TNSR','W','STRK','MANTA','ALT','PIXEL','PORTAL','ZKFAIR','METIS','BICO','API3','PERP','DYDX','SNX','UMA','BAL','POND','MASK','ALICE','TLM','QUICK','DODO','REEF','COMBO','FARM','BANK','POLS','SUPER','GHST','NEAR','ROSE','MOVR','GLMR','KSM','ACA','PARA','ASTR','SDN','BNC','KINT','AIR','KAR','CSM','PHA','TEER','RING','CRUST','DEGO','ERG','CKB','FORCE','VSYS','KMD','ARDR','IGNIS','NXT','BURST','XCP','MONA','VIA','GAME','NLG','BLOCK','HTML','XMY','MUSIC','CREA','XST','NXS','UNO','GRC','OKCASH','BLK','FLASH','TRIG','SPHR','LINX','SIB','KORE','NYC','EDRC','CHC','BTA','VRC','MEC','EFL','TOPAZ','VRM','ION','AMBER','LBRY','DBET','PLR','SAN','PAI','MDA','BRD','POE','EVX','SALT','RCN','DNT','AST','CDT','SNGLS','LRC','ENG','REQ','VIB','POWR','WTC','QSP','APPC','WABI','YOYO','OST','SUB','TNT','GTO','ZRX','SNT','ANT','BAT','FUN','OMG','NMR','CVC','BNT','STORJ','AMB','ELF','ENJ','KNC','MTL','NAS','OAX','PAY','POE','RLC','RPX','SNGLS','SNM','SPANK','SRN','TNB','VEN','XVG','ZEN','WAVES','DCR','QTUM','BTG','ICX','ONT','IOTA','LSK','ARK','ZEC','XEM','FCT'].slice(0,500)},
+    crypto_top1000:{label:'Crypto Top 1000',type:'crypto',tickers:['BTC','ETH','BNB','XRP','SOL','ADA','DOGE','TRX','DOT','LTC','SHIB','AVAX','LINK','ATOM','UNI','XLM','BCH','ALGO','ICP','HBAR','APT','ARB','NEAR','GRT','AAVE','MKR','INJ','OP','SUI','SEI','TIA','RUNE','PENDLE','JUP','WIF','BONK','FLOKI','PEPE','TON','KAS','TAO','IMX','RNDR','FIL','THETA','EGLD','FLOW','MINA','SAND','MANA','AXS','CHZ','ENJ','GALA','APE','GMT','GMX','DYDX','LDO','CRV','COMP','BAL','YFI','SUSHI','CVX','STX','BLUR','HNT','KDA','KAVA','ROSE','ANKR','RVN','ZIL','ZEC','DASH','XMR','ETC','NEO','VET','SNX','1INCH','CAKE','BAND','ASTR','CFX','CORE','ACH','RAY','ORCA','FTM','MAGIC','GMX','PENDLE','ARB','OP','INJ','TIA','SEI','SUI','JUP','WIF','BONK','PYTH','JTO','TNSR','W','STRK','MANTA','ALT','PIXEL','PORTAL','ZKFAIR','METIS','BICO','API3','PERP','DYDX','SNX','UMA','BAL','POND','MASK','ALICE','TLM','QUICK','DODO','REEF','COMBO','FARM','BANK','POLS','SUPER','GHST','NEAR','ROSE','MOVR','GLMR','KSM','ACA','PARA','ASTR','SDN','BNC','KINT','AIR','KAR','CSM','PHA','TEER','RING','CRUST','DEGO','ERG','CKB','FORCE','VSYS','KMD','ARDR','IGNIS','NXT','BURST','XCP','MONA','VIA','GAME','NLG','BLOCK','HTML','XMY','MUSIC','CREA','XST','NXS','UNO','GRC','OKCASH','BLK','FLASH','TRIG','SPHR','LINX','SIB','KORE','NYC','EDRC','CHC','BTA','VRC','MEC','EFL','TOPAZ','VRM','ION','AMBER','LBRY','DBET','PLR','SAN','PAI','MDA','BRD','POE','EVX','SALT','RCN','DNT','AST','CDT','SNGLS','LRC','ENG','REQ','VIB','POWR','WTC','QSP','APPC','WABI','YOYO','OST','SUB','TNT','GTO','ZRX','SNT','ANT','BAT','FUN','OMG','NMR','CVC','BNT','STORJ','AMB','ELF','ENJ','KNC','MTL','NAS','OAX','PAY','POE','RLC','RPX','SNGLS','SNM','SPANK','SRN','TNB','VEN','XVG','ZEN','WAVES','DCR','QTUM','BTG','ICX','ONT','IOTA','LSK','ARK','ZEC','XEM','FCT']}, // upgraded live from CoinGecko
     sp500:{label:'S&P 500',type:'stock',tickers:['AAPL','MSFT','AMZN','NVDA','GOOGL','META','TSLA','BRK-B','UNH','LLY','JPM','V','XOM','MA','PG','JNJ','HD','AVGO','MRK','CVX','PEP','ABBV','COST','KO','WMT','ADBE','CRM','BAC','MCD','PFE','TMO','CSCO','ABT','ACN','NKE','DHR','LIN','CMCSA','TXN','VZ','PM','NEE','RTX','HON','AMGN','IBM','UNP','INTC','QCOM','INTU','SBUX','GE','LOW','AMD','CAT','DE','SPGI','MS','GS','BLK']},
     nasdaq100:{label:'Nasdaq 100',type:'stock',tickers:['AAPL','MSFT','AMZN','NVDA','GOOGL','GOOG','META','TSLA','AVGO','ADBE','CSCO','CMCSA','INTC','AMD','INTU','QCOM','HON','AMAT','SBUX','MDLZ','GILD','REGN','VRTX','ISRG','KLAC','LRCX','SNPS','CDNS','MRVL','PANW','CRWD','NFLX','PYPL','ADP','MELI','ASML','COST','PDD','KDP','ORLY','PCAR','CTAS','FTNT','FAST','CPRT','MNST','DDOG','ROST','PAYX','ODFL']},
     russell2000:{label:'Russell 2000',type:'stock',tickers:[
@@ -1571,31 +1571,20 @@
         const needsDefi = selectedMarkets.includes('defi');
 
         if(needs1000 || needs500){
-          // ── Large built-in list — used as fallback and to avoid re-fetching CoinGecko every scan ──
-          const BUILTIN_500 = ['BTC','ETH','BNB','XRP','SOL','ADA','DOGE','TRX','DOT','LTC','SHIB','AVAX','LINK','ATOM','UNI','XLM','BCH','ALGO','ICP','HBAR','APT','ARB','NEAR','GRT','AAVE','MKR','INJ','OP','SUI','SEI','TIA','RUNE','PENDLE','JUP','WIF','BONK','FLOKI','PEPE','TON','KAS','TAO','IMX','RNDR','FIL','THETA','EGLD','FLOW','MINA','SAND','MANA','AXS','CHZ','ENJ','GALA','APE','GMT','GMX','DYDX','LDO','CRV','COMP','BAL','YFI','SUSHI','CVX','STX','BLUR','HNT','KDA','KAVA','ROSE','ANKR','RVN','ZIL','ZEC','DASH','XMR','ETC','NEO','VET','SNX','1INCH','CAKE','BAND','SKL','OGN','CELR','DUSK','PAXG','TUSD','FXS','LQTY','RPL','SSV','ASTR','CFX','CORE','ACH','RAY','ORCA','SRM','MNGO','TULIP','SAMO','STEP','MEDIA','COPE','SLND','PORT','SBR','LIKE','OXY','FIDA','KIN','MAPS','GENE','SOLR','DFL','SLIM','PRISM','LARIX','SUNNY','CWAR','SONAR','CHICKS','CHEEMS','HAMMY','BOKU','SOLPAD','WOOF','MEAN','SHILL','DINO','KURO','NINJA','POLIS','ATLAS','STAR','COPE','CRP','GOFX','REAL','SAMU','SOLFI','DXL','FCON','BSAMO','HGET','TAKI','GST','GFX','VLX','KRILL','CRWNY','BRAY','FRKT','SAIL','USDH','USDR','USDC','USDT','BUSD','DAI','FRAX','LUSD','MIM','CUSD','CEUR','UST','HUSD','OUSD','SUSD','USDP','GUSD','EURS','SEUR','AGEUR','RAI','FLOAT','BEAN','BEANETH','BEAN3CRV','SPELL','ICE','MIM','MULTI','BIFI','POTS','GAME','POLC','CERE','MBOX','PVU','HERO','LAND','NFT','NFTB','NFTART','MUSE','RARI','API3','ALPHA','QUICK','COMBO','REEF','FARM','BANK','BAAS','BABI','BEL','DODO','GXS','HARD','KLAY','ONT','IOTA','ICX','WAVES','DCR','QTUM','BTG','ZEN','KMD','PIVX','NAV','SMART','SYS','STRAT','UBQ','GAME','NLG','BLOCK','XVG','VIA','GRS','MONA','FCT','XEM','LSK','ARK','RISE','SHIFT','CLOAK','DIME','MUSIC','CREA','HTML','XMY','XST','BURST','NXS','UNO','IOP','GRC','OKCASH','MOIN','QORA','BLK','XSH','FLASH','VPN','TRIG','SPHR','OC','LINX','IOC','PUT','XBC','MNX','FRST','BITUSD','BITEUR','BITBTC','BITUSD2','INSTAR','LIFE','SIB','KORE','NYC','GB','EDRC','CHC','PASL','XCPO','BTA','NXBT','VRC','DRACO','BSC','MEC','MRT','EFL','STV','TOPAZ','METAL','VRM','ION','SRC','AMBER','GAIA','LBRY','DBET','PLR','VOX','SAN','IXT','PAI','NGC','MDA','BRD','POE','CTX','EVX','SALT','RCN','FUEL','DNT','AST','PAX','CDT','CND','SNGLS','ADT','XAUR','TAAS','LRC','ENG','REQ','VIB','POWR','MCO','WTC','THETA','ELEC','QSP','APPC','WABI','YOYO','OST','SUB','CAG','TNT','GTO','LINK','ZRX','TKN','LOC','CFI','DAY','ATMS','EDO','ALIS','MGO','SNT','ANT','BAT','MLN','FUN','GNT','OMG','ICN','NMR','MANA','CVC','BNT','STORJ','MCO','STO','AMB','ARN','BCPT','CDT','CHAT','CMT','ELF','ENJ','ETC','FUEL','GNO','IOTA','ICX','KNC','LEND','LINK','LRC','LSK','LUN','MANA','MCO','MDA','MOD','MTL','MTX','NAS','NEO','NMR','OMG','OST','OAX','PAY','POE','POWR','QSP','QTUM','RCN','RDN','REQ','RLC','RPX','SALT','SNGLS','SNM','SNT','SPANK','SRN','STORJ','STX','SUB','TNB','TNT','TRIG','TRX','VEN','VIB','VIU','WABI','WAN','WTC','XVG','YOYO','ZRX','ZEN'];
-
-          // Skip CoinGecko if we already have a valid list (prevents rate limit on repeat scans)
-          const alreadyHave500 = MARKET_TICKERS.crypto_top500.tickers && MARKET_TICKERS.crypto_top500.tickers.length >= 100;
-          const alreadyHave1000 = MARKET_TICKERS.crypto_top1000.tickers && MARKET_TICKERS.crypto_top1000.tickers.length >= 100;
-          const needsFetch = (needs500 && !alreadyHave500) || (needs1000 && !alreadyHave1000);
-
-          if(needsFetch){
-            document.getElementById('loadingStatus').textContent = 'Fetching live crypto list from CoinGecko...';
-            const limit = needs1000 ? 1000 : 500;
-            const liveSymbols = await fetchLiveCryptoList(limit);
-            if(liveSymbols.length >= 50){
-              if(needs1000) MARKET_TICKERS.crypto_top1000.tickers = liveSymbols.slice(0, 1000);
-              if(needs500)  MARKET_TICKERS.crypto_top500.tickers  = liveSymbols.slice(0, 500);
-            } else {
-              // Rate limited — use built-in list, but don't overwrite a good existing list
-              showToast('CoinGecko rate limited — using built-in list (500 coins)');
-              if(!alreadyHave500)  MARKET_TICKERS.crypto_top500.tickers  = BUILTIN_500.slice(0, 500);
-              if(!alreadyHave1000) MARKET_TICKERS.crypto_top1000.tickers = BUILTIN_500;
-            }
-          } else {
-            // Already have a good list — skip CoinGecko entirely
-            document.getElementById('loadingStatus').textContent = `Using cached crypto list (${MARKET_TICKERS[needs1000?'crypto_top1000':'crypto_top500'].tickers.length} coins)...`;
-            await new Promise(r=>setTimeout(r,300));
+          // Try CoinGecko silently — tickers already initialized with built-in list so failure is OK
+          const alreadyHaveLive = (needs500 && MARKET_TICKERS.crypto_top500._isLive) ||
+                                  (needs1000 && MARKET_TICKERS.crypto_top1000._isLive);
+          if(!alreadyHaveLive){
+            try{
+              const limit = needs1000 ? 1000 : 500;
+              document.getElementById('loadingStatus').textContent = 'Upgrading crypto list from CoinGecko...';
+              const liveSymbols = await fetchLiveCryptoList(limit);
+              if(liveSymbols.length >= 50){
+                if(needs500){ MARKET_TICKERS.crypto_top500.tickers = liveSymbols.slice(0,500); MARKET_TICKERS.crypto_top500._isLive=true; }
+                if(needs1000){ MARKET_TICKERS.crypto_top1000.tickers = liveSymbols.slice(0,1000); MARKET_TICKERS.crypto_top1000._isLive=true; }
+              }
+              // If rate limited, silently keep using built-in list — no toast, no crash
+            }catch(e){ /* silently use built-in */ }
           }
           document.getElementById('loadingStatus').textContent = `Scanning ${MARKET_TICKERS[needs1000?'crypto_top1000':'crypto_top500'].tickers.length} crypto tickers...`;
         }
@@ -1655,7 +1644,11 @@
       // ── Main data fetch ───────────────────────────────
       // Use cached data if available for this timeframe — skip re-fetch
       const cacheKey = getCacheKey(selectedTF.tf);
-      const realData = DATA_CACHE[cacheKey] ? Object.assign({}, DATA_CACHE[cacheKey]) : {};
+      // Load from cache but only keep assets in current allTickers selection
+      const allTickerSymbols = new Set(allTickers.map(t=>t.symbol));
+      const cachedRaw = DATA_CACHE[cacheKey] || {};
+      const realData = {};
+      Object.keys(cachedRaw).forEach(sym=>{ if(allTickerSymbols.has(sym)) realData[sym]=cachedRaw[sym]; });
       const hasCachedData = Object.keys(realData).length > 0;
       if(hasCachedData){
         document.getElementById('loadingStatus').textContent =
@@ -1871,6 +1864,12 @@
         console.log(`[APEX] WaveTrend threshold: <${wtT} or >53`);
         console.log(`[APEX] RSI threshold: <${rsiT}`);
         console.log(`[APEX] Vol spike threshold: >${volT}x`);
+        // Log sample WT1/RSI values to diagnose threshold mismatches
+        const sampleAssets = allTickers.filter(t=>realData[t.symbol]).slice(0,5);
+        sampleAssets.forEach(t=>{
+          const sd=realData[t.symbol];
+          console.log(`[APEX] ${t.symbol}: wt1=${sd.wt1}, rsi=${sd.rsi}, volSpike=${sd.volSpike}, bb=${sd.bb?.atLower}`);
+        });
       }
 
       // Sort by number of triggered selected indicators (descending), cap at 20
