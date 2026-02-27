@@ -348,19 +348,34 @@
     </div>
   </div>
 
-  <div class="section-label">05 — TELEGRAM ALERTS (OPTIONAL)</div>
-  <div class="api-card">
-    <div class="api-field visible">
-      <div class="api-label">BOT TOKEN</div>
-      <input type="password" class="api-input" id="tgToken" placeholder="123456789:ABCdef..." oninput="saveKey('tgToken',this.value)" />
+  <div class="section-label">05 — BACKGROUND ALERTS</div>
+  <div class="card">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+      <div>
+        <div class="api-label">TELEGRAM BOT TOKEN</div>
+        <input type="password" class="api-input" id="tgToken" placeholder="123456:ABC-DEF..."
+               oninput="localStorage.setItem('tg_token',this.value)" />
+      </div>
+      <div>
+        <div class="api-label">CHAT ID</div>
+        <input type="text" class="api-input" id="tgChatId" placeholder="-100123456 or @username"
+               oninput="localStorage.setItem('tg_chat_id',this.value)" />
+      </div>
     </div>
-    <div class="api-field visible" style="margin-top:8px;">
-      <div class="api-label">CHAT ID</div>
-      <input type="text" class="api-input" id="tgChatId" placeholder="Your chat ID from @userinfobot" oninput="saveKey('tgChatId',this.value)" />
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
+      <button class="filter-btn" onclick="saveTgToBackend()" style="border-color:var(--accent2);color:var(--accent2);">✓ ENABLE ALERTS</button>
+      <button class="filter-btn" onclick="testTelegram()">📨 SEND TEST</button>
+      <button class="filter-btn" onclick="triggerScanNow()">⚡ SCAN NOW</button>
+      <button class="filter-btn" onclick="checkMonitorStatus()">📊 STATUS</button>
     </div>
-    <div class="api-note" style="margin-top:6px;">Leave blank to skip. Get bot from @BotFather, chat ID from @userinfobot.</div>
-    <button onclick="testTelegram()" style="margin-top:8px;background:transparent;border:1px solid #ffb800;color:#ffb800;font-family:Share Tech Mono,monospace;font-size:10px;padding:8px 16px;cursor:pointer;letter-spacing:2px;width:100%;">✉ TEST TELEGRAM</button>
-    <div id="tgTestResult" style="display:none;margin-top:6px;font-family:Share Tech Mono,monospace;font-size:10px;padding:6px;"></div>
+    <div id="monitorStatus" style="display:none;font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--muted);line-height:1.8;background:rgba(0,212,255,0.04);border:1px solid var(--border);padding:10px;border-radius:2px;"></div>
+    <div class="api-note" style="margin-top:8px;">
+      Backend monitors <b>140+ coins</b> every hour — sends Telegram alert when volume exceeds <b>2.5× the 20-bar average</b>.<br>
+      1. Create bot: message <a href="https://t.me/BotFather" target="_blank">@BotFather</a> → /newbot → copy token<br>
+      2. Get your Chat ID: message <a href="https://t.me/userinfobot" target="_blank">@userinfobot</a> → copy the number<br>
+      3. Start your bot: search it on Telegram → press Start
+    </div>
+    <div id="tgTestResult" style="display:none;"></div>
   </div>
 
   <button class="scan-btn" id="scanBtn" onclick="runScan()">⚡ ANALYZE WITH AI</button>
