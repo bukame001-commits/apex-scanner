@@ -282,7 +282,7 @@
     <div class="section-label">04 — TIMEFRAME</div>
     <div class="card">
       <div style="display:flex;gap:8px;flex-wrap:wrap;" id="tfBtns">
-        <button class="filter-btn" data-tf="4h" data-interval="4h" data-limit="300" onclick="selectTF(this)">4H</button>
+        <button class="filter-btn" data-tf="4h" data-interval="4h" data-limit="300" onclick="selectTF(this)" title="4H: best for crypto. Stocks use 60m Yahoo data (limited history).">4H</button>
         <button class="filter-btn" data-tf="1d" data-interval="1d" data-limit="210" onclick="selectTF(this)">DAILY</button>
         <button class="filter-btn active" data-tf="1w" data-interval="1w" data-limit="210" onclick="selectTF(this)">WEEKLY</button>
       </div>
@@ -305,7 +305,7 @@
           <input type="range" min="10" max="50" value="15" step="1" oninput="document.getElementById('volVal').textContent=(this.value/10).toFixed(1)+'x'">
         </div>
         <div class="slider-item">
-          <label>MIN CONDITIONS <span id="minVal">2</span></label>
+          <label>MIN CONDITIONS <span id="minVal">1</span></label>
           <input type="range" min="1" max="5" value="1" step="1" oninput="document.getElementById('minVal').textContent=this.value" id="minT">
         </div>
       </div>
@@ -942,7 +942,7 @@
   // Full RSI Combo — returns all signals from Marco's script
   function calcRSICombo(closes){
     const n=closes.length;
-    if(n<35) return null;
+    if(n<20) return null;
 
     // ── Core RSI (RMA-based) ──
     const {rsiSeries,upSeries,downSeries}=calcRSIComboSeries(closes,14);
@@ -1314,7 +1314,7 @@
 
   function processKlines(c, assetType){
     try {
-    if(!c||c.length<35) return null;
+    if(!c||c.length<20) return null;
     const highs  = c.map(x=>parseFloat(x[2]));
     const lows   = c.map(x=>parseFloat(x[3]));
     const closes = c.map(x=>parseFloat(x[4]));
@@ -1451,7 +1451,7 @@
       const processed={};
       Object.keys(raw).forEach(sym=>{
         const item=raw[sym];
-        if(item&&item.klines&&item.klines.length>=35){
+        if(item&&item.klines&&item.klines.length>=20){
           const d=processKlines(item.klines,'stock');
           if(d){
             d.marketCap=item.marketCap||null;
@@ -1466,16 +1466,17 @@
   // ── Fetch market cap from Yahoo Finance (free, no key) ──
   async function fetchMarketCaps(symbols){
     const caps={};
-    await Promise.all(symbols.map(async sym=>{
-      try{
-        const url='https://query2.finance.yahoo.com/v8/finance/chart/'+sym+'?interval=1d&range=1d';
-        const res=await fetch(url,{signal:AbortSignal.timeout(8000)});
-        if(!res.ok) return;
+    try{
+      // Route through backend to avoid CORS — fetch 1d kline which includes marketCap in meta
+      const res=await fetch(BACKEND+'/stocks?symbols='+symbols.join(',')+'&interval=1d',
+        {signal:AbortSignal.timeout(15000)});
+      if(res.ok){
         const data=await res.json();
-        const mc=data?.chart?.result?.[0]?.meta?.marketCap;
-        if(mc) caps[sym]=mc;
-      }catch(e){}
-    }));
+        Object.keys(data).forEach(sym=>{
+          if(data[sym]&&data[sym].marketCap) caps[sym]=data[sym].marketCap;
+        });
+      }
+    }catch(e){ console.log('fetchMarketCaps error:',e.message); }
     return caps;
   }
   async function wakeBackend(){
@@ -1540,6 +1541,8 @@
   async function runScan() {
     if(selectedMarkets.length===0){showToast('SELECT AT LEAST ONE MARKET');return;}
     if(selectedInds.length===0){showToast('SELECT AT LEAST ONE INDICATOR');return;}
+    const has4hStocks = selectedTF.tf==='4h' && selectedMarkets.some(m=>['russell2000','sp500','nasdaq'].includes(m));
+    if(has4hStocks) showToast('⚠ 4H stocks use Yahoo 60m data — limited history, fewer results than crypto');
 
     const wtT=document.getElementById('wtVal').textContent;
     const rsiT=document.getElementById('rsiVal').textContent;
@@ -1697,7 +1700,7 @@
         const passing=stockTickers.filter(t=>{
           if(!realData[t.symbol]) return false;
           const cap=marketCapData[t.symbol];
-          if(!cap) return false; // still no cap after fetch — exclude to be safe
+          if(!cap) return true; // no cap data — include (Russell 2000 are small cap by definition)
           return cap<selectedMcap*1e9;
         }).length;
         document.getElementById('loadingStatus').textContent=passing+' of '+stockTickers.filter(t=>realData[t.symbol]).length+' stocks pass <$'+selectedMcap+'B market cap filter.';
@@ -1721,6 +1724,8 @@
       const stocksWithRealData = Object.keys(realData).filter(k=>realData[k].type==='stock');
       const cryptoWithRealData = Object.keys(realData).filter(k=>realData[k].type==='crypto');
       console.log(`[APEX] Real data loaded: ${stocksWithRealData.length} stocks, ${cryptoWithRealData.length} crypto`);
+      if(stocksWithRealData.length===0 && stockTickers.length>0) console.warn('[APEX] ⚠ No stocks got real data — backend may be down or returning empty');
+      if(cryptoWithRealData.length===0 && cryptoTickers.length>0) console.warn('[APEX] ⚠ No crypto got real data — Binance/Gate.io may be blocked');
       if(stocksWithRealData.length>0){
         const sample = realData[stocksWithRealData[0]];
         console.log(`[APEX] Sample stock (${stocksWithRealData[0]}):`, JSON.stringify({
@@ -1738,8 +1743,9 @@
         // Market cap filter for stocks
         if(selectedMcap>0 && t.type==='stock'){
           const cap=marketCapData[t.symbol];
-          if(!cap) return; // no cap data — exclude when filter is active (safe default)
-          if(cap>=selectedMcap*1e9) return; // skip if over cap limit
+          // If no cap data available, include the stock (Russell 2000 are small cap by definition)
+          // Only hard-exclude if we actually know the cap exceeds the limit
+          if(cap && cap>=selectedMcap*1e9) return;
         }
         const sigs=[];
         // WaveTrend [LazyBear]
@@ -1845,7 +1851,11 @@
       if(topQualified.length===0){
         document.getElementById('loading').classList.remove('visible');
         document.getElementById('setupPanel').style.display='block';
-        showError('No assets qualified with real data on '+selectedTF.label+'. Try loosening your thresholds or selecting more indicators.');
+        const realCount2 = Object.keys(realData).length;
+        const stockCount2 = Object.keys(realData).filter(k=>realData[k].type==='stock').length;
+        const cryptoCount2 = Object.keys(realData).filter(k=>realData[k].type==='crypto').length;
+        showError(`No assets qualified on ${selectedTF.label}. Got real data for ${realCount2} assets (${stockCount2} stocks, ${cryptoCount2} crypto). ` +
+          `Try: lower MIN CONDITIONS to 1, select fewer indicators, or widen WT/RSI thresholds.`);
         return;
       }
 
