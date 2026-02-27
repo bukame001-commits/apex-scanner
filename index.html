@@ -633,6 +633,14 @@
     else { selectedInds.push(ind); check.textContent='✓'; }
   }
 
+  // ── Safe fetch with timeout (AbortSignal.timeout not supported on all mobile browsers) ──
+  function fetchWithAbort(url, timeoutMs, options){
+    const controller = new AbortController();
+    const timer = setTimeout(()=>controller.abort(), timeoutMs);
+    return fetch(url, {...(options||{}), signal: controller.signal})
+      .finally(()=>clearTimeout(timer));
+  }
+
   // ── On-screen debug log (visible without DevTools) ──
   const _debugLines = [];
   function debugLog(...args){
@@ -752,19 +760,67 @@
     if(!chatId){result.style.color='#ff3366';result.textContent='ERROR: Enter chat ID first';return;}
     result.style.color='#ffb800';result.textContent='Testing...';
     try{
-      const botRes=await fetch('https://api.telegram.org/bot'+token+'/getMe');
-      const botData=await botRes.json();
-      if(!botData.ok){result.style.color='#ff3366';result.textContent='ERROR: Invalid bot token. Get from @BotFather';return;}
-      const parsedId=isNaN(chatId)?chatId:parseInt(chatId);
-      const msgRes=await fetch('https://api.telegram.org/bot'+token+'/sendMessage',{
-        method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({chat_id:parsedId,text:'APEX SCANNER: Connection test successful!'})
-      });
-      const msgData=await msgRes.json();
-      if(msgData.ok){result.style.color='#00ff88';result.textContent='SUCCESS! Check your Telegram for the test message.';}
-      else{result.style.color='#ff3366';result.textContent='ERROR: '+msgData.description+' — Check your Chat ID';}
+      const res = await fetch(BACKEND+'/monitor/test?token='+encodeURIComponent(token)+'&chat_id='+encodeURIComponent(chatId));
+      const d = await res.json();
+      if(d.sent){result.style.color='#00ff88';result.textContent='SUCCESS! Check your Telegram.';}
+      else{result.style.color='#ff3366';result.textContent='FAILED — check token and chat ID';}
     }catch(e){result.style.color='#ff3366';result.textContent='ERROR: '+e.message;}
   }
+
+  async function saveTgToBackend(){
+    const token  = document.getElementById('tgToken').value.trim();
+    const chatId = document.getElementById('tgChatId').value.trim();
+    if(!token || !chatId){ showToast('ENTER BOTH TOKEN AND CHAT ID'); return; }
+    localStorage.setItem('tg_token', token);
+    localStorage.setItem('tg_chat_id', chatId);
+    try{
+      const res = await fetch(BACKEND+'/monitor/config', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({token, chat_id: chatId})
+      });
+      showToast(res.ok ? '✓ ALERTS ENABLED' : '✓ SAVED LOCALLY');
+    }catch(e){ showToast('✓ SAVED LOCALLY'); }
+  }
+
+  async function triggerScanNow(){
+    const token  = document.getElementById('tgToken').value.trim();
+    const chatId = document.getElementById('tgChatId').value.trim();
+    showToast('TRIGGERING VOLUME SCAN...');
+    try{
+      const url = BACKEND+'/monitor/scan-now'+(token?'?token='+encodeURIComponent(token)+'&chat_id='+encodeURIComponent(chatId):'');
+      await fetch(url);
+      showToast('⚡ SCAN STARTED — CHECK TELEGRAM IN ~30s');
+    }catch(e){ showToast('✗ BACKEND OFFLINE'); }
+  }
+
+  async function checkMonitorStatus(){
+    try{
+      const res = await fetch(BACKEND+'/monitor/status', {signal: (()=>{const c=new AbortController();setTimeout(()=>c.abort(),8000);return c.signal;})()});
+      const d = await res.json();
+      const box = document.getElementById('monitorStatus');
+      box.style.display = 'block';
+      box.innerHTML =
+        'MONITOR: '+(d.running?'<span style="color:var(--accent2)">RUNNING ✓</span>':'<span style="color:var(--danger)">STOPPED</span>')+
+        ' &nbsp;|&nbsp; SCAN: every '+d.scan_interval_minutes+' min'+
+        ' &nbsp;|&nbsp; COINS: '+d.coins_monitored+'<br>'+
+        'SPIKE THRESHOLD: '+d.spike_threshold+'× avg volume'+
+        ' &nbsp;|&nbsp; COOLDOWN: '+d.alert_cooldown_hours+'h per coin<br>'+
+        'TELEGRAM: '+(d.telegram_configured?'<span style="color:var(--accent2)">CONFIGURED ✓</span>':'<span style="color:var(--warn)">⚠ NOT SET — ADD TOKEN ABOVE</span>')+
+        ' &nbsp;|&nbsp; ALERTS SENT: '+d.recent_alerts+' (last 4h)';
+    }catch(e){
+      const box = document.getElementById('monitorStatus');
+      box.style.display = 'block';
+      box.innerHTML = '<span style="color:var(--danger)">✗ COULD NOT REACH BACKEND: '+e.message+'</span>';
+    }
+  }
+
+  // Restore saved Telegram config on load
+  window.addEventListener('load', ()=>{
+    const t = localStorage.getItem('tg_token');
+    const c = localStorage.getItem('tg_chat_id');
+    if(t && document.getElementById('tgToken'))  document.getElementById('tgToken').value  = t;
+    if(c && document.getElementById('tgChatId')) document.getElementById('tgChatId').value = c;
+  });
 
   async function sendTelegram(alerts,sentimentMap,liqData){
     const token=document.getElementById('tgToken').value.trim();
@@ -1475,7 +1531,7 @@
       const interval = selectedTF.interval==='1w'?'1w':selectedTF.interval==='4h'?'4h':'1d';
       const res = await fetch(
         `${BACKEND}/crypto?symbols=${symbols.join(',')}&interval=${interval}&limit=${selectedTF.limit}`,
-        {signal: AbortSignal.timeout(30000)}
+        {signal: (()=>{const c=new AbortController();setTimeout(()=>c.abort(),30000);return c.signal;})()}
       );
       if(!res.ok) return {};
       const raw = await res.json();
@@ -1527,7 +1583,7 @@
   async function fetchStocksBatch(symbols){
     try{
       const yahooInterval=selectedTF.interval==='1w'?'1wk':selectedTF.interval==='4h'?'60m':'1d';
-      const res=await fetch(BACKEND+'/stocks?symbols='+symbols.join(',')+'&interval='+yahooInterval,{signal:AbortSignal.timeout(30000)});
+      const res=await fetch(BACKEND+'/stocks?symbols='+symbols.join(',')+'&interval='+yahooInterval,{signal: (()=>{const c=new AbortController();setTimeout(()=>c.abort(),30000);return c.signal;})()});
       if(!res.ok) return {};
       const raw=await res.json();
       const processed={};
@@ -1551,7 +1607,7 @@
     try{
       // Route through backend to avoid CORS — fetch 1d kline which includes marketCap in meta
       const res=await fetch(BACKEND+'/stocks?symbols='+symbols.join(',')+'&interval=1d',
-        {signal:AbortSignal.timeout(15000)});
+        {signal: (()=>{const c=new AbortController();setTimeout(()=>c.abort(),15000);return c.signal;})()});
       if(res.ok){
         const data=await res.json();
         Object.keys(data).forEach(sym=>{
@@ -1566,7 +1622,10 @@
   async function fetchBinancePairs(){
     if(_binancePairsFetched) return; // only fetch once per session
     try{
-      const res = await fetch(BACKEND+'/binance-pairs', {signal: AbortSignal.timeout(15000)});
+      const pairsController = new AbortController();
+      const pairsTimer = setTimeout(()=>pairsController.abort(), 15000);
+      const res = await fetch(BACKEND+'/binance-pairs', {signal: pairsController.signal});
+      clearTimeout(pairsTimer);
       if(!res.ok) return;
       const data = await res.json();
       if(data.symbols && data.symbols.length > 100){
@@ -1601,7 +1660,7 @@
           ? 'Waking stock data server (Render free tier sleeps — please wait up to 60s)...'
           : `Still waking server... (${elapsed}s elapsed, retrying)`;
       try{
-        const res=await fetch(BACKEND+'/health',{signal:AbortSignal.timeout(interval)});
+        const _hc=new AbortController();setTimeout(()=>_hc.abort(),interval);const res=await fetch(BACKEND+'/health',{signal:_hc.signal});
         if(res.ok){
           document.getElementById('loadingStatus').textContent='Stock server is online! Fetching data...';
           return true;
