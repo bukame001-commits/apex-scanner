@@ -828,8 +828,8 @@
   });
 
   async function sendTelegram(alerts,sentimentMap,liqData){
-    const token=document.getElementById('tgToken').value.trim();
-    const chatId=document.getElementById('tgChatId').value.trim();
+    const token=document.getElementById('tgToken2').value.trim();
+    const chatId=document.getElementById('tgChatId2').value.trim();
     if(!token||!chatId) return;
     const parsedId=isNaN(chatId)?chatId:parseInt(chatId);
     const strong=alerts.filter(a=>a.score>=3);
