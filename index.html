@@ -1434,34 +1434,47 @@
   }
 
   function processKlines(c, assetType){
-    try {
     if(!c||c.length<20) return null;
-    const highs  = c.map(x=>parseFloat(x[2]));
-    const lows   = c.map(x=>parseFloat(x[3]));
-    const closes = c.map(x=>parseFloat(x[4]));
-    const volumes= c.map(x=>parseFloat(x[5]));
-    const price  = closes[closes.length-1];
-    const ema200 = calcEMA(closes,200);
-    const wt     = calcWaveTrend(highs,lows,closes);
-    const rsiCombo = calcRSICombo(closes);
-    const recent52 = closes.slice(-52);
-    const high52   = recent52.length ? Math.max(...recent52) : null;
-    const vsHigh52 = high52 ? parseFloat(((price/high52-1)*100).toFixed(2)) : null;
-    const bb       = calcBollingerBands(closes);
-    const macd     = calcMACD(closes);
-    const stochRsi = calcStochRSI(closes);
-    const atr      = calcATR(highs, lows, closes);
-    const obv      = calcOBV(closes, volumes);
-    const vwap     = calcVWAP(highs, lows, closes, volumes, assetType);
-    return {
-      price, rsi: rsiCombo?rsiCombo.rsi:null, rsiCombo, ema200,
-      ema50: calcEMA(closes,50), volSpike: calcVolSpike(volumes, assetType!=='stock' && c.length>0 && selectedTF && selectedTF.tf==='1w'),
-      vsEma200: ema200 ? parseFloat(((price/ema200-1)*100).toFixed(2)) : null,
-      vsHigh52, bb, macd, stochRsi, atr, obv, vwap,
-      wt1: wt.wt1, wt2: wt.wt2, wtCrossed: wt.crossed, wtCrossType: wt.crossType,
-      type: assetType || 'crypto'
-    };
-    } catch(e) { console.warn('processKlines error:', e.message); return null; }
+    try {
+      const highs  = c.map(x=>parseFloat(x[2]));
+      const lows   = c.map(x=>parseFloat(x[3]));
+      const closes = c.map(x=>parseFloat(x[4]));
+      const volumes= c.map(x=>parseFloat(x[5]));
+      const price  = closes[closes.length-1];
+      if(!price || isNaN(price)) return null;
+
+      // Each indicator wrapped independently — one failure won't kill the asset
+      let ema200=null, wt={wt1:null,wt2:null,crossed:false,crossType:null};
+      let rsiCombo=null, bb=null, macd=null, stochRsi=null;
+      let atr=null, obv=null, vwap=null, ema50=null, volSpike=null;
+
+      try { ema200   = calcEMA(closes,200); }           catch(e){}
+      try { ema50    = calcEMA(closes,50); }            catch(e){}
+      try { wt       = calcWaveTrend(highs,lows,closes); } catch(e){}
+      try { rsiCombo = calcRSICombo(closes); }          catch(e){}
+      try { bb       = calcBollingerBands(closes); }    catch(e){}
+      try { macd     = calcMACD(closes); }              catch(e){}
+      try { stochRsi = calcStochRSI(closes); }          catch(e){}
+      try { atr      = calcATR(highs,lows,closes); }    catch(e){}
+      try { obv      = calcOBV(closes,volumes); }       catch(e){}
+      try { vwap     = calcVWAP(highs,lows,closes,volumes,assetType); } catch(e){}
+      try { volSpike = calcVolSpike(volumes, assetType!=='stock' && selectedTF && selectedTF.tf==='1w'); } catch(e){}
+
+      const recent52 = closes.slice(-52);
+      const high52   = recent52.length ? Math.max(...recent52) : null;
+      const vsHigh52 = high52 ? parseFloat(((price/high52-1)*100).toFixed(2)) : null;
+
+      return {
+        price, rsi: rsiCombo?rsiCombo.rsi:null, rsiCombo, ema200, ema50, volSpike,
+        vsEma200: ema200 ? parseFloat(((price/ema200-1)*100).toFixed(2)) : null,
+        vsHigh52, bb, macd, stochRsi, atr, obv, vwap,
+        wt1: wt.wt1, wt2: wt.wt2, wtCrossed: wt.crossed, wtCrossType: wt.crossType,
+        type: assetType || 'crypto'
+      };
+    } catch(e) {
+      debugLog('processKlines CRASH: ' + e.message);
+      return null;
+    }
   }
 
   // ── Fetch crypto: Binance Futures → Spot → Gate.io → CoinGecko ──
