@@ -139,7 +139,37 @@
 
   .new-scan-btn{background:transparent;border:1px solid var(--border);color:var(--muted);font-family:'Share Tech Mono',monospace;font-size:10px;padding:6px 14px;cursor:pointer;letter-spacing:2px;transition:all 0.15s;}
   .new-scan-btn:hover{border-color:var(--accent);color:var(--accent);}
-  .citadel-btn{background:transparent;border:1px solid #f0c040;color:#f0c040;font-family:'Share Tech Mono',monospace;font-size:10px;padding:6px 14px;cursor:pointer;letter-spacing:2px;transition:all 0.15s;}
+  .intel-btn{background:transparent;border:1px solid #a855f7;color:#a855f7;font-family:'Share Tech Mono',monospace;font-size:10px;padding:6px 14px;cursor:pointer;letter-spacing:2px;transition:all 0.15s;}
+  .intel-btn:hover{background:rgba(168,85,247,0.08);box-shadow:0 0 20px rgba(168,85,247,0.2);}
+  .intel-btn:disabled{opacity:0.4;cursor:not-allowed;}
+  .intel-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:1001;overflow-y:auto;padding:20px;}
+  .intel-modal.visible{display:flex;align-items:flex-start;justify-content:center;}
+  .intel-box{background:#0a0a0f;border:1px solid #a855f7;max-width:700px;width:100%;padding:28px;position:relative;margin:auto;}
+  .intel-title{font-family:'Orbitron',monospace;font-size:14px;font-weight:700;color:#a855f7;letter-spacing:3px;margin-bottom:18px;}
+  .intel-section{margin-bottom:18px;}
+  .intel-label{font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:2px;margin-bottom:6px;}
+  .intel-input{width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:'Share Tech Mono',monospace;font-size:12px;padding:8px 10px;box-sizing:border-box;}
+  .intel-input:focus{outline:none;border-color:#a855f7;}
+  .intel-row{display:flex;gap:8px;}
+  .intel-row .intel-input{flex:1;}
+  .intel-btn-primary{background:transparent;border:1px solid #a855f7;color:#a855f7;font-family:'Share Tech Mono',monospace;font-size:11px;padding:10px 20px;cursor:pointer;letter-spacing:2px;width:100%;transition:all 0.2s;margin-top:4px;}
+  .intel-btn-primary:hover{background:rgba(168,85,247,0.12);}
+  .intel-btn-primary:disabled{opacity:0.4;cursor:not-allowed;}
+  .intel-status{font-family:'Share Tech Mono',monospace;font-size:11px;color:#a855f7;margin-top:10px;min-height:18px;}
+  .intel-close{position:absolute;top:14px;right:14px;background:transparent;border:1px solid var(--border);color:var(--muted);font-family:'Share Tech Mono',monospace;font-size:10px;padding:4px 10px;cursor:pointer;letter-spacing:1px;}
+  .intel-close:hover{border-color:#a855f7;color:#a855f7;}
+  .intel-step{display:none;}
+  .intel-step.active{display:block;}
+  .intel-channel-row{display:flex;gap:6px;margin-bottom:6px;}
+  .intel-channel-row .intel-input{flex:1;}
+  .intel-rm-btn{background:transparent;border:1px solid var(--border);color:var(--muted);font-family:'Share Tech Mono',monospace;font-size:10px;padding:6px 10px;cursor:pointer;}
+  .intel-rm-btn:hover{border-color:var(--danger);color:var(--danger);}
+  .intel-add-btn{background:transparent;border:1px solid var(--border);color:var(--muted);font-family:'Share Tech Mono',monospace;font-size:10px;padding:6px 14px;cursor:pointer;letter-spacing:1px;margin-top:4px;}
+  .intel-add-btn:hover{border-color:#a855f7;color:#a855f7;}
+  .intel-badge{display:inline-block;padding:2px 8px;font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:1px;border-radius:2px;}
+  .intel-badge.green{background:rgba(0,255,136,0.1);color:var(--accent2);border:1px solid var(--accent2);}
+  .intel-badge.red{background:rgba(255,60,60,0.1);color:var(--danger);border:1px solid var(--danger);}
+    .citadel-btn{background:transparent;border:1px solid #f0c040;color:#f0c040;font-family:'Share Tech Mono',monospace;font-size:10px;padding:6px 14px;cursor:pointer;letter-spacing:2px;transition:all 0.15s;}
   .citadel-btn:hover{background:rgba(240,192,64,0.08);box-shadow:0 0 20px rgba(240,192,64,0.2);}
   .citadel-btn:disabled{opacity:0.4;cursor:not-allowed;}
   .citadel-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:1000;overflow-y:auto;padding:20px;}
@@ -405,6 +435,7 @@
       <div class="section-label" style="margin:0;flex:1">SCAN RESULTS</div>
       <button class="new-scan-btn" onclick="newScan()">↺ NEW SCAN</button>
       <button class="citadel-btn" id="citadelBtn" onclick="runCitadelReport()">⚔ CITADEL REPORT</button>
+      <button class="intel-btn" id="intelBtn" onclick="openIntelPanel()">🧠 INTELLIGENCE</button>
     </div>
     <div class="results-stats">
       <div class="stat-box"><div class="stat-val" id="statTotal">0</div><div class="stat-label">TOTAL</div></div>
@@ -427,6 +458,100 @@
   </div>
 </div>
 
+<div class="intel-modal" id="intelModal">
+  <div class="intel-box">
+    <button class="intel-close" onclick="closeIntel()">✕ CLOSE</button>
+    <div class="intel-title">🧠 TELEGRAM INTELLIGENCE</div>
+
+    <!-- Step 0: Check auth status -->
+    <div class="intel-step active" id="intelStep0">
+      <div class="intel-section">
+        <div class="intel-label">CONNECTION STATUS</div>
+        <div id="intelAuthStatus" style="font-family:'Share Tech Mono',monospace;font-size:12px;color:var(--muted);">Checking...</div>
+      </div>
+      <div id="intelAuthOkPanel" style="display:none">
+        <div class="intel-section">
+          <div class="intel-label">CHANNELS TO MONITOR</div>
+          <div id="intelChannelList"></div>
+          <button class="intel-add-btn" onclick="intelAddChannel()">+ ADD CHANNEL</button>
+        </div>
+        <div class="intel-section">
+          <div class="intel-label">LOOKBACK PERIOD</div>
+          <select class="intel-input" id="intelHours" style="cursor:pointer">
+            <option value="6">Last 6 hours</option>
+            <option value="12">Last 12 hours</option>
+            <option value="24" selected>Last 24 hours</option>
+            <option value="48">Last 48 hours</option>
+          </select>
+        </div>
+        <button class="intel-btn-primary" id="intelRunBtn" onclick="runIntelAnalysis()">🧠 RUN INTELLIGENCE ANALYSIS</button>
+        <div class="intel-status" id="intelRunStatus"></div>
+        <div style="margin-top:14px;border-top:1px solid var(--border);padding-top:12px;">
+          <button class="intel-add-btn" onclick="showIntelStep('intelStep1')">⚙ RECONNECT / CHANGE ACCOUNT</button>
+        </div>
+      </div>
+      <div id="intelNotAuthPanel" style="display:none">
+        <div class="intel-status" style="color:var(--warn)">Not connected. Complete setup below.</div>
+        <button class="intel-btn-primary" style="margin-top:12px" onclick="showIntelStep('intelStep1')">START SETUP →</button>
+      </div>
+    </div>
+
+    <!-- Step 1: API credentials -->
+    <div class="intel-step" id="intelStep1">
+      <div class="intel-section">
+        <div class="intel-label">STEP 1 — TELEGRAM API CREDENTIALS</div>
+        <div style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--muted);margin-bottom:10px;line-height:1.6">
+          Get free credentials at <b style="color:#a855f7">my.telegram.org</b><br>
+          → Log in → API Development Tools → Create App
+        </div>
+        <div class="intel-row" style="margin-bottom:8px">
+          <input class="intel-input" id="intelApiId" placeholder="api_id (numbers only)" type="number">
+          <input class="intel-input" id="intelApiHash" placeholder="api_hash" type="password">
+        </div>
+        <input class="intel-input" id="intelPhone" placeholder="Phone number with country code e.g. +44..." type="tel" style="margin-bottom:8px">
+        <button class="intel-btn-primary" id="intelSendCodeBtn" onclick="intelSendCode()">SEND CODE TO MY TELEGRAM →</button>
+        <div class="intel-status" id="intelStep1Status"></div>
+      </div>
+    </div>
+
+    <!-- Step 2: Enter code -->
+    <div class="intel-step" id="intelStep2">
+      <div class="intel-section">
+        <div class="intel-label">STEP 2 — ENTER VERIFICATION CODE</div>
+        <div style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--muted);margin-bottom:10px">
+          Check your Telegram app for the code sent by Telegram
+        </div>
+        <input class="intel-input" id="intelCode" placeholder="5-digit code" type="number" style="margin-bottom:8px;letter-spacing:6px;font-size:18px">
+        <button class="intel-btn-primary" id="intelVerifyBtn" onclick="intelVerifyCode()">VERIFY CODE →</button>
+        <div class="intel-status" id="intelStep2Status"></div>
+      </div>
+    </div>
+
+    <!-- Step 2b: 2FA -->
+    <div class="intel-step" id="intelStep2b">
+      <div class="intel-section">
+        <div class="intel-label">2FA — CLOUD PASSWORD</div>
+        <div style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--muted);margin-bottom:10px">
+          Your account has Two-Factor Authentication enabled. Enter your cloud password.
+        </div>
+        <input class="intel-input" id="intel2faPass" placeholder="Cloud password" type="password" style="margin-bottom:8px">
+        <button class="intel-btn-primary" onclick="intelVerify2FA()">VERIFY PASSWORD →</button>
+        <div class="intel-status" id="intelStep2bStatus"></div>
+      </div>
+    </div>
+
+    <!-- Step 3: Success -->
+    <div class="intel-step" id="intelStep3">
+      <div style="text-align:center;padding:20px 0">
+        <div style="font-size:40px;margin-bottom:12px">✅</div>
+        <div style="font-family:'Orbitron',monospace;font-size:14px;color:var(--accent2);letter-spacing:2px">CONNECTED</div>
+        <div style="font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--muted);margin-top:8px">Session saved to Railway. You won't need to do this again.</div>
+        <button class="intel-btn-primary" style="margin-top:20px" onclick="showIntelStep('intelStep0');checkIntelAuth()">CONTINUE →</button>
+      </div>
+    </div>
+
+  </div>
+</div>
 <div class="citadel-modal" id="citadelModal">
   <div class="citadel-box">
     <button class="citadel-close" onclick="closeCitadel()">✕ CLOSE</button>
@@ -2626,6 +2751,202 @@ Return ONLY the raw JSON array. No markdown, no backticks, no preamble.`;
 
   function closeCitadel() {
     document.getElementById('citadelModal').classList.remove('visible');
+  }
+
+  // ── Telegram Intelligence ─────────────────────────────────
+  let _intelApiId   = '';
+  let _intelApiHash = '';
+  let _intelPhone   = '';
+  let _intelChannels = JSON.parse(localStorage.getItem('apex_intel_channels') || '[]');
+  if (!_intelChannels.length) _intelChannels = [
+    {name: '', id: ''},
+    {name: '', id: ''},
+  ];
+
+  function openIntelPanel() {
+    document.getElementById('intelModal').classList.add('visible');
+    checkIntelAuth();
+    renderIntelChannels();
+  }
+
+  function closeIntel() {
+    document.getElementById('intelModal').classList.remove('visible');
+  }
+
+  function showIntelStep(stepId) {
+    document.querySelectorAll('.intel-step').forEach(s => s.classList.remove('active'));
+    document.getElementById(stepId).classList.add('active');
+  }
+
+  async function checkIntelAuth() {
+    const statusEl     = document.getElementById('intelAuthStatus');
+    const authOkPanel  = document.getElementById('intelAuthOkPanel');
+    const notAuthPanel = document.getElementById('intelNotAuthPanel');
+    statusEl.textContent = 'Checking connection...';
+    try {
+      const res  = await fetch(BACKEND + '/tg-intel/status');
+      const data = await res.json();
+      if (data.authenticated) {
+        statusEl.innerHTML = '<span style="color:var(--accent2)">● CONNECTED</span>';
+        authOkPanel.style.display  = 'block';
+        notAuthPanel.style.display = 'none';
+        // Show apex/vol data status
+        const apexNote = data.apex_count > 0 ? `${data.apex_count} signals` : 'No scan data yet';
+        const volNote  = data.vol_count  > 0 ? `${data.vol_count} spikes`   : 'No spike data yet';
+        statusEl.innerHTML += `<span style="font-size:10px;color:var(--muted);margin-left:12px">APEX: ${apexNote} · Spikes: ${volNote}</span>`;
+      } else {
+        statusEl.innerHTML = '<span style="color:var(--warn)">● NOT CONNECTED</span>';
+        authOkPanel.style.display  = 'none';
+        notAuthPanel.style.display = 'block';
+      }
+    } catch(e) {
+      statusEl.textContent = 'Cannot reach backend';
+    }
+  }
+
+  function renderIntelChannels() {
+    const container = document.getElementById('intelChannelList');
+    container.innerHTML = '';
+    _intelChannels.forEach((ch, i) => {
+      const row = document.createElement('div');
+      row.className = 'intel-channel-row';
+      row.innerHTML = `
+        <input class="intel-input" placeholder="Display name" value="${ch.name}"
+          oninput="_intelChannels[${i}].name=this.value;saveIntelChannels()">
+        <input class="intel-input" placeholder="@handle or numeric ID" value="${ch.id}"
+          oninput="_intelChannels[${i}].id=this.value;saveIntelChannels()">
+        <button class="intel-rm-btn" onclick="intelRemoveChannel(${i})">✕</button>
+      `;
+      container.appendChild(row);
+    });
+  }
+
+  function intelAddChannel() {
+    _intelChannels.push({name: '', id: ''});
+    renderIntelChannels();
+  }
+
+  function intelRemoveChannel(i) {
+    _intelChannels.splice(i, 1);
+    renderIntelChannels();
+    saveIntelChannels();
+  }
+
+  function saveIntelChannels() {
+    localStorage.setItem('apex_intel_channels', JSON.stringify(_intelChannels));
+  }
+
+  async function intelSendCode() {
+    const btn    = document.getElementById('intelSendCodeBtn');
+    const status = document.getElementById('intelStep1Status');
+    _intelApiId   = document.getElementById('intelApiId').value.trim();
+    _intelApiHash = document.getElementById('intelApiHash').value.trim();
+    _intelPhone   = document.getElementById('intelPhone').value.trim();
+    if (!_intelApiId || !_intelApiHash || !_intelPhone) {
+      status.textContent = 'Fill in all fields';
+      return;
+    }
+    btn.disabled     = true;
+    status.textContent = 'Sending code...';
+    try {
+      const res  = await fetch(BACKEND + '/tg-intel/send-code', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({api_id: _intelApiId, api_hash: _intelApiHash, phone: _intelPhone})
+      });
+      const data = await res.json();
+      if (data.ok) {
+        status.textContent = '';
+        showIntelStep('intelStep2');
+      } else {
+        status.textContent = 'Error: ' + data.error;
+        btn.disabled = false;
+      }
+    } catch(e) {
+      status.textContent = 'Connection error: ' + e.message;
+      btn.disabled = false;
+    }
+  }
+
+  async function intelVerifyCode() {
+    const btn    = document.getElementById('intelVerifyBtn');
+    const status = document.getElementById('intelStep2Status');
+    const code   = document.getElementById('intelCode').value.trim();
+    if (!code) { status.textContent = 'Enter the code'; return; }
+    btn.disabled     = true;
+    status.textContent = 'Verifying...';
+    try {
+      const res  = await fetch(BACKEND + '/tg-intel/verify-code', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({phone: _intelPhone, code, api_id: _intelApiId, api_hash: _intelApiHash})
+      });
+      const data = await res.json();
+      if (data.ok) {
+        showIntelStep('intelStep3');
+      } else if (data.needs_2fa) {
+        showIntelStep('intelStep2b');
+      } else {
+        status.textContent = 'Error: ' + data.error;
+        btn.disabled = false;
+      }
+    } catch(e) {
+      status.textContent = 'Connection error: ' + e.message;
+      btn.disabled = false;
+    }
+  }
+
+  async function intelVerify2FA() {
+    const status = document.getElementById('intelStep2bStatus');
+    const pass   = document.getElementById('intel2faPass').value.trim();
+    if (!pass) { status.textContent = 'Enter password'; return; }
+    status.textContent = 'Verifying 2FA...';
+    try {
+      const res  = await fetch(BACKEND + '/tg-intel/verify-2fa', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({password: pass, api_id: _intelApiId, api_hash: _intelApiHash})
+      });
+      const data = await res.json();
+      if (data.ok) {
+        showIntelStep('intelStep3');
+      } else {
+        status.textContent = 'Error: ' + data.error;
+      }
+    } catch(e) {
+      status.textContent = 'Connection error: ' + e.message;
+    }
+  }
+
+  async function runIntelAnalysis() {
+    const btn    = document.getElementById('intelRunBtn');
+    const status = document.getElementById('intelRunStatus');
+    const hours  = document.getElementById('intelHours').value;
+    const channels = _intelChannels
+      .filter(c => c.name && c.id)
+      .map(c => [c.name, c.id]);
+    if (!channels.length) {
+      status.textContent = 'Add at least one channel first';
+      return;
+    }
+    btn.disabled       = true;
+    status.textContent = `Fetching posts from ${channels.length} channels...`;
+    try {
+      const res  = await fetch(BACKEND + '/tg-intel/run', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({channels, hours: parseInt(hours)})
+      });
+      const data = await res.json();
+      if (data.ok) {
+        status.textContent = '✅ Analysis running — report arriving on Telegram shortly';
+      } else {
+        status.textContent = 'Error: ' + data.error;
+      }
+    } catch(e) {
+      status.textContent = 'Connection error: ' + e.message;
+    }
+    btn.disabled = false;
   }
 
 </script>
