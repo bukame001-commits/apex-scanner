@@ -2344,6 +2344,23 @@
       allAlerts = parsed;
       sendTelegram(parsed, sentimentMap, liqData);
 
+      // ── Auto-send top results to backend for Intelligence analysis ──
+      try {
+        const apexPayload = parsed.slice(0, 30).map(a => ({
+          symbol:   a.symbol,
+          score:    a.score,
+          rsi:      a.rsi,
+          wt1:      a.wt1,
+          vsEma200: a.vsEma200,
+          signals:  a.signals || [],
+        }));
+        fetch(BACKEND + '/apex-results', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({alerts: apexPayload})
+        }).catch(() => {});
+      } catch(e) {}
+
       // Show results immediately — no waiting for AI
       document.getElementById('loading').classList.remove('visible');
       document.getElementById('resultsSection').classList.add('visible');
