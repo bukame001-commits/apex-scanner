@@ -2869,7 +2869,9 @@ Return ONLY the raw JSON array. No markdown, no backticks, no preamble.`;
       const deployScore = data.deploy_score;   // 0-5
       const verdict     = data.verdict;
       const historical  = data.historical_context;
-      const signals     = data.signals;        // array of signal objects
+      const signals     = data.signals;
+      const lthPrice    = data.lth_price;
+      const btcPrice    = data.btc_price;
 
       // Score color
       const sColor = deployScore >= 4 ? '#00ff88' : deployScore >= 3 ? '#ffb800' : deployScore >= 2 ? '#ff6b35' : '#ff3366';
@@ -2905,6 +2907,42 @@ Return ONLY the raw JSON array. No markdown, no backticks, no preamble.`;
           <div style="font-family:Share Tech Mono,monospace;font-size:9px;letter-spacing:3px;color:var(--muted);margin-bottom:8px;">DEPLOY SCORE</div>
           <div style="font-family:Share Tech Mono,monospace;font-size:11px;color:${sColor};font-weight:700;">${sLabel}</div>
         </div>
+
+
+        <!-- LTH Proximity Widget -->
+        ${(lthPrice && btcPrice) ? (() => {
+          const pct=((btcPrice-lthPrice)/lthPrice*100);
+          const absPct=Math.abs(pct);
+          const above=pct>=0;
+          const bC=above?(pct>40?'#ff3366':pct>15?'#ffb800':'#00d4ff'):(absPct>20?'#00ff88':absPct>5?'#ffb800':'#ff6b35');
+          const dist=above?('+'+pct.toFixed(1)+'% above LTH Realized Price'):(pct.toFixed(1)+'% below LTH Realized Price');
+          const zone=above?(pct>40?'DANGER ZONE - well above LTH cost basis':pct>15?'ELEVATED - not a bottom signal':'NEAR LTH - approaching accumulation'):(absPct>20?'CAPITULATION ZONE - LTH holders underwater, strongest buy signal historically':absPct>5?'BELOW LTH - in accumulation territory':'AT LTH LEVEL - critical support/resistance');
+          const zp=(50/130*100).toFixed(1);
+          const bp=Math.min(99,Math.max(1,(pct+50)/130*100)).toFixed(1);
+          const bF='$'+btcPrice.toLocaleString(undefined,{maximumFractionDigits:0});
+          const lF='$'+lthPrice.toLocaleString(undefined,{maximumFractionDigits:0});
+          return ''
+            +'<div style="padding:14px 16px;border:1px solid '+bC+'55;border-radius:4px;background:rgba(0,0,0,0.3);margin-bottom:16px;">'
+            +'<div style="font-family:Share Tech Mono,monospace;font-size:9px;color:var(--muted);letter-spacing:2px;margin-bottom:10px;">&#128205; BTC vs LTH REALIZED PRICE</div>'
+            +'<div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:12px;gap:8px;">'
+            +'<div><div style="font-family:Share Tech Mono,monospace;font-size:8px;color:var(--muted);margin-bottom:3px;">BTC PRICE</div>'
+            +'<div style="font-family:Orbitron,monospace;font-size:18px;color:#fff;font-weight:700;">'+bF+'</div></div>'
+            +'<div style="text-align:center;flex:1;"><div style="font-family:Orbitron,monospace;font-size:13px;color:'+bC+';font-weight:700;">'+dist+'</div></div>'
+            +'<div style="text-align:right;"><div style="font-family:Share Tech Mono,monospace;font-size:8px;color:#00d4ff;margin-bottom:3px;">LTH REALIZED</div>'
+            +'<div style="font-family:Orbitron,monospace;font-size:18px;color:#00d4ff;font-weight:700;">'+lF+'</div></div>'
+            +'</div>'
+            +'<div style="position:relative;height:28px;background:rgba(255,255,255,0.04);border-radius:3px;margin-bottom:6px;">'
+            +'<div style="position:absolute;inset:0;background:linear-gradient(to right,#00ff8833 0%,transparent 38%,transparent 55%,#ff336622 100%);border-radius:3px;"></div>'
+            +'<div style="position:absolute;top:0;bottom:0;left:'+zp+'%;width:2px;background:#00d4ff99;"></div>'
+            +'<div style="position:absolute;bottom:1px;left:'+zp+'%;font-family:Share Tech Mono,monospace;font-size:7px;color:#00d4ff;transform:translateX(-50%);">LTH</div>'
+            +'<div style="position:absolute;top:0;bottom:0;left:'+bp+'%;width:3px;background:'+bC+';border-radius:2px;box-shadow:0 0 8px '+bC+';"></div>'
+            +'<div style="position:absolute;top:2px;left:'+bp+'%;font-family:Share Tech Mono,monospace;font-size:7px;color:'+bC+';transform:translateX(-50%);">BTC</div>'
+            +'</div>'
+            +'<div style="display:flex;justify-content:space-between;font-family:Share Tech Mono,monospace;font-size:8px;color:var(--muted);margin-bottom:8px;">'
+            +'<span>-50%</span><span>-25%</span><span style="color:#00d4ff;">LTH</span><span>+25%</span><span>+80%</span></div>'
+            +'<div style="font-family:Share Tech Mono,monospace;font-size:10px;color:'+bC+';font-weight:700;">'+zone+'</div>'
+            +'</div>';
+        })() : ''}
 
         <!-- Historical context -->
         ${historical ? `<div style="padding:12px 14px;border:1px solid rgba(0,212,255,0.2);border-radius:3px;background:rgba(0,212,255,0.03);margin-bottom:16px;">
