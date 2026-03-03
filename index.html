@@ -1092,6 +1092,95 @@
         researchHtml = '<div style="margin-top:8px;font-family:Share Tech Mono,monospace;font-size:9px;color:var(--muted);font-style:italic;">Fetching research intel...</div>';
       }
 
+      // ── Citadel signal blocks ──
+      // EMA200 distance bar
+      let emaBarHtml = '';
+      if(a.vsEma200 !== undefined && a.vsEma200 !== null) {
+        const ev = a.vsEma200;
+        const eColor = ev < 0 ? '#00ff88' : ev < 5 ? '#ffb800' : '#ff6b35';
+        const eBg    = ev < 0 ? 'rgba(0,255,136,0.08)' : ev < 5 ? 'rgba(255,184,0,0.08)' : 'rgba(255,107,53,0.08)';
+        const eBorder= ev < 0 ? 'rgba(0,255,136,0.25)' : ev < 5 ? 'rgba(255,184,0,0.25)' : 'rgba(255,107,53,0.25)';
+        const eLabel = ev < 0 ? '▼ BELOW 200 EMA' : ev < 5 ? '≈ NEAR 200 EMA' : '▲ ABOVE 200 EMA';
+        // Visual distance bar — capped at 30%
+        const barPct = Math.min(Math.abs(ev) / 30 * 100, 100);
+        emaBarHtml =
+          '<div style="margin-top:8px;padding:8px 10px;border:1px solid '+eBorder+';border-radius:2px;background:'+eBg+';">'+
+            '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;">'+
+              '<span style="font-family:Share Tech Mono,monospace;font-size:9px;color:var(--muted);letter-spacing:2px;">200 EMA DISTANCE</span>'+
+              '<span style="font-family:Share Tech Mono,monospace;font-size:11px;color:'+eColor+';font-weight:700;">'+(ev>0?'+':'')+ev+'%  '+eLabel+'</span>'+
+            '</div>'+
+            '<div style="height:3px;background:rgba(255,255,255,0.06);border-radius:2px;overflow:hidden;">'+
+              '<div style="height:100%;width:'+barPct+'%;background:'+eColor+';border-radius:2px;transition:width 0.6s ease;"></div>'+
+            '</div>'+
+          '</div>';
+      }
+
+      // CVD divergence block
+      let cvdHtml = '';
+      if(a.cvdBullDiv || a.cvdBearDiv) {
+        const cvdColor  = a.cvdBullDiv ? '#00bfff' : '#ff3366';
+        const cvdBorder = a.cvdBullDiv ? 'rgba(0,191,255,0.3)' : 'rgba(255,51,102,0.3)';
+        const cvdBg     = a.cvdBullDiv ? 'rgba(0,191,255,0.06)' : 'rgba(255,51,102,0.06)';
+        const cvdLabel  = a.cvdBullDiv
+          ? '🔵 CVD BULLISH DIVERGENCE — Hidden accumulation detected. Smart money absorbing sells.'
+          : '🔴 CVD BEARISH DIVERGENCE — Hidden distribution detected. Smart money offloading into strength.';
+        cvdHtml =
+          '<div style="margin-top:8px;padding:8px 10px;border:1px solid '+cvdBorder+';border-radius:2px;background:'+cvdBg+';">'+
+            '<span style="font-family:Share Tech Mono,monospace;font-size:10px;color:'+cvdColor+';">'+cvdLabel+'</span>'+
+          '</div>';
+      }
+
+      // Liquidation target block
+      let liqTargetHtml = '';
+      if(a.liqTarget) {
+        liqTargetHtml =
+          '<div style="margin-top:8px;padding:8px 10px;border:1px solid rgba(255,184,0,0.3);border-radius:2px;background:rgba(255,184,0,0.05);">'+
+            '<div style="display:flex;justify-content:space-between;align-items:center;">'+
+              '<span style="font-family:Share Tech Mono,monospace;font-size:9px;color:var(--muted);letter-spacing:2px;">🎯 LIQ TARGET</span>'+
+              '<span style="font-family:Share Tech Mono,monospace;font-size:11px;color:#ffb800;font-weight:700;">'+a.liqTarget+'</span>'+
+            '</div>'+
+            '<div style="font-family:Share Tech Mono,monospace;font-size:9px;color:var(--muted);margin-top:3px;">Short liquidation cluster — price will seek this level</div>'+
+          '</div>';
+      }
+
+      // Basis block
+      let basisHtml = '';
+      if(a.basis !== undefined && a.basis !== null) {
+        const bColor  = a.basis < -0.05 ? '#00ff88' : a.basis > 0.3 ? '#ff6b35' : 'var(--muted)';
+        const bLabel  = a.basis < -0.05 ? '🟢 SPOT PREMIUM — Real buying, not leverage'
+                      : a.basis > 0.3   ? '⚠ FUTURES PREMIUM — Leverage heavy, fragile'
+                      : '⚪ BASIS NEUTRAL';
+        basisHtml =
+          '<div style="margin-top:6px;padding:6px 10px;border:1px solid rgba(255,255,255,0.06);border-radius:2px;background:rgba(0,0,0,0.2);">'+
+            '<div style="display:flex;justify-content:space-between;">'+
+              '<span style="font-family:Share Tech Mono,monospace;font-size:9px;color:var(--muted);letter-spacing:1px;">BASIS</span>'+
+              '<span style="font-family:Share Tech Mono,monospace;font-size:10px;color:'+bColor+';">'+(a.basis>0?'+':'')+a.basis.toFixed(3)+'%  '+bLabel+'</span>'+
+            '</div>'+
+          '</div>';
+      }
+
+      // Taker ratio block
+      let takerHtml = '';
+      if(a.takerColor) {
+        const tColor  = a.takerColor==='green' ? '#00ff88' : a.takerColor==='red' ? '#ff3366' : '#ffb800';
+        const tBorder = a.takerColor==='green' ? 'rgba(0,255,136,0.25)' : a.takerColor==='red' ? 'rgba(255,51,102,0.25)' : 'rgba(255,184,0,0.25)';
+        const tBg     = a.takerColor==='green' ? 'rgba(0,255,136,0.05)' : a.takerColor==='red' ? 'rgba(255,51,102,0.05)' : 'rgba(255,184,0,0.05)';
+        const tLabel  = a.takerColor==='green' ? 'BUYERS DOMINANT' : a.takerColor==='red' ? 'SELLERS DOMINANT' : 'MIXED FLOW';
+        takerHtml =
+          '<div style="margin-top:6px;padding:6px 10px;border:1px solid '+tBorder+';border-radius:2px;background:'+tBg+';">'+
+            '<div style="display:flex;justify-content:space-between;">'+
+              '<span style="font-family:Share Tech Mono,monospace;font-size:9px;color:var(--muted);letter-spacing:1px;">TAKER FLOW</span>'+
+              '<span style="font-family:Share Tech Mono,monospace;font-size:10px;color:'+tColor+';font-weight:700;">'+(a.takerPct||'')+'% buy  '+tLabel+'</span>'+
+            '</div>'+
+          '</div>';
+      }
+
+      // Verdict badge (replaces old STRONG/MODERATE)
+      const verdictText  = a.citadelVerdict || (isStrong ? '🔥 STRONG' : '⚡ MODERATE');
+      const verdictColor = verdictText.includes('STRONG') ? '#00ff88'
+                         : verdictText.includes('WATCH')  ? '#ffb800'
+                         : verdictText.includes('AVOID')  ? '#ff3366' : 'var(--accent)';
+
       card.innerHTML =
         '<div class="alert-top">'+
           '<div>'+
@@ -1099,18 +1188,22 @@
             '<div class="alert-market">'+(a.market||'')+' &bull; '+((a.type||'').toUpperCase())+'</div>'+
           '</div>'+
           '<div style="text-align:right">'+
-            '<div class="alert-score '+(isStrong?'':'moderate')+'">'+Math.min(a.score,selectedInds.length)+'/'+selectedInds.length+'</div>'+
-            '<div style="font-family:Share Tech Mono,monospace;font-size:9px;color:var(--muted);margin-top:2px;">'+(isStrong?'🔥 STRONG':'⚡ MODERATE')+'</div>'+
+            '<div class="alert-score '+(isStrong?'':'moderate')+'">'+Math.min(a.score,10)+'/10</div>'+
+            '<div style="font-family:Share Tech Mono,monospace;font-size:9px;color:'+verdictColor+';margin-top:2px;font-weight:700;">'+verdictText+'</div>'+
           '</div>'+
         '</div>'+
         '<div class="alert-signals">'+sigsHtml+'</div>'+
         rsiComboHtml+
+        emaBarHtml+
+        cvdHtml+
+        liqTargetHtml+
+        basisHtml+
+        takerHtml+
         sentHtml+liqHtml+
         researchHtml+
         '<div class="alert-values">'+
           (a.price!==undefined?'<div class="alert-val">PRICE <span>$'+parseFloat(a.price).toPrecision(5)+'</span></div>':'')+
           (a.marketCap?'<div class="alert-val">MCAP <span>'+(a.marketCap>=1e9?(a.marketCap/1e9).toFixed(2)+'B':(a.marketCap/1e6).toFixed(0)+'M')+'</span></div>':'')+
-          (a.vsEma200!==undefined&&a.vsEma200!==null?'<div class="alert-val" title="% above/below 200 EMA">EMA200 <span style="color:'+(a.vsEma200<0?'#00ff88':'#ff6b35')+';">'+(a.vsEma200>0?'+':'')+a.vsEma200+'%</span></div>':'')+
           (a.wt1!==undefined&&a.wt1!==null?'<div class="alert-val">WT1 <span style="color:'+(a.wt1<-53?'#00ff88':a.wt1>53?'#ff3366':'var(--accent)')+';">'+a.wt1+'</span></div>':'')+
           (a.wt2!==undefined&&a.wt2!==null?'<div class="alert-val">WT2 <span>'+a.wt2+'</span></div>':'')+
           (a.wtCrossed?'<div class="alert-val"><span style="color:'+(a.wtCrossType==='bullish'?'#00ff88':'#ff3366')+';font-weight:700;">'+(a.wtCrossType==='bullish'?'▲ BULL CROSS':'▼ BEAR CROSS')+'</span></div>':'')+
@@ -2322,7 +2415,14 @@
           rsi: rd.rsi, rsiCombo: rd.rsiCombo,
           vsEma200: rd.vsEma200, volSpike: rd.volSpike,
           marketCap: q.marketCap || null,
-          fundamentals: '', disruptive: '', news: '', verdict: ''
+          fundamentals: '', disruptive: '', news: '', verdict: '',
+          citadelVerdict: rd.citadelVerdict || '',
+          cvdBullDiv: rd.cvdBullDiv || false,
+          cvdBearDiv: rd.cvdBearDiv || false,
+          liqTarget:  rd.liqTarget  || null,
+          basis:      rd.basis !== undefined ? rd.basis : null,
+          takerColor: rd.takerColor || null,
+          takerPct:   rd.takerPct   || null
         };
         if(sentimentMap && sentimentMap[q.symbol]){
           const s = sentimentMap[q.symbol];
@@ -2347,12 +2447,18 @@
       // ── Auto-send top results to backend for Intelligence analysis ──
       try {
         const apexPayload = parsed.slice(0, 30).map(a => ({
-          symbol:   a.symbol,
-          score:    a.score,
-          rsi:      a.rsi,
-          wt1:      a.wt1,
-          vsEma200: a.vsEma200,
-          signals:  a.signals || [],
+          symbol:         a.symbol,
+          score:          a.score,
+          rsi:            a.rsi,
+          wt1:            a.wt1,
+          vsEma200:       a.vsEma200,
+          signals:        a.signals || [],
+          citadelVerdict: a.citadelVerdict || '',
+          cvdBullDiv:     a.cvdBullDiv || false,
+          liqTarget:      a.liqTarget || null,
+          basis:          a.basis || null,
+          takerColor:     a.takerColor || null,
+          takerPct:       a.takerPct || null,
         }));
         fetch(BACKEND + '/apex-results', {
           method: 'POST',
