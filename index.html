@@ -1774,6 +1774,8 @@
     }
 
     // 4️⃣ CoinGecko — try before backend
+    // NOTE: CoinGecko OHLC returns 4-day candles for days>90, and data may be stale.
+    // We always overwrite the last candle's close with the real-time simple/price.
     try{
       const sRes=await fetchWithTimeout(`https://api.coingecko.com/api/v3/search?query=${encodeURIComponent(symbol)}`, 8000);
       if(sRes){
@@ -1781,7 +1783,10 @@
         const match=sd.coins?.find(c=>c.symbol?.toUpperCase()===symbol.toUpperCase());
         if(match){
           const days=selectedTF.tf==='1w'?365:selectedTF.tf==='1d'?210:60;
-          const oRes=await fetchWithTimeout(`https://api.coingecko.com/api/v3/coins/${match.id}/ohlc?vs_currency=usd&days=${days}`, 10000);
+          const [oRes, priceRes] = await Promise.all([
+            fetchWithTimeout(`https://api.coingecko.com/api/v3/coins/${match.id}/ohlc?vs_currency=usd&days=${days}`, 10000),
+            fetchWithTimeout(`https://api.coingecko.com/api/v3/simple/price?ids=${match.id}&vs_currencies=usd`, 5000)
+          ]);
           if(oRes){
             const raw=await oRes.json();
             if(raw&&raw.length>=20){
@@ -1794,6 +1799,19 @@
                   wk.push([w[0][0],w[0][1],Math.max(...w.map(c=>c[2])),Math.min(...w.map(c=>c[3])),w[w.length-1][4],0]);
                 }
                 klines=wk;
+              }
+              // Overwrite last candle close with real-time price to avoid stale data
+              if(priceRes){
+                try{
+                  const pd=await priceRes.json();
+                  const livePrice=pd[match.id]?.usd;
+                  if(livePrice && livePrice > 0){
+                    const last=klines[klines.length-1];
+                    last[4]=livePrice; // close = live price
+                    last[2]=Math.max(last[2],livePrice); // high
+                    last[3]=Math.min(last[3],livePrice); // low
+                  }
+                }catch(e){}
               }
               const r=processKlines(klines);
               if(r) return r;
@@ -2992,10 +3010,13 @@ Return ONLY the raw JSON array. No markdown, no backticks, no preamble.`;
     const top50 = [...allAlerts].sort((a,b) => b.score - a.score).slice(0, 50);
 
     const coinsData = top50.map((a, i) => {
+      const atrVal  = a.atr  ? `$${a.atr.atr} (${a.atr.atrPct}% of price)` : 'N/A';
+      const vwapVal = a.vwap ? `$${a.vwap.vwap}` : 'N/A';
       return `${i+1}. ${a.symbol} (${a.type||'crypto'})
    Price: $${a.price || 'N/A'}
    Score: ${a.score} signals — ${(a.signals||[]).join(', ')}
    RSI: ${a.rsi || 'N/A'} | WT1: ${a.wt1 || 'N/A'} | vs EMA200: ${a.vsEma200 !== undefined ? a.vsEma200+'%' : 'N/A'}
+   ATR: ${atrVal} | VWAP: ${vwapVal}
    Vol Spike: ${a.volSpike ? 'YES' : 'no'} | Timeframe: ${a.timeframe || 'N/A'}`;
     }).join('\n\n');
 
