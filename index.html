@@ -2463,7 +2463,9 @@
           liqTarget:  rd.liqTarget  || null,
           basis:      rd.basis !== undefined ? rd.basis : null,
           takerColor: rd.takerColor || null,
-          takerPct:   rd.takerPct   || null
+          takerPct:   rd.takerPct   || null,
+          atr:        rd.atr  || null,
+          vwap:       rd.vwap || null
         };
         if(sentimentMap && sentimentMap[q.symbol]){
           const s = sentimentMap[q.symbol];
