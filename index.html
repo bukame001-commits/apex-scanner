@@ -265,9 +265,7 @@
         <button class="market-btn active" data-market="crypto_top500" onclick="toggleMarket(this)">
           <span class="icon">₿</span><div class="name">CRYPTO TOP 500</div><div class="desc">By market cap</div>
         </button>
-        <button class="market-btn" data-market="crypto_top1000" onclick="toggleMarket(this)">
-          <span class="icon">🪙</span><div class="name">CRYPTO TOP 1000</div><div class="desc">By market cap</div>
-        </button>
+
         <button class="market-btn" data-market="sp500" onclick="toggleMarket(this)">
           <span class="icon">📈</span><div class="name">S&amp;P 500</div><div class="desc">US large cap</div>
         </button>
@@ -651,8 +649,6 @@
 
   const MARKET_TICKERS = {
     crypto_top500:{label:'Crypto Top 500',type:'crypto',tickers:['BTC', 'ETH', 'BNB', 'XRP', 'SOL', 'ADA', 'DOGE', 'TRX', 'DOT', 'LTC', 'SHIB', 'AVAX', 'LINK', 'ATOM', 'UNI', 'XLM', 'BCH', 'ALGO', 'ICP', 'HBAR', 'APT', 'ARB', 'NEAR', 'GRT', 'AAVE', 'MKR', 'INJ', 'OP', 'SUI', 'SEI', 'TIA', 'RUNE', 'PENDLE', 'JUP', 'WIF', 'BONK', 'FLOKI', 'PEPE', 'TON', 'KAS', 'TAO', 'IMX', 'RNDR', 'FIL', 'THETA', 'EGLD', 'FLOW', 'MINA', 'SAND', 'MANA', 'AXS', 'CHZ', 'ENJ', 'GALA', 'APE', 'GMT', 'GMX', 'DYDX', 'LDO', 'CRV', 'COMP', 'BAL', 'YFI', 'SUSHI', 'CVX', 'STX', 'BLUR', 'HNT', 'KAVA', 'ROSE', 'ANKR', 'ZIL', 'ZEC', 'DASH', 'ETC', 'NEO', 'VET', 'SNX', '1INCH', 'CAKE', 'BAND', 'ASTR', 'CFX', 'CORE', 'ACH', 'FTM', 'MAGIC', 'PYTH', 'JTO', 'W', 'STRK', 'METIS', 'API3', 'PERP', 'UMA', 'MASK', 'ALICE', 'TLM', 'DODO', 'REEF', 'POLS', 'SUPER', 'GLMR', 'KSM', 'CKB', 'KMD', 'ZRX', 'SNT', 'BAT', 'FUN', 'OMG', 'NMR', 'CVC', 'BNT', 'STORJ', 'ELF', 'KNC', 'MTL', 'OAX', 'RLC', 'XVG', 'WAVES', 'QTUM', 'BTG', 'ICX', 'ONT', 'LSK', 'ARK', 'LUNC', 'KDA', 'MOVR', 'BICO', 'POND', 'QUICK', 'COMBO', 'FARM', 'BANK', 'GHST', 'JASMY', 'HIGH', 'LQTY', 'RPL', 'SSV', 'RDNT', 'GNS', 'JOE', 'VELO', 'BIFI', 'HOOK', 'CHESS', 'ACE', 'XAI', 'MANTA', 'ALT', 'PIXEL', 'PORTAL', 'ZETA', 'DYM', 'TNSR', 'OMNI', 'REZ', 'BB', 'NOT', 'IO', 'ZK', 'LISTA', 'ZRO', 'RENDER', 'WLD', 'ETHFI', 'EIGEN', 'HMSTR', 'CATI', 'NEIRO', 'SCR', 'DOGS', 'MAJOR', 'DEGEN', 'PRIME', 'ONDO', 'BEAM', 'ENA', 'SAGA', 'SAFE', 'AEVO', 'BOME', 'SLERF', 'MEW', 'PONKE', 'POPCAT', 'PNUT', 'ACT', 'GOAT', 'MOODENG', 'TURBO', 'BRETT', 'MOG', 'FWOG', 'BANANA', 'MANEKI', 'MYRO', 'SILLY', 'WEN', 'GECKO', 'HARAMBE', 'TREMP', 'MAGA', 'MOTHER', 'TONY', 'AIDOGE', 'BABYDOGE', 'SNEK', 'BGB', 'OKB', 'CRO', 'HT', 'GT', 'MX', 'KCS', 'LEO', 'FTT', 'BNX', 'LUNA', 'UST', 'BTTC', 'WIN', 'TWT', 'VGX', 'CELR', 'SKL', 'OGN', 'DUSK', 'PAXG', 'FXS', 'ID', 'VANRY'].slice(0,500)},
-    crypto_top1000:{label:'Crypto Top 1000',type:'crypto',tickers:['BTC', 'ETH', 'BNB', 'XRP', 'SOL', 'ADA', 'DOGE', 'TRX', 'DOT', 'LTC', 'SHIB', 'AVAX', 'LINK', 'ATOM', 'UNI', 'XLM', 'BCH', 'ALGO', 'ICP', 'HBAR', 'APT', 'ARB', 'NEAR', 'GRT', 'AAVE', 'MKR', 'INJ', 'OP', 'SUI', 'SEI', 'TIA', 'RUNE', 'PENDLE', 'JUP', 'WIF', 'BONK', 'FLOKI', 'PEPE', 'TON', 'KAS', 'TAO', 'IMX', 'RNDR', 'FIL', 'THETA', 'EGLD', 'FLOW', 'MINA', 'SAND', 'MANA', 'AXS', 'CHZ', 'ENJ', 'GALA', 'APE', 'GMT', 'GMX', 'DYDX', 'LDO', 'CRV', 'COMP', 'BAL', 'YFI', 'SUSHI', 'CVX', 'STX', 'BLUR', 'HNT', 'KAVA', 'ROSE', 'ANKR', 'ZIL', 'ZEC', 'DASH', 'ETC', 'NEO', 'VET', 'SNX', '1INCH', 'CAKE', 'BAND', 'ASTR', 'CFX', 'CORE', 'ACH', 'FTM', 'MAGIC', 'PYTH', 'JTO', 'W', 'STRK', 'METIS', 'API3', 'PERP', 'UMA', 'MASK', 'ALICE', 'TLM', 'DODO', 'REEF', 'POLS', 'SUPER', 'GLMR', 'KSM', 'CKB', 'KMD', 'ZRX', 'SNT', 'BAT', 'FUN', 'OMG', 'NMR', 'CVC', 'BNT', 'STORJ', 'ELF', 'KNC', 'MTL', 'OAX', 'RLC', 'XVG', 'WAVES', 'QTUM', 'BTG', 'ICX', 'ONT', 'LSK', 'ARK', 'LUNC', 'KDA', 'MOVR', 'BICO', 'POND', 'QUICK', 'COMBO', 'FARM', 'BANK', 'GHST', 'JASMY', 'HIGH', 'LQTY', 'RPL', 'SSV', 'RDNT', 'GNS', 'JOE', 'VELO', 'BIFI', 'HOOK', 'CHESS', 'ACE', 'XAI', 'MANTA', 'ALT', 'PIXEL', 'PORTAL', 'ZETA', 'DYM', 'TNSR', 'OMNI', 'REZ', 'BB', 'NOT', 'IO', 'ZK', 'LISTA', 'ZRO', 'RENDER', 'WLD', 'ETHFI', 'EIGEN', 'HMSTR', 'CATI', 'NEIRO', 'SCR', 'DOGS', 'MAJOR', 'DEGEN', 'PRIME', 'ONDO', 'BEAM', 'ENA', 'SAGA', 'SAFE', 'AEVO', 'BOME', 'SLERF', 'MEW', 'PONKE', 'POPCAT', 'PNUT', 'ACT', 'GOAT', 'MOODENG', 'TURBO', 'BRETT', 'MOG', 'FWOG', 'BANANA', 'MANEKI', 'MYRO', 'SILLY', 'WEN', 'GECKO', 'HARAMBE', 'TREMP', 'MAGA', 'MOTHER', 'TONY', 'AIDOGE', 'BABYDOGE', 'SNEK', 'BGB', 'OKB', 'CRO', 'HT', 'GT', 'MX', 'KCS', 'LEO', 'FTT', 'BNX', 'LUNA', 'UST', 'BTTC', 'WIN', 'TWT', 'VGX', 'CELR', 'SKL', 'OGN', 'DUSK', 'PAXG', 'FXS', 'ID', 'VANRY']}, // upgraded live from CoinGecko live from CoinGecko live from CoinGecko
-    sp500:{label:'S&P 500',type:'stock',tickers:['AAPL','MSFT','AMZN','NVDA','GOOGL','GOOG','META','TSLA','BRK-B','UNH','LLY','JPM','V','XOM','MA','PG','JNJ','HD','AVGO','MRK','CVX','PEP','ABBV','COST','KO','WMT','ADBE','CRM','BAC','MCD','PFE','TMO','CSCO','ABT','ACN','NKE','DHR','LIN','CMCSA','TXN','VZ','PM','NEE','RTX','HON','AMGN','IBM','UNP','INTC','QCOM','INTU','SBUX','GE','LOW','AMD','CAT','DE','SPGI','MS','GS','BLK','AXP','SCHW','BK','USB','WFC','C','BMY','GILD','VRTX','REGN','ISRG','MDT','BSX','SYK','ELV','HUM','CI','MCK','CVS','MO','CL','GIS','HSY','CPB','CAG','HRL','TSN','PPC','LRCX','KLAC','AMAT','MRVL','PANW','CRWD','NFLX','TGT','F','GM','UBER']},
     nasdaq100:{label:'Nasdaq 100',type:'stock',tickers:['AAPL','MSFT','AMZN','NVDA','GOOGL','GOOG','META','TSLA','AVGO','ADBE','CSCO','CMCSA','INTC','AMD','INTU','QCOM','HON','AMAT','SBUX','MDLZ','GILD','REGN','VRTX','ISRG','KLAC','LRCX','SNPS','CDNS','MRVL','PANW','CRWD','NFLX','PYPL','ADP','MELI','ASML','COST','PDD','KDP','ORLY','PCAR','CTAS','FTNT','FAST','CPRT','MNST','DDOG','ROST','PAYX','ODFL','VRSK','CTSH','ANSS','GEHC','CEG','IDXX','TEAM','WDAY','DASH','ZS','COIN','TTD','RBLX','ABNB','BKNG','NXPI','MCHP','SWKS','ON','ENPH','FSLR','LULU','BIIB','MRNA','ILMN','ALGN','DXCM','PODD','RMD','NBIX','ALNY','BMRN','MANH','PAYC','PCTY','NCNO','CSGP','SGEN','ZM','OKTA','DOCU','PLTR','RGEN','ACAD','ITCI','INSM','NTRA','EXAS','PCVX','SMAR','TENB','APPF','GTLB','FROG','DLO']},
     russell2000:{label:'Russell 2000',type:'stock',tickers:[
       // Technology
@@ -1955,8 +1951,6 @@
         // Update both crypto lists with real Binance data
         MARKET_TICKERS.crypto_top500.tickers = data.symbols.slice(0, 500);
         MARKET_TICKERS.crypto_top500._isLive = true;
-        MARKET_TICKERS.crypto_top1000.tickers = data.symbols;
-        MARKET_TICKERS.crypto_top1000._isLive = true;
         const src = data.source || 'exchange';
         console.log('[APEX] Crypto pairs loaded from', src, ':', data.symbols.length, 'coins');
         showToast('Loaded '+data.symbols.length+' pairs from '+src.toUpperCase());
@@ -2062,15 +2056,13 @@
       const needsCrypto = selectedMarkets.some(m => MARKET_TICKERS[m]?.type === 'crypto');
       if(needsCrypto){
         document.getElementById('loadingStatus').textContent = 'Fetching live top crypto list from CoinGecko...';
-        const needs1000 = selectedMarkets.includes('crypto_top1000');
         const needs500  = selectedMarkets.includes('crypto_top500');
         const needsDefi = selectedMarkets.includes('defi');
 
         if(needs1000 || needs500){
           // Try CoinGecko silently — tickers already initialized with built-in list so failure is OK
           // CoinGecko sorts by market cap — upgrade if not already sorted
-          const alreadyHaveLive = (needs500 && MARKET_TICKERS.crypto_top500._isCGSorted) ||
-                                  (needs1000 && MARKET_TICKERS.crypto_top1000._isCGSorted);
+          const alreadyHaveLive = needs500 && MARKET_TICKERS.crypto_top500._isCGSorted;
           if(!alreadyHaveLive){
             try{
               const limit = needs1000 ? 1000 : 500;
@@ -2078,12 +2070,11 @@
               const liveSymbols = await fetchLiveCryptoList(limit);
               if(liveSymbols.length >= 50){
                 if(needs500){ MARKET_TICKERS.crypto_top500.tickers = liveSymbols.slice(0,500); MARKET_TICKERS.crypto_top500._isCGSorted=true; }
-                if(needs1000){ MARKET_TICKERS.crypto_top1000.tickers = liveSymbols.slice(0,1000); MARKET_TICKERS.crypto_top1000._isCGSorted=true; }
               }
               // If rate limited, silently keep using built-in list — no toast, no crash
             }catch(e){ /* silently use built-in */ }
           }
-          document.getElementById('loadingStatus').textContent = `Scanning ${MARKET_TICKERS[needs1000?'crypto_top1000':'crypto_top500'].tickers.length} crypto tickers...`;
+          document.getElementById('loadingStatus').textContent = `Scanning ${MARKET_TICKERS['crypto_top500'].tickers.length} crypto tickers...`;
         }
 
         if(needsDefi && !MARKET_TICKERS.defi.tickers){
