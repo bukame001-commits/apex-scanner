@@ -3016,7 +3016,7 @@ Return ONLY the raw JSON array. No markdown, no backticks, no preamble.`;
     const coinsData = top10.map((a, i) => {
       const atrVal  = a.atr  ? `$${a.atr.atr}` : 'N/A';
       const vwapVal = a.vwap ? `$${a.vwap.vwap}` : 'N/A';
-      return `${i+1}. ${a.symbol} $${a.price||'N/A'} | RSI:${a.rsi||'N/A'} WT:${a.wt1||'N/A'} EMA200:${a.vsEma200!==undefined?a.vsEma200+'%':'N/A'} ATR:${atrVal} VWAP:${vwapVal}${a.volSpike?' VOLSPIKE':''}
+      return `${i+1}. ${a.symbol} $${a.price||'N/A'} | RSI:${a.rsi||'N/A'} WT:${a.wt1||'N/A'} EMA200:${a.vsEma200!==undefined?a.vsEma200+'%':'N/A'} ATR:${atrVal} VWAP:${vwapVal}${a.volSpike ? ' VOL:' + a.volSpike + 'x' : ''}
    ${a.score} signals: ${(a.signals||[]).join(' · ')}`;
     }).join('\n');
 
@@ -3028,7 +3028,7 @@ Return ONLY the raw JSON array. No markdown, no backticks, no preamble.`;
       signals:   (a.signals || []).join(', '),
       score:     a.score,
       timeframe: a.timeframe || 'N/A',
-      volSpike:  a.volSpike || false,
+      volSpike:  a.volSpike || null,   // actual ratio e.g. 2.87 or null
       vsEma200:  a.vsEma200 || null,
     }));
 
