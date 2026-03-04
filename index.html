@@ -3020,12 +3020,24 @@ Return ONLY the raw JSON array. No markdown, no backticks, no preamble.`;
    Vol Spike: ${a.volSpike ? 'YES' : 'no'} | Timeframe: ${a.timeframe || 'N/A'}`;
     }).join('\n\n');
 
+    // Structured JSON for reliable backtest logging — no regex parsing needed
+    const coinsStructured = top50.slice(0, 10).map(a => ({
+      symbol:    a.symbol,
+      price:     a.price,
+      atr:       a.atr?.atr || null,
+      signals:   (a.signals || []).join(', '),
+      score:     a.score,
+      timeframe: a.timeframe || 'N/A',
+      volSpike:  a.volSpike || false,
+      vsEma200:  a.vsEma200 || null,
+    }));
+
     try {
       const backendUrl = window.BACKEND_URL || 'https://web-production-d8201.up.railway.app';
       const resp = await fetch(`${backendUrl}/citadel-report`, {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ coins: coinsData, count: top50.length, timeframe: top50[0]?.timeframe || 'N/A' })
+        body: JSON.stringify({ coins: coinsData, coinsStructured, count: top50.length, timeframe: top50[0]?.timeframe || 'N/A' })
       });
       const data = await resp.json();
       if (data.report) {
