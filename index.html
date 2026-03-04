@@ -1000,7 +1000,11 @@
     if(strong.length===0) return;
     let msg='APEX SCANNER RESULTS\n'+new Date().toLocaleString()+'\n\nSTRONG SIGNALS ('+strong.length+'):\n\n';
     strong.forEach(a=>{
-      msg+=a.symbol+' - '+a.score+' signals\n';
+      const priceStr = a.price ? ' | $'+Number(a.price).toPrecision(6).replace(/\.?0+$/,'') : '';
+      const atrStr   = a.atr?.atr ? ' | ATR $'+a.atr.atr : '';
+      const vwapStr  = a.vwap?.vwap ? ' | VWAP $'+a.vwap.vwap : '';
+      const emaStr   = a.vsEma200 !== undefined ? ' | EMA200 '+a.vsEma200+'%' : '';
+      msg+=a.symbol+' - '+a.score+' signals'+priceStr+atrStr+vwapStr+emaStr+'\n';
       msg+='Signals: '+(a.signals||[]).join(', ')+'\n';
       if(sentimentMap&&sentimentMap[a.symbol]) msg+='Reddit: '+sentimentMap[a.symbol].label+' ('+sentimentMap[a.symbol].posts+' posts)\n';
       const liq=liqData&&liqData[a.symbol];
@@ -3006,22 +3010,18 @@ Return ONLY the raw JSON array. No markdown, no backticks, no preamble.`;
     content.textContent = '';
     status.textContent = '[ Contacting backend... ]';
 
-    // Top 50 by score
-    const top50 = [...allAlerts].sort((a,b) => b.score - a.score).slice(0, 50);
+    // Top 10 by score — keeps token usage low, prevents Telegram/Gemini cutoff
+    const top10 = [...allAlerts].sort((a,b) => b.score - a.score).slice(0, 10);
 
-    const coinsData = top50.map((a, i) => {
-      const atrVal  = a.atr  ? `$${a.atr.atr} (${a.atr.atrPct}% of price)` : 'N/A';
+    const coinsData = top10.map((a, i) => {
+      const atrVal  = a.atr  ? `$${a.atr.atr}` : 'N/A';
       const vwapVal = a.vwap ? `$${a.vwap.vwap}` : 'N/A';
-      return `${i+1}. ${a.symbol} (${a.type||'crypto'})
-   Price: $${a.price || 'N/A'}
-   Score: ${a.score} signals — ${(a.signals||[]).join(', ')}
-   RSI: ${a.rsi || 'N/A'} | WT1: ${a.wt1 || 'N/A'} | vs EMA200: ${a.vsEma200 !== undefined ? a.vsEma200+'%' : 'N/A'}
-   ATR: ${atrVal} | VWAP: ${vwapVal}
-   Vol Spike: ${a.volSpike ? 'YES' : 'no'} | Timeframe: ${a.timeframe || 'N/A'}`;
-    }).join('\n\n');
+      return `${i+1}. ${a.symbol} $${a.price||'N/A'} | RSI:${a.rsi||'N/A'} WT:${a.wt1||'N/A'} EMA200:${a.vsEma200!==undefined?a.vsEma200+'%':'N/A'} ATR:${atrVal} VWAP:${vwapVal}${a.volSpike?' VOLSPIKE':''}
+   ${a.score} signals: ${(a.signals||[]).join(' · ')}`;
+    }).join('\n');
 
-    // Structured JSON for reliable backtest logging — no regex parsing needed
-    const coinsStructured = top50.slice(0, 10).map(a => ({
+    // Structured JSON for backtest logging
+    const coinsStructured = top10.map(a => ({
       symbol:    a.symbol,
       price:     a.price,
       atr:       a.atr?.atr || null,
@@ -3037,12 +3037,12 @@ Return ONLY the raw JSON array. No markdown, no backticks, no preamble.`;
       const resp = await fetch(`${backendUrl}/citadel-report`, {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ coins: coinsData, coinsStructured, count: top50.length, timeframe: top50[0]?.timeframe || 'N/A' })
+        body: JSON.stringify({ coins: coinsData, coinsStructured, count: top10.length, timeframe: top10[0]?.timeframe || 'N/A' })
       });
       const data = await resp.json();
       if (data.report) {
         content.textContent = data.report;
-        status.textContent = `[ Report generated for top ${top50.length} assets | Sent to Telegram ]`;
+        status.textContent = `[ Report generated for top ${top10.length} assets | Sent to Telegram ]`;
       } else {
         content.textContent = data.error || 'Failed to generate report.';
         status.textContent = '[ Error ]';
