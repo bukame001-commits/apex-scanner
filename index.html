@@ -2059,13 +2059,13 @@
         const needs500  = selectedMarkets.includes('crypto_top500');
         const needsDefi = selectedMarkets.includes('defi');
 
-        if(needs1000 || needs500){
+        if(needs500){
           // Try CoinGecko silently — tickers already initialized with built-in list so failure is OK
           // CoinGecko sorts by market cap — upgrade if not already sorted
-          const alreadyHaveLive = needs500 && MARKET_TICKERS.crypto_top500._isCGSorted;
+          const alreadyHaveLive = MARKET_TICKERS.crypto_top500._isCGSorted;
           if(!alreadyHaveLive){
             try{
-              const limit = needs1000 ? 1000 : 500;
+              const limit = 500;
               document.getElementById('loadingStatus').textContent = 'Upgrading crypto list from CoinGecko...';
               const liveSymbols = await fetchLiveCryptoList(limit);
               if(liveSymbols.length >= 50){
