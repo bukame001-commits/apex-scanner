@@ -1418,16 +1418,11 @@
 
   function calcVolSpike(vols, isWeekly){
     if(!vols||vols.length<22) return null;
-    if(isWeekly){
-      // On weekly TF: last bar is incomplete (current week not finished)
-      // Use second-to-last as current, compare against 20 bars before that
-      const current = vols[vols.length-2];
-      const avg = vols.slice(-22,-2).reduce((a,b)=>a+b,0)/20;
-      return avg>0?parseFloat((current/avg).toFixed(2)):null;
-    }
-    // Daily/4H: last bar is current, compare against previous 20
-    const avg=vols.slice(-21,-1).reduce((a,b)=>a+b,0)/20;
-    return avg>0?parseFloat((vols[vols.length-1]/avg).toFixed(2)):null;
+    // Always use second-to-last bar as "current" — last bar is always incomplete
+    // (current candle still forming on all timeframes: 4H, 1D, 1W)
+    const current = vols[vols.length-2];
+    const avg = vols.slice(-22,-2).reduce((a,b)=>a+b,0)/20;
+    return avg>0?parseFloat((current/avg).toFixed(2)):null;
   }
 
   // ── WaveTrend [LazyBear] exact implementation ────
