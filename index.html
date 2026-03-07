@@ -324,7 +324,7 @@
       <div style="display:flex;gap:8px;flex-wrap:wrap;" id="tfBtns">
         <button class="filter-btn" data-tf="4h" data-interval="4h" data-limit="300" onclick="selectTF(this)" title="4H: best for crypto. Stocks use 60m Yahoo data (limited history).">4H</button>
         <button class="filter-btn" data-tf="1d" data-interval="1d" data-limit="210" onclick="selectTF(this)">DAILY</button>
-        <button class="filter-btn active" data-tf="1w" data-interval="1w" data-limit="210" onclick="selectTF(this)">WEEKLY</button>
+        <button class="filter-btn active" data-tf="1w" data-interval="1w" data-limit="300" onclick="selectTF(this)">WEEKLY</button>
       </div>
     </div>
 
@@ -2336,6 +2336,7 @@
         if(d.volSpike!==null&&d.volSpike>=parseFloat(volT)&&selectedTF.tf!=='1w') sigs.push('Volume Spike:Volume Spike '+d.volSpike+'x');
         if(d.vsEma200!==null&&Math.abs(d.vsEma200)<=5) sigs.push('200 EMA proximity:Near 200 EMA ('+d.vsEma200+'%)');
         if(d.vsEma200!==null&&d.vsEma200>20) sigs.push('200 EMA proximity:Extended above 200 EMA ('+d.vsEma200+'%)');
+        if(d.vsEma200!==null&&d.vsEma200<-10) sigs.push('200 EMA proximity:Below 200 EMA ('+d.vsEma200+'%)');
         if(d.vsHigh52!==null&&d.vsHigh52>-5) sigs.push('200 EMA proximity:Near 52W High ('+d.vsHigh52+'%)');
         // Bollinger Bands
         if(d.bb){
@@ -2999,8 +3000,7 @@ Return ONLY the raw JSON array. No markdown, no backticks, no preamble.`;
 
     btn.disabled = true;
     btn.textContent = '⚔ GENERATING...';
-    modal.classList.add('visible');
-    content.textContent = '';
+    // Modal not shown — report sent to Telegram only
     status.textContent = '[ Contacting backend... ]';
 
     // Top 10 by score — keeps token usage low, prevents Telegram/Gemini cutoff
@@ -3034,11 +3034,10 @@ Return ONLY the raw JSON array. No markdown, no backticks, no preamble.`;
       });
       const data = await resp.json();
       if (data.report) {
-        content.textContent = data.report;
-        status.textContent = `[ Report generated for top ${top10.length} assets | Sent to Telegram ]`;
+        status.textContent = `[ Report sent to Telegram ✓ ]`;
+        showToast('⚔ CITADEL REPORT SENT TO TELEGRAM');
       } else {
-        content.textContent = data.error || 'Failed to generate report.';
-        status.textContent = '[ Error ]';
+        status.textContent = '[ Error: ' + (data.error || 'Failed') + ' ]';
       }
     } catch(e) {
       content.textContent = 'Error: ' + e.message;
