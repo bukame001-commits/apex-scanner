@@ -193,7 +193,7 @@
 
   <div class="header">
     <div class="header-badge">AI-POWERED MARKET INTELLIGENCE</div>
-    <h1>APEX <span>SCANNER</span> <span style="font-size:clamp(11px,2.5vw,16px);font-weight:400;color:var(--muted);letter-spacing:2px;vertical-align:middle;">v2.11</span></h1>
+    <h1>APEX <span>SCANNER</span> <span style="font-size:clamp(11px,2.5vw,16px);font-weight:400;color:var(--muted);letter-spacing:2px;vertical-align:middle;">v2.13</span></h1>
     <div class="header-sub">CLAUDE AI + GEMINI AI — CHOOSE YOUR ENGINE</div>
   </div>
 
@@ -418,10 +418,9 @@
   </div>
   </div>
 
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:6px;">
-    <button class="scan-btn" id="scanBtn" onclick="runScan()" style="margin-top:0;">⚡ SHORT TERM SCAN</button>
-    <button class="scan-btn" id="bottomBtn" onclick="runFindBottom()" style="margin-top:0;border-color:#00ff88;color:#00ff88;">🎯 FIND THE BOTTOM</button>
-  </div>
+  <!-- Hidden stubs so JS references to scanBtn/bottomBtn don't break -->
+  <button id="scanBtn"   style="display:none" onclick="runScan()"></button>
+  <button id="bottomBtn" style="display:none" onclick="runFindBottom()"></button>
 
   <!-- Find The Bottom Results Panel -->
   <div id="bottomPanel" style="display:none;margin-top:20px;">
@@ -3255,27 +3254,42 @@ Return ONLY the raw JSON array. No markdown, no backticks, no preamble.`;
     background: rgba(4,4,8,0.97);
     border-top: 1px solid #1a1a2e;
     backdrop-filter: blur(10px);
-    padding: 10px 12px;
-    padding-bottom: calc(10px + env(safe-area-inset-bottom));
+    padding: 8px 10px;
+    padding-bottom: calc(8px + env(safe-area-inset-bottom));
     display: flex;
     gap: 6px;
     align-items: stretch;
   }
-  /* Group wrapper */
-  .bar-group {
-    display: flex;
-    gap: 3px;
-    flex: 1;
-  }
-  .bar-group-standalone { flex: 2; }
-  .bar-group-scan       { flex: 3; }
-  .bar-btn {
+  /* Left cluster: ANALYSE + its sub-buttons */
+  .bar-cluster {
     display: flex;
     flex-direction: column;
+    gap: 4px;
+    flex: 2;
+  }
+  .bar-cluster-sub {
+    display: flex;
+    gap: 4px;
+  }
+  /* Right group: standalone buttons */
+  .bar-standalone {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 3;
+  }
+  .bar-standalone-row {
+    display: flex;
+    gap: 4px;
+    flex: 1;
+  }
+  .bar-btn {
+    display: flex;
+    flex-direction: row;
     align-items: center;
     justify-content: center;
-    gap: 3px;
-    padding: 8px 4px;
+    gap: 6px;
+    padding: 0 8px;
     background: transparent;
     border: 1px solid #1a1a2e;
     color: #444;
@@ -3285,22 +3299,19 @@ Return ONLY the raw JSON array. No markdown, no backticks, no preamble.`;
     text-decoration: none;
     border-radius: 2px;
     flex: 1;
+    height: 36px;
   }
-  /* Standalone buttons — always active */
-  .bar-btn.btn-analyse  { border-color: rgba(0,212,255,0.5); color: #00d4ff; }
-  .bar-btn.btn-analyse:hover  { background: rgba(0,212,255,0.08); box-shadow: 0 0 16px rgba(0,212,255,0.15); }
-  .bar-btn.btn-btcbottom { border-color: rgba(0,255,136,0.4); color: #00ff88; }
-  .bar-btn.btn-btcbottom:hover { background: rgba(0,255,136,0.06); }
-  .bar-btn.btn-volspike  { border-color: rgba(240,192,64,0.4); color: #f0c040; }
-  .bar-btn.btn-volspike:hover  { background: rgba(240,192,64,0.06); }
-  .bar-btn.btn-backtest  { border-color: rgba(0,212,255,0.3); color: #555; }
-  .bar-btn.btn-backtest:hover  { border-color: #00d4ff; color: #00d4ff; background: rgba(0,212,255,0.06); }
-  /* Scan-dependent buttons — greyed until scan done */
+  /* ANALYSE — big primary button */
+  .bar-btn.btn-analyse {
+    border-color: rgba(0,212,255,0.6); color: #00d4ff;
+    height: 44px; font-size: 13px; letter-spacing: 2px; font-weight: 700;
+  }
+  .bar-btn.btn-analyse:hover { background: rgba(0,212,255,0.08); box-shadow: 0 0 16px rgba(0,212,255,0.15); }
+  /* Sub-buttons under ANALYSE */
   .bar-btn.btn-citadel, .bar-btn.btn-intelligence {
-    border-color: #1a1a2e;
-    color: #2a2a3e;
-    cursor: not-allowed;
-    pointer-events: none;
+    border-color: #1a1a2e; color: #2a2a3e;
+    cursor: not-allowed; pointer-events: none;
+    height: 32px; font-size: 11px;
   }
   .bar-btn.btn-citadel.unlocked {
     border-color: rgba(168,85,247,0.5); color: #a855f7;
@@ -3308,57 +3319,65 @@ Return ONLY the raw JSON array. No markdown, no backticks, no preamble.`;
   }
   .bar-btn.btn-citadel.unlocked:hover { background: rgba(168,85,247,0.08); }
   .bar-btn.btn-intelligence.unlocked {
-    border-color: rgba(168,85,247,0.3); color: #7c3aed;
+    border-color: rgba(168,85,247,0.3); color: #9f6ef5;
     cursor: pointer; pointer-events: auto;
   }
   .bar-btn.btn-intelligence.unlocked:hover { background: rgba(124,58,237,0.08); }
-  /* Divider between groups */
+  /* Standalone buttons */
+  .bar-btn.btn-btcbottom { border-color: rgba(0,255,136,0.4); color: #00ff88; font-size: 11px; }
+  .bar-btn.btn-btcbottom:hover { background: rgba(0,255,136,0.06); }
+  .bar-btn.btn-volspike  { border-color: rgba(240,192,64,0.4); color: #f0c040; font-size: 11px; }
+  .bar-btn.btn-volspike:hover  { background: rgba(240,192,64,0.06); }
+  .bar-btn.btn-backtest  { border-color: rgba(0,212,255,0.3); color: #556; font-size: 11px; }
+  .bar-btn.btn-backtest:hover { border-color: #00d4ff; color: #00d4ff; background: rgba(0,212,255,0.06); }
+  /* Divider */
   .bar-divider {
-    width: 1px;
-    background: #1a1a2e;
-    margin: 4px 0;
-    flex-shrink: 0;
+    width: 1px; background: #1a1a2e; margin: 2px 0; flex-shrink: 0;
   }
-  .bar-btn .bar-icon  { font-size: 15px; line-height: 1; }
-  .bar-btn .bar-label { font-size: 7.5px; letter-spacing: 1px; white-space: nowrap; }
+  .bar-btn .bar-icon  { font-size: 14px; line-height: 1; }
+  .bar-btn .bar-label { letter-spacing: 1px; white-space: nowrap; font-size: 11px; }
   .bar-btn:disabled   { opacity: 0.3; cursor: not-allowed; pointer-events: none; }
-  body { padding-bottom: 82px; }
+  body { padding-bottom: 90px; }
 </style>
 
 <div id="bottomActionBar">
 
-  <!-- GROUP 1: Scan-dependent (greyed until analyse completes) -->
-  <div class="bar-group" style="flex:2">
-    <button class="bar-btn btn-citadel" id="barCitadelBtn" onclick="runCitadelReport()">
-      <span class="bar-icon">⚔</span>
-      <span class="bar-label">CITADEL</span>
-    </button>
-    <button class="bar-btn btn-intelligence" id="barIntelBtn" onclick="openIntelPanel()">
-      <span class="bar-icon">🧠</span>
-      <span class="bar-label">INTEL</span>
-    </button>
-  </div>
-
-  <div class="bar-divider"></div>
-
-  <!-- GROUP 2: Standalone (always active) -->
-  <div class="bar-group" style="flex:3">
+  <!-- LEFT: ANALYSE + sub-buttons (Citadel & Intel unlock after scan) -->
+  <div class="bar-cluster">
     <button class="bar-btn btn-analyse" id="barScanBtn" onclick="runScan()">
       <span class="bar-icon">⚡</span>
       <span class="bar-label">ANALYSE</span>
     </button>
-    <button class="bar-btn btn-btcbottom" id="barBottomBtn" onclick="runFindBottom()">
-      <span class="bar-icon">🎯</span>
-      <span class="bar-label">BTC BOTTOM</span>
-    </button>
-    <button class="bar-btn btn-volspike" id="barVolBtn" onclick="triggerScanNow()">
-      <span class="bar-icon">📡</span>
-      <span class="bar-label">VOL SPIKE</span>
-    </button>
-    <a class="bar-btn btn-backtest" href="/backtest" target="_blank">
-      <span class="bar-icon">📊</span>
-      <span class="bar-label">BACKTEST</span>
-    </a>
+    <div class="bar-cluster-sub">
+      <button class="bar-btn btn-citadel" id="barCitadelBtn" onclick="runCitadelReport()">
+        <span class="bar-icon">⚔</span>
+        <span class="bar-label">CITADEL</span>
+      </button>
+      <button class="bar-btn btn-intelligence" id="barIntelBtn" onclick="openIntelPanel()">
+        <span class="bar-icon">🧠</span>
+        <span class="bar-label">INTEL</span>
+      </button>
+    </div>
+  </div>
+
+  <div class="bar-divider"></div>
+
+  <!-- RIGHT: Standalone buttons -->
+  <div class="bar-standalone">
+    <div class="bar-standalone-row">
+      <button class="bar-btn btn-btcbottom" id="barBottomBtn" onclick="runFindBottom()">
+        <span class="bar-icon">🎯</span>
+        <span class="bar-label">BTC BOTTOM</span>
+      </button>
+      <button class="bar-btn btn-volspike" id="barVolBtn" onclick="triggerScanNow()">
+        <span class="bar-icon">📡</span>
+        <span class="bar-label">VOL SPIKE</span>
+      </button>
+      <a class="bar-btn btn-backtest" href="/backtest" target="_blank">
+        <span class="bar-icon">📊</span>
+        <span class="bar-label">BACKTEST</span>
+      </a>
+    </div>
   </div>
 
 </div>
