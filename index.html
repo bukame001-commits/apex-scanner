@@ -193,7 +193,7 @@
 
   <div class="header">
     <div class="header-badge">AI-POWERED MARKET INTELLIGENCE</div>
-    <h1>APEX <span>SCANNER</span> <span style="font-size:clamp(11px,2.5vw,16px);font-weight:400;color:var(--muted);letter-spacing:2px;vertical-align:middle;">v2.13</span></h1>
+    <h1>APEX <span>SCANNER</span> <span style="font-size:clamp(11px,2.5vw,16px);font-weight:400;color:var(--muted);letter-spacing:2px;vertical-align:middle;">v2.14</span></h1>
     <div class="header-sub">CLAUDE AI + GEMINI AI — CHOOSE YOUR ENGINE</div>
   </div>
 
@@ -2999,8 +2999,9 @@ Return ONLY the raw JSON array. No markdown, no backticks, no preamble.`;
     // Modal not shown — report sent to Telegram only
     status.textContent = '[ Contacting backend... ]';
 
-    // Top 10 by score — keeps token usage low, prevents Telegram/Gemini cutoff
-    const top10 = [...allAlerts].sort((a,b) => b.score - a.score).slice(0, 10);
+    // All alerts sorted by score — all logged to backtest, top 10 to Gemini
+    const sortedAlerts = [...allAlerts].sort((a,b) => b.score - a.score);
+    const top10 = sortedAlerts.slice(0, 10);
 
     const coinsData = top10.map((a, i) => {
       const atrVal  = a.atr  ? `$${a.atr.atr}` : 'N/A';
@@ -3009,16 +3010,27 @@ Return ONLY the raw JSON array. No markdown, no backticks, no preamble.`;
    ${a.score} signals: ${(a.signals||[]).join(' · ')}`;
     }).join('\n');
 
-    // Structured JSON for backtest logging
-    const coinsStructured = top10.map(a => ({
-      symbol:    a.symbol,
-      price:     a.price,
-      atr:       a.atr?.atr || null,
-      signals:   (a.signals || []).join(', '),
-      score:     a.score,
-      timeframe: a.timeframe || 'N/A',
-      volSpike:  a.volSpike || null,   // actual ratio e.g. 2.87 or null
-      vsEma200:  a.vsEma200 || null,
+    // Rich structured payload — includes BB, liq, vol candle colour for report cards
+    const coinsStructured = sortedAlerts.map(a => ({
+      symbol:        a.symbol,
+      price:         a.price,
+      atr:           a.atr?.atr || null,
+      signals:       (a.signals || []).join(', '),
+      score:         a.score,
+      timeframe:     a.timeframe || 'N/A',
+      volSpike:      a.volSpike || null,
+      volSpikeGreen: a.volSpikeGreen != null ? a.volSpikeGreen : null,
+      vsEma200:      a.vsEma200 != null ? a.vsEma200 : null,
+      rsi:           a.rsi || null,
+      wt1:           a.wt1 || null,
+      vwap:          a.vwap ? { vwap: a.vwap.vwap, pctFromVwap: a.vwap.pctFromVwap, belowVwap: a.vwap.belowVwap } : null,
+      bb: a.bb ? {
+        upper: a.bb.upper, lower: a.bb.lower, mid: a.bb.mid,
+        atUpper: a.bb.atUpper, atLower: a.bb.atLower,
+        pctInBand: (a.bb.upper && a.bb.lower && a.bb.upper !== a.bb.lower)
+          ? Math.round(((a.price - a.bb.lower) / (a.bb.upper - a.bb.lower)) * 100) : null
+      } : null,
+      liq: a.liq ? { distLong: a.liq.distLong, distShort: a.liq.distShort, alertType: a.liq.alertType } : null,
     }));
 
     try {
@@ -3029,7 +3041,10 @@ Return ONLY the raw JSON array. No markdown, no backticks, no preamble.`;
         body: JSON.stringify({ coins: coinsData, coinsStructured, count: top10.length, timeframe: top10[0]?.timeframe || 'N/A' })
       });
       const data = await resp.json();
-      if (data.report) {
+      if (data.reportUrl) {
+        status.textContent = `[ Report ready → ${data.reportUrl} ]`;
+        showToast('⚔ CITADEL REPORT READY');
+      } else if (data.report) {
         status.textContent = `[ Report sent to Telegram ✓ ]`;
         showToast('⚔ CITADEL REPORT SENT TO TELEGRAM');
       } else {
