@@ -186,7 +186,6 @@
   ::-webkit-scrollbar{width:4px;}
   ::-webkit-scrollbar-track{background:var(--bg);}
   ::-webkit-scrollbar-thumb{background:var(--border);}
-
   /* ── SECTION 07: NEWS INTEL ─────────────────────────────── */
   .news-btn{background:transparent;border:1px solid #ff6b35;color:#ff6b35;font-family:'Share Tech Mono',monospace;font-size:10px;padding:6px 14px;cursor:pointer;letter-spacing:2px;transition:all 0.15s;}
   .news-btn:hover{background:rgba(255,107,53,0.08);box-shadow:0 0 20px rgba(255,107,53,0.2);}
@@ -240,7 +239,7 @@
 
   <div class="header">
     <div class="header-badge">AI-POWERED MARKET INTELLIGENCE</div>
-    <h1>APEX <span>SCANNER</span></h1>
+    <h1>APEX <span>SCANNER</span> <span style="font-size:clamp(11px,2.5vw,16px);font-weight:400;color:var(--muted);letter-spacing:2px;vertical-align:middle;">v2.16</span></h1>
     <div class="header-sub">CLAUDE AI + GEMINI AI — CHOOSE YOUR ENGINE</div>
   </div>
 
@@ -312,9 +311,7 @@
         <button class="market-btn active" data-market="crypto_top500" onclick="toggleMarket(this)">
           <span class="icon">₿</span><div class="name">CRYPTO TOP 500</div><div class="desc">By market cap</div>
         </button>
-        <button class="market-btn" data-market="crypto_top1000" onclick="toggleMarket(this)">
-          <span class="icon">🪙</span><div class="name">CRYPTO TOP 1000</div><div class="desc">By market cap</div>
-        </button>
+
         <button class="market-btn" data-market="sp500" onclick="toggleMarket(this)">
           <span class="icon">📈</span><div class="name">S&amp;P 500</div><div class="desc">US large cap</div>
         </button>
@@ -373,7 +370,7 @@
       <div style="display:flex;gap:8px;flex-wrap:wrap;" id="tfBtns">
         <button class="filter-btn" data-tf="4h" data-interval="4h" data-limit="300" onclick="selectTF(this)" title="4H: best for crypto. Stocks use 60m Yahoo data (limited history).">4H</button>
         <button class="filter-btn" data-tf="1d" data-interval="1d" data-limit="210" onclick="selectTF(this)">DAILY</button>
-        <button class="filter-btn active" data-tf="1w" data-interval="1w" data-limit="210" onclick="selectTF(this)">WEEKLY</button>
+        <button class="filter-btn active" data-tf="1w" data-interval="1w" data-limit="300" onclick="selectTF(this)">WEEKLY</button>
       </div>
     </div>
 
@@ -467,10 +464,9 @@
   </div>
   </div>
 
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:6px;">
-    <button class="scan-btn" id="scanBtn" onclick="runScan()" style="margin-top:0;">⚡ SHORT TERM SCAN</button>
-    <button class="scan-btn" id="bottomBtn" onclick="runFindBottom()" style="margin-top:0;border-color:#00ff88;color:#00ff88;">🎯 FIND THE BOTTOM</button>
-  </div>
+  <!-- Hidden stubs so JS references to scanBtn/bottomBtn don't break -->
+  <button id="scanBtn"   style="display:none" onclick="runScan()"></button>
+  <button id="bottomBtn" style="display:none" onclick="runFindBottom()"></button>
 
   <!-- Find The Bottom Results Panel -->
   <div id="bottomPanel" style="display:none;margin-top:20px;">
@@ -500,9 +496,9 @@
     <div class="results-header">
       <div class="section-label" style="margin:0;flex:1">SCAN RESULTS</div>
       <button class="new-scan-btn" onclick="newScan()">↺ NEW SCAN</button>
-      <button class="citadel-btn" id="citadelBtn" onclick="runCitadelReport()">⚔ CITADEL REPORT</button>
-      <button class="intel-btn" id="intelBtn" onclick="openIntelPanel()">🧠 INTELLIGENCE</button>
-      <button class="news-btn" id="newsBtn" onclick="openNewsModal()">📰 NEWS INTEL</button>
+      <button class="citadel-btn" id="citadelBtn" style="display:none" onclick="runCitadelReport()"></button>
+      <button class="intel-btn" id="intelBtn" style="display:none" onclick="openIntelPanel()"></button>
+      <button class="news-btn" id="newsBtn" style="display:none" onclick="openNewsModal()">📰 NEWS INTEL</button>
     </div>
     <div class="results-stats">
       <div class="stat-box"><div class="stat-val" id="statTotal">0</div><div class="stat-label">TOTAL</div></div>
@@ -699,8 +695,6 @@
 
   const MARKET_TICKERS = {
     crypto_top500:{label:'Crypto Top 500',type:'crypto',tickers:['BTC', 'ETH', 'BNB', 'XRP', 'SOL', 'ADA', 'DOGE', 'TRX', 'DOT', 'LTC', 'SHIB', 'AVAX', 'LINK', 'ATOM', 'UNI', 'XLM', 'BCH', 'ALGO', 'ICP', 'HBAR', 'APT', 'ARB', 'NEAR', 'GRT', 'AAVE', 'MKR', 'INJ', 'OP', 'SUI', 'SEI', 'TIA', 'RUNE', 'PENDLE', 'JUP', 'WIF', 'BONK', 'FLOKI', 'PEPE', 'TON', 'KAS', 'TAO', 'IMX', 'RNDR', 'FIL', 'THETA', 'EGLD', 'FLOW', 'MINA', 'SAND', 'MANA', 'AXS', 'CHZ', 'ENJ', 'GALA', 'APE', 'GMT', 'GMX', 'DYDX', 'LDO', 'CRV', 'COMP', 'BAL', 'YFI', 'SUSHI', 'CVX', 'STX', 'BLUR', 'HNT', 'KAVA', 'ROSE', 'ANKR', 'ZIL', 'ZEC', 'DASH', 'ETC', 'NEO', 'VET', 'SNX', '1INCH', 'CAKE', 'BAND', 'ASTR', 'CFX', 'CORE', 'ACH', 'FTM', 'MAGIC', 'PYTH', 'JTO', 'W', 'STRK', 'METIS', 'API3', 'PERP', 'UMA', 'MASK', 'ALICE', 'TLM', 'DODO', 'REEF', 'POLS', 'SUPER', 'GLMR', 'KSM', 'CKB', 'KMD', 'ZRX', 'SNT', 'BAT', 'FUN', 'OMG', 'NMR', 'CVC', 'BNT', 'STORJ', 'ELF', 'KNC', 'MTL', 'OAX', 'RLC', 'XVG', 'WAVES', 'QTUM', 'BTG', 'ICX', 'ONT', 'LSK', 'ARK', 'LUNC', 'KDA', 'MOVR', 'BICO', 'POND', 'QUICK', 'COMBO', 'FARM', 'BANK', 'GHST', 'JASMY', 'HIGH', 'LQTY', 'RPL', 'SSV', 'RDNT', 'GNS', 'JOE', 'VELO', 'BIFI', 'HOOK', 'CHESS', 'ACE', 'XAI', 'MANTA', 'ALT', 'PIXEL', 'PORTAL', 'ZETA', 'DYM', 'TNSR', 'OMNI', 'REZ', 'BB', 'NOT', 'IO', 'ZK', 'LISTA', 'ZRO', 'RENDER', 'WLD', 'ETHFI', 'EIGEN', 'HMSTR', 'CATI', 'NEIRO', 'SCR', 'DOGS', 'MAJOR', 'DEGEN', 'PRIME', 'ONDO', 'BEAM', 'ENA', 'SAGA', 'SAFE', 'AEVO', 'BOME', 'SLERF', 'MEW', 'PONKE', 'POPCAT', 'PNUT', 'ACT', 'GOAT', 'MOODENG', 'TURBO', 'BRETT', 'MOG', 'FWOG', 'BANANA', 'MANEKI', 'MYRO', 'SILLY', 'WEN', 'GECKO', 'HARAMBE', 'TREMP', 'MAGA', 'MOTHER', 'TONY', 'AIDOGE', 'BABYDOGE', 'SNEK', 'BGB', 'OKB', 'CRO', 'HT', 'GT', 'MX', 'KCS', 'LEO', 'FTT', 'BNX', 'LUNA', 'UST', 'BTTC', 'WIN', 'TWT', 'VGX', 'CELR', 'SKL', 'OGN', 'DUSK', 'PAXG', 'FXS', 'ID', 'VANRY'].slice(0,500)},
-    crypto_top1000:{label:'Crypto Top 1000',type:'crypto',tickers:['BTC', 'ETH', 'BNB', 'XRP', 'SOL', 'ADA', 'DOGE', 'TRX', 'DOT', 'LTC', 'SHIB', 'AVAX', 'LINK', 'ATOM', 'UNI', 'XLM', 'BCH', 'ALGO', 'ICP', 'HBAR', 'APT', 'ARB', 'NEAR', 'GRT', 'AAVE', 'MKR', 'INJ', 'OP', 'SUI', 'SEI', 'TIA', 'RUNE', 'PENDLE', 'JUP', 'WIF', 'BONK', 'FLOKI', 'PEPE', 'TON', 'KAS', 'TAO', 'IMX', 'RNDR', 'FIL', 'THETA', 'EGLD', 'FLOW', 'MINA', 'SAND', 'MANA', 'AXS', 'CHZ', 'ENJ', 'GALA', 'APE', 'GMT', 'GMX', 'DYDX', 'LDO', 'CRV', 'COMP', 'BAL', 'YFI', 'SUSHI', 'CVX', 'STX', 'BLUR', 'HNT', 'KAVA', 'ROSE', 'ANKR', 'ZIL', 'ZEC', 'DASH', 'ETC', 'NEO', 'VET', 'SNX', '1INCH', 'CAKE', 'BAND', 'ASTR', 'CFX', 'CORE', 'ACH', 'FTM', 'MAGIC', 'PYTH', 'JTO', 'W', 'STRK', 'METIS', 'API3', 'PERP', 'UMA', 'MASK', 'ALICE', 'TLM', 'DODO', 'REEF', 'POLS', 'SUPER', 'GLMR', 'KSM', 'CKB', 'KMD', 'ZRX', 'SNT', 'BAT', 'FUN', 'OMG', 'NMR', 'CVC', 'BNT', 'STORJ', 'ELF', 'KNC', 'MTL', 'OAX', 'RLC', 'XVG', 'WAVES', 'QTUM', 'BTG', 'ICX', 'ONT', 'LSK', 'ARK', 'LUNC', 'KDA', 'MOVR', 'BICO', 'POND', 'QUICK', 'COMBO', 'FARM', 'BANK', 'GHST', 'JASMY', 'HIGH', 'LQTY', 'RPL', 'SSV', 'RDNT', 'GNS', 'JOE', 'VELO', 'BIFI', 'HOOK', 'CHESS', 'ACE', 'XAI', 'MANTA', 'ALT', 'PIXEL', 'PORTAL', 'ZETA', 'DYM', 'TNSR', 'OMNI', 'REZ', 'BB', 'NOT', 'IO', 'ZK', 'LISTA', 'ZRO', 'RENDER', 'WLD', 'ETHFI', 'EIGEN', 'HMSTR', 'CATI', 'NEIRO', 'SCR', 'DOGS', 'MAJOR', 'DEGEN', 'PRIME', 'ONDO', 'BEAM', 'ENA', 'SAGA', 'SAFE', 'AEVO', 'BOME', 'SLERF', 'MEW', 'PONKE', 'POPCAT', 'PNUT', 'ACT', 'GOAT', 'MOODENG', 'TURBO', 'BRETT', 'MOG', 'FWOG', 'BANANA', 'MANEKI', 'MYRO', 'SILLY', 'WEN', 'GECKO', 'HARAMBE', 'TREMP', 'MAGA', 'MOTHER', 'TONY', 'AIDOGE', 'BABYDOGE', 'SNEK', 'BGB', 'OKB', 'CRO', 'HT', 'GT', 'MX', 'KCS', 'LEO', 'FTT', 'BNX', 'LUNA', 'UST', 'BTTC', 'WIN', 'TWT', 'VGX', 'CELR', 'SKL', 'OGN', 'DUSK', 'PAXG', 'FXS', 'ID', 'VANRY']}, // upgraded live from CoinGecko live from CoinGecko live from CoinGecko
-    sp500:{label:'S&P 500',type:'stock',tickers:['AAPL','MSFT','AMZN','NVDA','GOOGL','GOOG','META','TSLA','BRK-B','UNH','LLY','JPM','V','XOM','MA','PG','JNJ','HD','AVGO','MRK','CVX','PEP','ABBV','COST','KO','WMT','ADBE','CRM','BAC','MCD','PFE','TMO','CSCO','ABT','ACN','NKE','DHR','LIN','CMCSA','TXN','VZ','PM','NEE','RTX','HON','AMGN','IBM','UNP','INTC','QCOM','INTU','SBUX','GE','LOW','AMD','CAT','DE','SPGI','MS','GS','BLK','AXP','SCHW','BK','USB','WFC','C','BMY','GILD','VRTX','REGN','ISRG','MDT','BSX','SYK','ELV','HUM','CI','MCK','CVS','MO','CL','GIS','HSY','CPB','CAG','HRL','TSN','PPC','LRCX','KLAC','AMAT','MRVL','PANW','CRWD','NFLX','TGT','F','GM','UBER']},
     nasdaq100:{label:'Nasdaq 100',type:'stock',tickers:['AAPL','MSFT','AMZN','NVDA','GOOGL','GOOG','META','TSLA','AVGO','ADBE','CSCO','CMCSA','INTC','AMD','INTU','QCOM','HON','AMAT','SBUX','MDLZ','GILD','REGN','VRTX','ISRG','KLAC','LRCX','SNPS','CDNS','MRVL','PANW','CRWD','NFLX','PYPL','ADP','MELI','ASML','COST','PDD','KDP','ORLY','PCAR','CTAS','FTNT','FAST','CPRT','MNST','DDOG','ROST','PAYX','ODFL','VRSK','CTSH','ANSS','GEHC','CEG','IDXX','TEAM','WDAY','DASH','ZS','COIN','TTD','RBLX','ABNB','BKNG','NXPI','MCHP','SWKS','ON','ENPH','FSLR','LULU','BIIB','MRNA','ILMN','ALGN','DXCM','PODD','RMD','NBIX','ALNY','BMRN','MANH','PAYC','PCTY','NCNO','CSGP','SGEN','ZM','OKTA','DOCU','PLTR','RGEN','ACAD','ITCI','INSM','NTRA','EXAS','PCVX','SMAR','TENB','APPF','GTLB','FROG','DLO']},
     russell2000:{label:'Russell 2000',type:'stock',tickers:[
       // Technology
@@ -1048,7 +1042,11 @@
     if(strong.length===0) return;
     let msg='APEX SCANNER RESULTS\n'+new Date().toLocaleString()+'\n\nSTRONG SIGNALS ('+strong.length+'):\n\n';
     strong.forEach(a=>{
-      msg+=a.symbol+' - '+a.score+' signals\n';
+      const priceStr = a.price ? ' | $'+Number(a.price).toPrecision(6).replace(/\.?0+$/,'') : '';
+      const atrStr   = a.atr?.atr ? ' | ATR $'+a.atr.atr : '';
+      const vwapStr  = a.vwap?.vwap ? ' | VWAP $'+a.vwap.vwap : '';
+      const emaStr   = a.vsEma200 !== undefined ? ' | EMA200 '+a.vsEma200+'%' : '';
+      msg+=a.symbol+' - '+a.score+' signals'+priceStr+atrStr+vwapStr+emaStr+'\n';
       msg+='Signals: '+(a.signals||[]).join(', ')+'\n';
       if(sentimentMap&&sentimentMap[a.symbol]) msg+='Reddit: '+sentimentMap[a.symbol].label+' ('+sentimentMap[a.symbol].posts+' posts)\n';
       const liq=liqData&&liqData[a.symbol];
@@ -1466,16 +1464,11 @@
 
   function calcVolSpike(vols, isWeekly){
     if(!vols||vols.length<22) return null;
-    if(isWeekly){
-      // On weekly TF: last bar is incomplete (current week not finished)
-      // Use second-to-last as current, compare against 20 bars before that
-      const current = vols[vols.length-2];
-      const avg = vols.slice(-22,-2).reduce((a,b)=>a+b,0)/20;
-      return avg>0?parseFloat((current/avg).toFixed(2)):null;
-    }
-    // Daily/4H: last bar is current, compare against previous 20
-    const avg=vols.slice(-21,-1).reduce((a,b)=>a+b,0)/20;
-    return avg>0?parseFloat((vols[vols.length-1]/avg).toFixed(2)):null;
+    // Always use second-to-last bar as "current" — last bar is always incomplete
+    // (current candle still forming on all timeframes: 4H, 1D, 1W)
+    const current = vols[vols.length-2];
+    const avg = vols.slice(-22,-2).reduce((a,b)=>a+b,0)/20;
+    return avg>0?parseFloat((current/avg).toFixed(2)):null;
   }
 
   // ── WaveTrend [LazyBear] exact implementation ────
@@ -1822,6 +1815,8 @@
     }
 
     // 4️⃣ CoinGecko — try before backend
+    // NOTE: CoinGecko OHLC returns 4-day candles for days>90, and data may be stale.
+    // We always overwrite the last candle's close with the real-time simple/price.
     try{
       const sRes=await fetchWithTimeout(`https://api.coingecko.com/api/v3/search?query=${encodeURIComponent(symbol)}`, 8000);
       if(sRes){
@@ -1829,7 +1824,10 @@
         const match=sd.coins?.find(c=>c.symbol?.toUpperCase()===symbol.toUpperCase());
         if(match){
           const days=selectedTF.tf==='1w'?365:selectedTF.tf==='1d'?210:60;
-          const oRes=await fetchWithTimeout(`https://api.coingecko.com/api/v3/coins/${match.id}/ohlc?vs_currency=usd&days=${days}`, 10000);
+          const [oRes, priceRes] = await Promise.all([
+            fetchWithTimeout(`https://api.coingecko.com/api/v3/coins/${match.id}/ohlc?vs_currency=usd&days=${days}`, 10000),
+            fetchWithTimeout(`https://api.coingecko.com/api/v3/simple/price?ids=${match.id}&vs_currencies=usd`, 5000)
+          ]);
           if(oRes){
             const raw=await oRes.json();
             if(raw&&raw.length>=20){
@@ -1842,6 +1840,19 @@
                   wk.push([w[0][0],w[0][1],Math.max(...w.map(c=>c[2])),Math.min(...w.map(c=>c[3])),w[w.length-1][4],0]);
                 }
                 klines=wk;
+              }
+              // Overwrite last candle close with real-time price to avoid stale data
+              if(priceRes){
+                try{
+                  const pd=await priceRes.json();
+                  const livePrice=pd[match.id]?.usd;
+                  if(livePrice && livePrice > 0){
+                    const last=klines[klines.length-1];
+                    last[4]=livePrice; // close = live price
+                    last[2]=Math.max(last[2],livePrice); // high
+                    last[3]=Math.min(last[3],livePrice); // low
+                  }
+                }catch(e){}
               }
               const r=processKlines(klines);
               if(r) return r;
@@ -1993,8 +2004,6 @@
         // Update both crypto lists with real Binance data
         MARKET_TICKERS.crypto_top500.tickers = data.symbols.slice(0, 500);
         MARKET_TICKERS.crypto_top500._isLive = true;
-        MARKET_TICKERS.crypto_top1000.tickers = data.symbols;
-        MARKET_TICKERS.crypto_top1000._isLive = true;
         const src = data.source || 'exchange';
         console.log('[APEX] Crypto pairs loaded from', src, ':', data.symbols.length, 'coins');
         showToast('Loaded '+data.symbols.length+' pairs from '+src.toUpperCase());
@@ -2087,12 +2096,19 @@
     const wtT=document.getElementById('wtVal').textContent;
     const rsiT=document.getElementById('rsiVal').textContent;
     const volT=document.getElementById('volVal').textContent;
-    const minT=document.getElementById('minT').value;
+    const minTRaw=parseInt(document.getElementById('minT').value);
+    // Auto-cap minT to number of selected indicators so single-indicator filters always work
+    const minT=Math.min(minTRaw, selectedInds.length).toString();
     const engineName=selectedEngine==='claude'?'CLAUDE':'GEMINI';
 
     document.getElementById('setupPanel').style.display='none';
     document.getElementById('loading').classList.add('visible');
     document.getElementById('resultsSection').classList.remove('visible');
+    // Hide action buttons until scan completes
+    ['citadelBtn','intelBtn','newsBtn'].forEach(id => {
+      const el = document.getElementById(id);
+      if(el) el.style.display = 'none';
+    });
     document.getElementById('engineLabel').textContent=`${engineName} IS ANALYZING MARKETS...`;
     allAlerts=[];
 
@@ -2101,28 +2117,25 @@
       const needsCrypto = selectedMarkets.some(m => MARKET_TICKERS[m]?.type === 'crypto');
       if(needsCrypto){
         document.getElementById('loadingStatus').textContent = 'Fetching live top crypto list from CoinGecko...';
-        const needs1000 = selectedMarkets.includes('crypto_top1000');
         const needs500  = selectedMarkets.includes('crypto_top500');
         const needsDefi = selectedMarkets.includes('defi');
 
-        if(needs1000 || needs500){
+        if(needs500){
           // Try CoinGecko silently — tickers already initialized with built-in list so failure is OK
           // CoinGecko sorts by market cap — upgrade if not already sorted
-          const alreadyHaveLive = (needs500 && MARKET_TICKERS.crypto_top500._isCGSorted) ||
-                                  (needs1000 && MARKET_TICKERS.crypto_top1000._isCGSorted);
+          const alreadyHaveLive = MARKET_TICKERS.crypto_top500._isCGSorted;
           if(!alreadyHaveLive){
             try{
-              const limit = needs1000 ? 1000 : 500;
+              const limit = 500;
               document.getElementById('loadingStatus').textContent = 'Upgrading crypto list from CoinGecko...';
               const liveSymbols = await fetchLiveCryptoList(limit);
               if(liveSymbols.length >= 50){
                 if(needs500){ MARKET_TICKERS.crypto_top500.tickers = liveSymbols.slice(0,500); MARKET_TICKERS.crypto_top500._isCGSorted=true; }
-                if(needs1000){ MARKET_TICKERS.crypto_top1000.tickers = liveSymbols.slice(0,1000); MARKET_TICKERS.crypto_top1000._isCGSorted=true; }
               }
               // If rate limited, silently keep using built-in list — no toast, no crash
             }catch(e){ /* silently use built-in */ }
           }
-          document.getElementById('loadingStatus').textContent = `Scanning ${MARKET_TICKERS[needs1000?'crypto_top1000':'crypto_top500'].tickers.length} crypto tickers...`;
+          document.getElementById('loadingStatus').textContent = `Scanning ${MARKET_TICKERS['crypto_top500'].tickers.length} crypto tickers...`;
         }
 
         if(needsDefi && !MARKET_TICKERS.defi.tickers){
@@ -2298,12 +2311,6 @@
       }
       const _cryptoDone = Object.keys(realData).filter(k=>realData[k]?.type==='crypto').length;
       const _stockDone  = Object.keys(realData).filter(k=>realData[k]?.type==='stock').length;
-      if(_stockDone > 0 && window._stockMeta){
-        const m = window._stockMeta;
-        console.log(`[STOCKS] ${m.fetched}/${m.requested} fetched — Yahoo:${m.yahoo} Stooq:${m.stooq} Failed:${m.failed}`);
-        document.getElementById('loadingStatus').textContent =
-          `Stocks: ${m.fetched}/${m.requested} loaded (Yahoo:${m.yahoo} Stooq:${m.stooq} Failed:${m.failed})`;
-      }
       debugLog(`Fetch complete: ${_cryptoDone} crypto, ${_stockDone} stocks with real data`);
       debugLog(`TF=${selectedTF.label} | inds=${selectedInds.join(',')} | minT=${document.getElementById('minT').value}`);
       // Market cap fetch & filter for stocks
@@ -2396,6 +2403,7 @@
         if(d.volSpike!==null&&d.volSpike>=parseFloat(volT)&&selectedTF.tf!=='1w') sigs.push('Volume Spike:Volume Spike '+d.volSpike+'x');
         if(d.vsEma200!==null&&Math.abs(d.vsEma200)<=5) sigs.push('200 EMA proximity:Near 200 EMA ('+d.vsEma200+'%)');
         if(d.vsEma200!==null&&d.vsEma200>20) sigs.push('200 EMA proximity:Extended above 200 EMA ('+d.vsEma200+'%)');
+        if(d.vsEma200!==null&&d.vsEma200<-10) sigs.push('200 EMA proximity:Below 200 EMA ('+d.vsEma200+'%)');
         if(d.vsHigh52!==null&&d.vsHigh52>-5) sigs.push('200 EMA proximity:Near 52W High ('+d.vsHigh52+'%)');
         // Bollinger Bands
         if(d.bb){
@@ -2514,7 +2522,9 @@
           liqTarget:  rd.liqTarget  || null,
           basis:      rd.basis !== undefined ? rd.basis : null,
           takerColor: rd.takerColor || null,
-          takerPct:   rd.takerPct   || null
+          takerPct:   rd.takerPct   || null,
+          atr:        rd.atr  || null,
+          vwap:       rd.vwap || null
         };
         if(sentimentMap && sentimentMap[q.symbol]){
           const s = sentimentMap[q.symbol];
@@ -2562,6 +2572,12 @@
       // Show results immediately — no waiting for AI
       document.getElementById('loading').classList.remove('visible');
       document.getElementById('resultsSection').classList.add('visible');
+      // Reveal action buttons now that scan is complete
+      document.getElementById('citadelBtn').style.display = 'inline-flex';
+      document.getElementById('citadelBtn').textContent   = '⚔ CITADEL REPORT';
+      document.getElementById('intelBtn').style.display   = 'inline-flex';
+      document.getElementById('intelBtn').textContent     = '🧠 INTELLIGENCE';
+      document.getElementById('newsBtn').style.display    = 'inline-flex';
       const strong = allAlerts.filter(a=>a.score>=3).length;
       document.getElementById('statTotal').textContent    = allAlerts.length;
       document.getElementById('statStrong').textContent   = strong;
@@ -3057,35 +3073,59 @@ Return ONLY the raw JSON array. No markdown, no backticks, no preamble.`;
 
     btn.disabled = true;
     btn.textContent = '⚔ GENERATING...';
-    modal.classList.add('visible');
-    content.textContent = '';
+    // Modal not shown — report sent to Telegram only
     status.textContent = '[ Contacting backend... ]';
 
-    // Top 50 by score
-    const top50 = [...allAlerts].sort((a,b) => b.score - a.score).slice(0, 50);
+    // All alerts sorted by score — all logged to backtest, top 10 to Gemini
+    const sortedAlerts = [...allAlerts].sort((a,b) => b.score - a.score);
+    const top10 = sortedAlerts.slice(0, 10);
 
-    const coinsData = top50.map((a, i) => {
-      return `${i+1}. ${a.symbol} (${a.type||'crypto'})
-   Price: $${a.price || 'N/A'}
-   Score: ${a.score} signals — ${(a.signals||[]).join(', ')}
-   RSI: ${a.rsi || 'N/A'} | WT1: ${a.wt1 || 'N/A'} | vs EMA200: ${a.vsEma200 !== undefined ? a.vsEma200+'%' : 'N/A'}
-   Vol Spike: ${a.volSpike ? 'YES' : 'no'} | Timeframe: ${a.timeframe || 'N/A'}`;
-    }).join('\n\n');
+    const coinsData = top10.map((a, i) => {
+      const atrVal  = a.atr  ? `$${a.atr.atr}` : 'N/A';
+      const vwapVal = a.vwap ? `$${a.vwap.vwap}` : 'N/A';
+      return `${i+1}. ${a.symbol} $${a.price||'N/A'} | RSI:${a.rsi||'N/A'} WT:${a.wt1||'N/A'} EMA200:${a.vsEma200!==undefined?a.vsEma200+'%':'N/A'} ATR:${atrVal} VWAP:${vwapVal}${a.volSpike ? ' VOL:' + a.volSpike + 'x' : ''}
+   ${a.score} signals: ${(a.signals||[]).join(' · ')}`;
+    }).join('\n');
+
+    // Rich structured payload — includes BB, liq, vol candle colour for report cards
+    const coinsStructured = sortedAlerts.map(a => ({
+      symbol:        a.symbol,
+      price:         a.price,
+      atr:           a.atr?.atr || null,
+      signals:       (a.signals || []).join(', '),
+      score:         a.score,
+      timeframe:     a.timeframe || 'N/A',
+      volSpike:      a.volSpike || null,
+      volSpikeGreen: a.volSpikeGreen != null ? a.volSpikeGreen : null,
+      vsEma200:      a.vsEma200 != null ? a.vsEma200 : null,
+      rsi:           a.rsi || null,
+      wt1:           a.wt1 || null,
+      vwap:          a.vwap ? { vwap: a.vwap.vwap, pctFromVwap: a.vwap.pctFromVwap, belowVwap: a.vwap.belowVwap } : null,
+      bb: a.bb ? {
+        upper: a.bb.upper, lower: a.bb.lower, mid: a.bb.mid,
+        atUpper: a.bb.atUpper, atLower: a.bb.atLower,
+        pctInBand: (a.bb.upper && a.bb.lower && a.bb.upper !== a.bb.lower)
+          ? Math.round(((a.price - a.bb.lower) / (a.bb.upper - a.bb.lower)) * 100) : null
+      } : null,
+      liq: a.liq ? { distLong: a.liq.distLong, distShort: a.liq.distShort, alertType: a.liq.alertType } : null,
+    }));
 
     try {
       const backendUrl = window.BACKEND_URL || 'https://web-production-d8201.up.railway.app';
       const resp = await fetch(`${backendUrl}/citadel-report`, {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ coins: coinsData, count: top50.length, timeframe: top50[0]?.timeframe || 'N/A' })
+        body: JSON.stringify({ coins: coinsData, coinsStructured, count: top10.length, timeframe: top10[0]?.timeframe || 'N/A' })
       });
       const data = await resp.json();
-      if (data.report) {
-        content.textContent = data.report;
-        status.textContent = `[ Report generated for top ${top50.length} assets | Sent to Telegram ]`;
+      if (data.reportUrl) {
+        status.textContent = `[ Report ready → ${data.reportUrl} ]`;
+        showToast('⚔ CITADEL REPORT READY');
+      } else if (data.report) {
+        status.textContent = `[ Report sent to Telegram ✓ ]`;
+        showToast('⚔ CITADEL REPORT SENT TO TELEGRAM');
       } else {
-        content.textContent = data.error || 'Failed to generate report.';
-        status.textContent = '[ Error ]';
+        status.textContent = '[ Error: ' + (data.error || 'Failed') + ' ]';
       }
     } catch(e) {
       content.textContent = 'Error: ' + e.message;
@@ -3108,7 +3148,6 @@ Return ONLY the raw JSON array. No markdown, no backticks, no preamble.`;
     {name: '', id: ''},
     {name: '', id: ''},
   ];
-
 
   // ══════════════════════════════════════════════════════════
   // SECTION 07 — NEWS INTEL
@@ -3519,6 +3558,174 @@ Be direct, precise, and institutional in tone. No bullet points — flowing pros
 
 </script>
 
+<!-- ── Fixed Bottom Action Bar ── -->
+<style>
+  #bottomActionBar {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    z-index: 1000;
+    background: rgba(4,4,8,0.97);
+    border-top: 1px solid #1a1a2e;
+    backdrop-filter: blur(10px);
+    padding: 8px 10px;
+    padding-bottom: calc(8px + env(safe-area-inset-bottom));
+    display: flex;
+    gap: 6px;
+    align-items: stretch;
+  }
+  /* Left cluster: ANALYSE + its sub-buttons */
+  .bar-cluster {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 2;
+  }
+  .bar-cluster-sub {
+    display: flex;
+    gap: 4px;
+  }
+  /* Right group: standalone buttons */
+  .bar-standalone {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 3;
+  }
+  .bar-standalone-row {
+    display: flex;
+    gap: 4px;
+    flex: 1;
+  }
+  .bar-btn {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 0 8px;
+    background: transparent;
+    border: 1px solid #1a1a2e;
+    color: #444;
+    font-family: 'Share Tech Mono', monospace;
+    cursor: pointer;
+    transition: all 0.15s;
+    text-decoration: none;
+    border-radius: 2px;
+    flex: 1;
+    height: 36px;
+  }
+  /* ANALYSE — big primary button */
+  .bar-btn.btn-analyse {
+    border-color: rgba(0,212,255,0.6); color: #00d4ff;
+    height: 44px; font-size: 13px; letter-spacing: 2px; font-weight: 700;
+  }
+  .bar-btn.btn-analyse:hover { background: rgba(0,212,255,0.08); box-shadow: 0 0 16px rgba(0,212,255,0.15); }
+  /* Sub-buttons under ANALYSE */
+  .bar-btn.btn-citadel, .bar-btn.btn-intelligence {
+    border-color: #1a1a2e; color: #2a2a3e;
+    cursor: not-allowed; pointer-events: none;
+    height: 32px; font-size: 11px;
+  }
+  .bar-btn.btn-citadel.unlocked {
+    border-color: rgba(168,85,247,0.5); color: #a855f7;
+    cursor: pointer; pointer-events: auto;
+  }
+  .bar-btn.btn-citadel.unlocked:hover { background: rgba(168,85,247,0.08); }
+  .bar-btn.btn-intelligence.unlocked {
+    border-color: rgba(168,85,247,0.3); color: #9f6ef5;
+    cursor: pointer; pointer-events: auto;
+  }
+  .bar-btn.btn-intelligence.unlocked:hover { background: rgba(124,58,237,0.08); }
+  /* Standalone buttons */
+  .bar-btn.btn-btcbottom { border-color: rgba(0,255,136,0.4); color: #00ff88; font-size: 11px; }
+  .bar-btn.btn-btcbottom:hover { background: rgba(0,255,136,0.06); }
+  .bar-btn.btn-volspike  { border-color: rgba(240,192,64,0.4); color: #f0c040; font-size: 11px; }
+  .bar-btn.btn-volspike:hover  { background: rgba(240,192,64,0.06); }
+  .bar-btn.btn-backtest  { border-color: rgba(0,212,255,0.3); color: #556; font-size: 11px; }
+  .bar-btn.btn-backtest:hover { border-color: #00d4ff; color: #00d4ff; background: rgba(0,212,255,0.06); }
+  /* Divider */
+  .bar-divider {
+    width: 1px; background: #1a1a2e; margin: 2px 0; flex-shrink: 0;
+  }
+  .bar-btn .bar-icon  { font-size: 14px; line-height: 1; }
+  .bar-btn .bar-label { letter-spacing: 1px; white-space: nowrap; font-size: 11px; }
+  .bar-btn:disabled   { opacity: 0.3; cursor: not-allowed; pointer-events: none; }
+  body { padding-bottom: 90px; }
+</style>
+
+<div id="bottomActionBar">
+
+  <!-- LEFT: ANALYSE + sub-buttons (Citadel & Intel unlock after scan) -->
+  <div class="bar-cluster">
+    <button class="bar-btn btn-analyse" id="barScanBtn" onclick="runScan()">
+      <span class="bar-icon">⚡</span>
+      <span class="bar-label">ANALYSE</span>
+    </button>
+    <div class="bar-cluster-sub">
+      <button class="bar-btn btn-citadel" id="barCitadelBtn" onclick="runCitadelReport()">
+        <span class="bar-icon">⚔</span>
+        <span class="bar-label">CITADEL</span>
+      </button>
+      <button class="bar-btn btn-intelligence" id="barIntelBtn" onclick="openIntelPanel()">
+        <span class="bar-icon">🧠</span>
+        <span class="bar-label">INTEL</span>
+      </button>
+    </div>
+  </div>
+
+  <div class="bar-divider"></div>
+
+  <!-- RIGHT: Standalone buttons -->
+  <div class="bar-standalone">
+    <div class="bar-standalone-row">
+      <button class="bar-btn btn-btcbottom" id="barBottomBtn" onclick="runFindBottom()">
+        <span class="bar-icon">🎯</span>
+        <span class="bar-label">BTC BOTTOM</span>
+      </button>
+      <button class="bar-btn btn-volspike" id="barVolBtn" onclick="triggerScanNow()">
+        <span class="bar-icon">📡</span>
+        <span class="bar-label">VOL SPIKE</span>
+      </button>
+      <a class="bar-btn btn-backtest" href="/backtest" target="_blank">
+        <span class="bar-icon">📊</span>
+        <span class="bar-label">BACKTEST</span>
+      </a>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  // Unlock scan-dependent buttons once results are visible
+  (function() {
+    const barCitadel = document.getElementById('barCitadelBtn');
+    const barIntel   = document.getElementById('barIntelBtn');
+    const barScan    = document.getElementById('barScanBtn');
+    const barBottom  = document.getElementById('barBottomBtn');
+
+    let _scanDone = false;
+
+    function syncBar() {
+      const resultsVisible = document.getElementById('resultsSection')?.classList.contains('visible');
+      const scanning = document.getElementById('loading')?.classList.contains('visible');
+
+      // Lock/unlock scan-dependent buttons
+      if(resultsVisible && !_scanDone) _scanDone = true;
+      if(_scanDone) {
+        barCitadel.classList.add('unlocked');
+        barIntel.classList.add('unlocked');
+      }
+
+      // Disable ANALYSE and BTC BOTTOM while scanning
+      barScan.disabled   = !!scanning;
+      barBottom.disabled = !!scanning;
+    }
+
+    setInterval(syncBar, 400);
+  })();
+</script>
+
+
 <!-- ══════════════════════════════════════════════════════════
      SECTION 07 — NEWS INTEL MODAL
      Sources: Financial Juice (speed) + CryptoPanic (sentiment)
@@ -3562,6 +3769,7 @@ Be direct, precise, and institutional in tone. No bullet points — flowing pros
     </div>
   </div>
 </div>
+
 
 </body>
 </html>
