@@ -3126,9 +3126,12 @@ Return ONLY the raw JSON array. No markdown, no backticks, no preamble.`;
     document.getElementById('newsModal').classList.remove('visible');
   }
 
-  // Close on backdrop click
-  document.getElementById('newsModal').addEventListener('click', function(e) {
-    if (e.target === this) closeNewsModal();
+  // Close on backdrop click — defer until DOM is ready
+  document.addEventListener('DOMContentLoaded', function() {
+    const nm = document.getElementById('newsModal');
+    if (nm) nm.addEventListener('click', function(e) {
+      if (e.target === this) closeNewsModal();
+    });
   });
 
   async function fetchAllNews() {
