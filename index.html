@@ -241,9 +241,7 @@
     <div class="header-badge">AI-POWERED MARKET INTELLIGENCE</div>
     <h1>APEX <span>SCANNER</span> <span style="font-size:clamp(11px,2.5vw,16px);font-weight:400;color:var(--muted);letter-spacing:2px;vertical-align:middle;">v2.16</span></h1>
     <div class="header-sub">CLAUDE AI + GEMINI AI — CHOOSE YOUR ENGINE</div>
-    <div style="margin-top:12px;">
-      <button class="news-btn" onclick="openNewsModal()">📰 NEWS INTEL</button>
-    </div>
+
   </div>
 
   <div id="errorBox" style="display:none;background:rgba(255,51,102,0.1);border:1px solid var(--danger);border-radius:2px;padding:14px;margin-bottom:14px;font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--danger);line-height:1.7;word-break:break-all;"></div>
@@ -3735,6 +3733,10 @@ Return ONLY the raw JSON array. No markdown, no backticks, no preamble.`;
   .bar-btn.btn-volspike:hover  { background: rgba(240,192,64,0.06); }
   .bar-btn.btn-backtest  { border-color: rgba(0,212,255,0.3); color: #556; font-size: 11px; }
   .bar-btn.btn-backtest:hover { border-color: #00d4ff; color: #00d4ff; background: rgba(0,212,255,0.06); }
+  .bar-btn.btn-news   { border-color: rgba(255,107,53,0.5); color: #ff6b35; font-size: 11px; }
+  .bar-btn.btn-news:hover { background: rgba(255,107,53,0.08); }
+  .bar-btn.btn-digest { border-color: rgba(0,212,255,0.35); color: #00aacc; font-size: 11px; }
+  .bar-btn.btn-digest:hover { background: rgba(0,212,255,0.06); }
   /* Divider */
   .bar-divider {
     width: 1px; background: #1a1a2e; margin: 2px 0; flex-shrink: 0;
@@ -3742,7 +3744,7 @@ Return ONLY the raw JSON array. No markdown, no backticks, no preamble.`;
   .bar-btn .bar-icon  { font-size: 14px; line-height: 1; }
   .bar-btn .bar-label { letter-spacing: 1px; white-space: nowrap; font-size: 11px; }
   .bar-btn:disabled   { opacity: 0.3; cursor: not-allowed; pointer-events: none; }
-  body { padding-bottom: 90px; }
+  body { padding-bottom: 110px; }
 </style>
 
 <div id="bottomActionBar">
@@ -3767,8 +3769,22 @@ Return ONLY the raw JSON array. No markdown, no backticks, no preamble.`;
 
   <div class="bar-divider"></div>
 
-  <!-- RIGHT: Standalone buttons -->
+  <!-- RIGHT: Two rows of standalone buttons -->
   <div class="bar-standalone">
+    <div class="bar-standalone-row">
+      <button class="bar-btn btn-news" onclick="openNewsModal()">
+        <span class="bar-icon">📰</span>
+        <span class="bar-label">NEWS</span>
+      </button>
+      <button class="bar-btn btn-digest" onclick="window.open('https://web-production-d8201.up.railway.app/digest','_blank')">
+        <span class="bar-icon">🎬</span>
+        <span class="bar-label">DIGEST</span>
+      </button>
+      <a class="bar-btn btn-backtest" href="https://web-production-d8201.up.railway.app/backtest" target="_blank">
+        <span class="bar-icon">📊</span>
+        <span class="bar-label">BACKTEST</span>
+      </a>
+    </div>
     <div class="bar-standalone-row">
       <button class="bar-btn btn-btcbottom" id="barBottomBtn" onclick="runFindBottom()">
         <span class="bar-icon">🎯</span>
@@ -3778,10 +3794,6 @@ Return ONLY the raw JSON array. No markdown, no backticks, no preamble.`;
         <span class="bar-icon">📡</span>
         <span class="bar-label">VOL SPIKE</span>
       </button>
-      <a class="bar-btn btn-backtest" href="/backtest" target="_blank">
-        <span class="bar-icon">📊</span>
-        <span class="bar-label">BACKTEST</span>
-      </a>
     </div>
   </div>
 
