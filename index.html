@@ -241,6 +241,9 @@
     <div class="header-badge">AI-POWERED MARKET INTELLIGENCE</div>
     <h1>APEX <span>SCANNER</span> <span style="font-size:clamp(11px,2.5vw,16px);font-weight:400;color:var(--muted);letter-spacing:2px;vertical-align:middle;">v2.16</span></h1>
     <div class="header-sub">CLAUDE AI + GEMINI AI — CHOOSE YOUR ENGINE</div>
+    <div style="margin-top:12px;">
+      <button class="news-btn" onclick="openNewsModal()">📰 NEWS INTEL</button>
+    </div>
   </div>
 
   <div id="errorBox" style="display:none;background:rgba(255,51,102,0.1);border:1px solid var(--danger);border-radius:2px;padding:14px;margin-bottom:14px;font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--danger);line-height:1.7;word-break:break-all;"></div>
@@ -498,7 +501,6 @@
       <button class="new-scan-btn" onclick="newScan()">↺ NEW SCAN</button>
       <button class="citadel-btn" id="citadelBtn" style="display:none" onclick="runCitadelReport()"></button>
       <button class="intel-btn" id="intelBtn" style="display:none" onclick="openIntelPanel()"></button>
-      <button class="news-btn" id="newsBtn" style="display:none" onclick="openNewsModal()">📰 NEWS INTEL</button>
     </div>
     <div class="results-stats">
       <div class="stat-box"><div class="stat-val" id="statTotal">0</div><div class="stat-label">TOTAL</div></div>
@@ -2105,7 +2107,7 @@
     document.getElementById('loading').classList.add('visible');
     document.getElementById('resultsSection').classList.remove('visible');
     // Hide action buttons until scan completes
-    ['citadelBtn','intelBtn','newsBtn'].forEach(id => {
+    ['citadelBtn','intelBtn'].forEach(id => {
       const el = document.getElementById(id);
       if(el) el.style.display = 'none';
     });
@@ -2577,7 +2579,7 @@
       document.getElementById('citadelBtn').textContent   = '⚔ CITADEL REPORT';
       document.getElementById('intelBtn').style.display   = 'inline-flex';
       document.getElementById('intelBtn').textContent     = '🧠 INTELLIGENCE';
-      document.getElementById('newsBtn').style.display    = 'inline-flex';
+
       const strong = allAlerts.filter(a=>a.score>=3).length;
       document.getElementById('statTotal').textContent    = allAlerts.length;
       document.getElementById('statStrong').textContent   = strong;
@@ -3186,6 +3188,10 @@ Return ONLY the raw JSON array. No markdown, no backticks, no preamble.`;
     _newsAllItems = [...fjItems, ...cpItems]
       .sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
 
+    console.log('[NEWS] FJ items:', fjItems.length, 'CP items:', cpItems.length, 'Total:', _newsAllItems.length);
+    if(_newsAllItems.length === 0) {
+      document.getElementById('newsFeed').innerHTML = '<div class="news-empty" style="color:var(--warn)">⚠ No headlines loaded. Check console for errors.</div>';
+    }
     renderNewsFeed(_newsActiveTab);
     renderNewsTicker();
     setNewsLoading(false);
@@ -3202,6 +3208,7 @@ Return ONLY the raw JSON array. No markdown, no backticks, no preamble.`;
       const r = await fetch(BACKEND + '/api/fj-feed', {signal: makeAbortSignal(12000)});
       if (!r.ok) return [];
       const items = await r.json();
+      if (!Array.isArray(items)) { console.warn('[NEWS] FJ unexpected response:', items); return []; }
       return items.map(it => ({
         title:     it.title,
         url:       it.url,
