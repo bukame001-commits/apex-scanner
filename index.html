@@ -3161,6 +3161,7 @@ Return ONLY the raw JSON array. No markdown, no backticks, no preamble.`;
   function openNewsModal() {
     document.getElementById('newsModal').classList.add('visible');
     if (!_newsFetched) fetchAllNews();
+    loadSavedNewsReports();
   }
 
   function closeNewsModal() {
@@ -3309,50 +3310,132 @@ Return ONLY the raw JSON array. No markdown, no backticks, no preamble.`;
     ticker.style.display = 'block';
   }
 
+  // ── News Intel Report — saved reports store ─────────────────
+  let _savedNewsReports = [];
+
+  async function loadSavedNewsReports() {
+    try {
+      const r = await fetch(BACKEND + '/api/news-intel-reports', {signal: makeAbortSignal(8000)});
+      if (r.ok) {
+        _savedNewsReports = await r.json();
+        _savedNewsReports.sort((a,b) => b.createdAt.localeCompare(a.createdAt));
+        renderNewsReportHistory();
+        // Auto-show latest if exists
+        if (_savedNewsReports.length) showNewsReport(_savedNewsReports[0].id);
+      }
+    } catch(e) { console.warn('[NEWS] Could not load saved reports:', e.message); }
+  }
+
+  function renderNewsReportHistory() {
+    const el = document.getElementById('newsReportHistory');
+    if (!el) return;
+    if (!_savedNewsReports.length) {
+      el.innerHTML = '<div style="font-size:10px;color:var(--muted);font-family:Share Tech Mono,monospace;padding:6px 0 10px;">No saved reports. Click COMPILE INTEL REPORT to generate one.</div>';
+      return;
+    }
+    el.innerHTML = _savedNewsReports.map(r => {
+      const d   = new Date(r.createdAt);
+      const age = Math.round((Date.now() - d) / 60000);
+      const ageStr = age < 60 ? age + 'm ago' : Math.round(age/60) + 'h ago';
+      const vColor = r.verdict==='RISK-ON' ? '#00ff88' : r.verdict==='RISK-OFF' ? '#ff3366' : '#ffb800';
+      return `<span onclick="showNewsReport('${r.id}')" style="display:inline-flex;align-items:center;gap:6px;
+        border:1px solid ${vColor};border-radius:2px;padding:3px 10px;margin:0 6px 6px 0;
+        cursor:pointer;font-family:Share Tech Mono,monospace;font-size:9px;color:${vColor};
+        background:rgba(0,0,0,0.3);">
+        ${r.verdict} <span style="color:var(--muted)">${ageStr}</span>
+      </span>`;
+    }).join('');
+  }
+
+  function _formatReportText(text) {
+    const sections = ['MACRO SNAPSHOT','ASSET RECOMMENDATIONS','ASSETS TO AVOID','RISK VERDICT','KEY CATALYST'];
+    let html = text;
+    // Section headers
+    sections.forEach(s => {
+      html = html.replace(new RegExp('(^|\n)(' + s + ')(\n|$)', 'g'),
+        '$1<div style="font-family:Orbitron,monospace;font-size:10px;letter-spacing:2px;color:var(--accent);margin:16px 0 8px;border-bottom:1px solid var(--border);padding-bottom:4px;">$2</div>$3');
+    });
+    // Asset recommendation rows: ASSET | DIRECTION | CONVICTION | REASONING
+    html = html.replace(/^([^
+<|]{1,30})\s*\|\s*(BUY|SELL|HOLD|AVOID|WATCH)\s*\|\s*(HIGH|MEDIUM|LOW)\s*\|\s*(.+)$/gm, (_, asset, dir, conv, reason) => {
+      const dc = dir==='BUY'?'#00ff88':dir==='SELL'||dir==='AVOID'?'#ff3366':'#ffb800';
+      const cc = conv==='HIGH'?'#00ff88':conv==='LOW'?'#ff3366':'#ffb800';
+      return `<div style="display:grid;grid-template-columns:110px 55px 65px 1fr;gap:6px;align-items:start;
+        padding:6px 10px;margin:3px 0;border-left:3px solid ${dc};background:rgba(0,0,0,0.2);font-size:11px;">
+        <span style="color:var(--strong);font-weight:600;">${asset.trim()}</span>
+        <span style="color:${dc};font-family:Share Tech Mono,monospace;">${dir}</span>
+        <span style="color:${cc};font-family:Share Tech Mono,monospace;font-size:10px;">${conv}</span>
+        <span style="color:var(--text);line-height:1.5;">${reason.trim()}</span>
+      </div>`;
+    });
+    // Plain lines
+    html = html.split('\n').map(line => {
+      if (line.startsWith('<')) return line;
+      if (!line.trim()) return '<div style="height:6px;"></div>';
+      return `<div style="font-size:11px;line-height:1.6;color:var(--text);padding:1px 0;">${line
+        .replace(/⚠/g,'<span style="color:var(--warn)">⚠</span>')
+        .replace(/✓/g,'<span style="color:var(--accent2)">✓</span>')
+        .replace(/RISK-OFF/g,'<span style="color:#ff3366;font-weight:600;">RISK-OFF</span>')
+        .replace(/RISK-ON/g,'<span style="color:#00ff88;font-weight:600;">RISK-ON</span>')
+        .replace(/MIXED/g,'<span style="color:#ffb800;font-weight:600;">MIXED</span>')
+      }</div>`;
+    }).join('');
+    return html;
+  }
+
+  function showNewsReport(id) {
+    const r = _savedNewsReports.find(x => x.id === id);
+    if (!r) return;
+    const text  = document.getElementById('newsAiText');
+    const vColor = r.verdict==='RISK-ON'?'#00ff88':r.verdict==='RISK-OFF'?'#ff3366':'#ffb800';
+    const d = new Date(r.createdAt);
+    text.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:center;
+        border-bottom:1px solid var(--border);padding-bottom:8px;margin-bottom:12px;">
+        <span style="font-family:Orbitron,monospace;font-size:10px;color:var(--accent);letter-spacing:2px;">
+          INTEL REPORT
+        </span>
+        <div style="display:flex;gap:10px;align-items:center;">
+          <span style="font-family:Share Tech Mono,monospace;font-size:10px;color:${vColor};
+            border:1px solid ${vColor};padding:2px 8px;">${r.verdict}</span>
+          <span style="font-size:9px;color:var(--muted);">${d.toLocaleString()}</span>
+        </div>
+      </div>
+      <div style="font-size:9px;color:var(--muted);margin-bottom:10px;font-family:Share Tech Mono,monospace;">
+        ${r.sourceCount||0} HEADLINES · REUTERS · MARKETWATCH · FT · INVESTING.COM · COINDESK · DECRYPT · FIN JUICE
+      </div>
+      ${_formatReportText(r.report)}`;
+  }
+
   async function compileNewsAI() {
     const btn  = document.getElementById('newsCompileBtn');
     const text = document.getElementById('newsAiText');
-    if (!_newsAllItems.length) { text.textContent = 'No headlines loaded yet. Wait for feeds to load.'; return; }
-
     btn.disabled = true;
-    btn.textContent = '⏳ COMPILING...';
-    text.textContent = 'Synthesising headlines...';
-
-    const headlines = _newsAllItems.slice(0, 30).map((it, i) =>
-      `${i+1}. [${it.source}] [${it.sentiment.toUpperCase()}] ${it.title}`
-    ).join('\n');
-
-    const prompt = `You are a senior macro intelligence analyst at a hedge fund. Here are the top ${Math.min(30, _newsAllItems.length)} market headlines right now:
-
-${headlines}
-
-Produce a concise intelligence brief (5-7 sentences) covering:
-1. The dominant market narrative driving these headlines
-2. Key risks and opportunities for crypto and equities
-3. One contrarian observation the consensus is missing
-4. Overall market sentiment: RISK-ON / RISK-OFF / MIXED
-
-Be direct, precise, and institutional in tone. No bullet points — flowing prose.`;
-
+    btn.textContent = '⏳ FETCHING SOURCES...';
+    text.innerHTML = `<div style="color:var(--muted);font-size:11px;font-family:Share Tech Mono,monospace;line-height:2;">
+      FETCHING: Reuters · MarketWatch · FT · Investing.com · CoinDesk · Decrypt · Financial Juice<br>
+      <span style="color:var(--accent);">Running Gemini analysis...</span><br>
+      <span style="font-size:9px;">This takes 30-60 seconds</span>
+    </div>`;
     try {
-      const r = await fetch('https://api.anthropic.com/v1/messages', {
+      const r = await fetch(BACKEND + '/api/compile-news-report', {
         method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
-          max_tokens: 1000,
-          messages: [{role: 'user', content: prompt}]
-        })
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({}),
+        signal: makeAbortSignal(120000)
       });
       const data = await r.json();
-      const brief = data.content?.[0]?.text || 'Could not generate brief.';
-      text.textContent = brief;
+      if (data.error) { text.textContent = 'Error: ' + data.error; btn.disabled=false; btn.textContent='🧠 COMPILE INTEL REPORT'; return; }
+      const newReport = {id:data.id, createdAt:data.createdAt, report:data.report, verdict:data.verdict, sourceCount:data.sourceCount};
+      _savedNewsReports.unshift(newReport);
+      _savedNewsReports = _savedNewsReports.slice(0, 20); // keep max 20 in memory
+      renderNewsReportHistory();
+      showNewsReport(data.id);
     } catch(e) {
-      text.textContent = 'AI synthesis failed: ' + e.message;
+      text.innerHTML = `<div style="color:var(--danger);">Compile failed: ${e.message}</div>`;
     }
-
     btn.disabled = false;
-    btn.textContent = '🔄 REFRESH BRIEF';
+    btn.textContent = '🔄 COMPILE NEW REPORT';
   }
 
   function setNewsLoading(on) {
@@ -3744,7 +3827,7 @@ Be direct, precise, and institutional in tone. No bullet points — flowing pros
   <div class="news-box">
     <button class="news-close" onclick="closeNewsModal()">✕ CLOSE</button>
     <div class="news-title">📰 NEWS INTEL</div>
-    <div class="news-subtitle">FINANCIAL JUICE · COINDESK · DECRYPT · AI SYNTHESIS</div>
+    <div class="news-subtitle">REUTERS · MARKETWATCH · FT · COINDESK · DECRYPT · FIN JUICE</div>
 
     <!-- Loading bar -->
     <div class="news-loading-bar" id="newsLoadingBar"></div>
@@ -3757,10 +3840,17 @@ Be direct, precise, and institutional in tone. No bullet points — flowing pros
     <!-- AI Synthesis panel -->
     <div class="news-ai-panel">
       <div class="news-ai-label">
-        <span>⚡ AI SYNTHESIS — MARKET INTELLIGENCE BRIEF</span>
-        <button class="news-compile-btn" id="newsCompileBtn" onclick="compileNewsAI()">🧠 COMPILE BRIEF</button>
+        <span>⚡ NEWS INTEL REPORT — MACRO + ASSET INTELLIGENCE</span>
+        <button class="news-compile-btn" id="newsCompileBtn" onclick="compileNewsAI()">🧠 COMPILE INTEL REPORT</button>
       </div>
-      <div class="news-ai-text" id="newsAiText">Press COMPILE BRIEF to generate an AI-powered synthesis of the latest headlines.</div>
+      <div id="newsReportHistory" style="padding:4px 0;"></div>
+      <div class="news-ai-text" id="newsAiText" style="min-height:100px;">
+        <div style="color:var(--muted);font-size:11px;font-family:Share Tech Mono,monospace;line-height:1.8;">
+          Click COMPILE INTEL REPORT to generate a macro intelligence brief from 7 live sources.<br>
+          <span style="font-size:9px;">Sources: Reuters · MarketWatch · FT · Investing.com · CoinDesk · Decrypt · Financial Juice</span><br>
+          <span style="font-size:9px;">Reports are saved for 3 days and auto-fed into Citadel Reports.</span>
+        </div>
+      </div>
     </div>
 
     <!-- Source tabs -->
