@@ -239,7 +239,7 @@
 
   <div class="header">
     <div class="header-badge">AI-POWERED MARKET INTELLIGENCE</div>
-    <h1>APEX <span>SCANNER</span> <span style="font-size:clamp(11px,2.5vw,16px);font-weight:400;color:var(--muted);letter-spacing:2px;vertical-align:middle;">v2.19</span></h1>
+    <h1>APEX <span>SCANNER</span> <span style="font-size:clamp(11px,2.5vw,16px);font-weight:400;color:var(--muted);letter-spacing:2px;vertical-align:middle;">v2.20</span></h1>
     <div class="header-sub">CLAUDE AI + GEMINI AI — CHOOSE YOUR ENGINE</div>
 
   </div>
@@ -3092,6 +3092,7 @@ Return ONLY the raw JSON array. No markdown, no backticks, no preamble.`;
     const coinsStructured = sortedAlerts.map(a => ({
       symbol:        a.symbol,
       price:         a.price,
+      type:          a.type || 'crypto',
       atr:           a.atr?.atr || null,
       signals:       (a.signals || []).join(', '),
       score:         a.score,
