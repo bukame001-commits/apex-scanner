@@ -3182,7 +3182,7 @@ Return ONLY the raw JSON array. No markdown, no backticks, no preamble.`;
 
     const [fjItems, cpItems] = await Promise.all([
       fetchFJFeed(),
-      fetchCryptoPanic()
+      fetchCryptoNews()
     ]);
 
     _newsAllItems = [...fjItems, ...cpItems]
@@ -3223,7 +3223,7 @@ Return ONLY the raw JSON array. No markdown, no backticks, no preamble.`;
     }
   }
 
-  async function fetchCryptoPanic() {
+  async function fetchCryptoNews() {
     try {
       const r = await fetch(BACKEND + '/api/crypto-news', {signal: makeAbortSignal(12000)});
       if (!r.ok) return [];
@@ -3231,17 +3231,13 @@ Return ONLY the raw JSON array. No markdown, no backticks, no preamble.`;
       return (data.results || []).map(it => ({
         title:     it.title,
         url:       it.url,
-        date:      it.published_at,
-        source:    'CryptoPanic',
+        date:      it.date,
+        source:    it.source || 'Crypto News',
         sourceKey: 'cp',
-        sentiment: it.votes
-          ? (it.votes.positive > it.votes.negative ? 'bullish'
-             : it.votes.negative > it.votes.positive ? 'bearish' : 'neutral')
-          : guessSentiment(it.title),
-        votes: it.votes,
+        sentiment: guessSentiment(it.title),
       }));
     } catch(e) {
-      console.warn('CryptoPanic error:', e);
+      console.warn('Crypto news error:', e);
       return [];
     }
   }
@@ -3748,7 +3744,7 @@ Be direct, precise, and institutional in tone. No bullet points — flowing pros
   <div class="news-box">
     <button class="news-close" onclick="closeNewsModal()">✕ CLOSE</button>
     <div class="news-title">📰 NEWS INTEL</div>
-    <div class="news-subtitle">FINANCIAL JUICE · CRYPTOPANIC · AI SYNTHESIS</div>
+    <div class="news-subtitle">FINANCIAL JUICE · COINDESK · DECRYPT · AI SYNTHESIS</div>
 
     <!-- Loading bar -->
     <div class="news-loading-bar" id="newsLoadingBar"></div>
@@ -3770,8 +3766,8 @@ Be direct, precise, and institutional in tone. No bullet points — flowing pros
     <!-- Source tabs -->
     <div class="news-tabs">
       <button class="news-tab active" onclick="switchNewsTab('all', this)">ALL</button>
-      <button class="news-tab" onclick="switchNewsTab('fj', this)">⚡ FINANCIAL JUICE</button>
-      <button class="news-tab" onclick="switchNewsTab('cp', this)">🌐 CRYPTOPANIC</button>
+      <button class="news-tab" onclick="switchNewsTab('fj', this)">⚡ FIN JUICE</button>
+      <button class="news-tab" onclick="switchNewsTab('cp', this)">📡 CRYPTO RSS</button>
       <button class="news-tab" onclick="switchNewsTab('bullish', this)">🟢 BULLISH</button>
       <button class="news-tab" onclick="switchNewsTab('bearish', this)">🔴 BEARISH</button>
     </div>
