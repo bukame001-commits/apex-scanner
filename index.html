@@ -239,7 +239,7 @@
 
   <div class="header">
     <div class="header-badge">AI-POWERED MARKET INTELLIGENCE</div>
-    <h1>APEX <span>SCANNER</span> <span style="font-size:clamp(11px,2.5vw,16px);font-weight:400;color:var(--muted);letter-spacing:2px;vertical-align:middle;">v2.18</span></h1>
+    <h1>APEX <span>SCANNER</span> <span style="font-size:clamp(11px,2.5vw,16px);font-weight:400;color:var(--muted);letter-spacing:2px;vertical-align:middle;">v2.19</span></h1>
     <div class="header-sub">CLAUDE AI + GEMINI AI — CHOOSE YOUR ENGINE</div>
 
   </div>
@@ -3120,7 +3120,15 @@ Return ONLY the raw JSON array. No markdown, no backticks, no preamble.`;
       });
       const data = await resp.json();
       if (data.reportUrl) {
-        status.textContent = `[ Report ready → ${data.reportUrl} ]`;
+        let statusMsg = `[ Report ready → ${data.reportUrl} ]`;
+        if (data.priceWarnings && data.priceWarnings.length > 0) {
+          const warns = data.priceWarnings.map(w =>
+            `${w.symbol}: scan $${w.scanPrice.toPrecision(4)} → corrected to live $${w.livePrice.toPrecision(4)} (${w.deviation}% off)`
+          ).join('\n');
+          statusMsg += `\n\n⚠ PRICE CORRECTIONS (${data.priceWarnings.length}):\n${warns}`;
+          showToast(`⚠ ${data.priceWarnings.length} price(s) corrected to live data`);
+        }
+        status.textContent = statusMsg;
         showToast('⚔ CITADEL REPORT READY');
       } else if (data.report) {
         status.textContent = `[ Report sent to Telegram ✓ ]`;
