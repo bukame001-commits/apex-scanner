@@ -239,7 +239,7 @@
 
   <div class="header">
     <div class="header-badge">AI-POWERED MARKET INTELLIGENCE</div>
-    <h1>APEX <span>SCANNER</span> <span style="font-size:clamp(11px,2.5vw,16px);font-weight:400;color:var(--muted);letter-spacing:2px;vertical-align:middle;">v2.16</span></h1>
+    <h1>APEX <span>SCANNER</span> <span style="font-size:clamp(11px,2.5vw,16px);font-weight:400;color:var(--muted);letter-spacing:2px;vertical-align:middle;">v2.17</span></h1>
     <div class="header-sub">CLAUDE AI + GEMINI AI — CHOOSE YOUR ENGINE</div>
 
   </div>
@@ -3354,8 +3354,7 @@ Return ONLY the raw JSON array. No markdown, no backticks, no preamble.`;
         '$1<div style="font-family:Orbitron,monospace;font-size:10px;letter-spacing:2px;color:var(--accent);margin:16px 0 8px;border-bottom:1px solid var(--border);padding-bottom:4px;">$2</div>$3');
     });
     // Asset recommendation rows: ASSET | DIRECTION | CONVICTION | REASONING
-    html = html.replace(/^([^
-<|]{1,30})\s*\|\s*(BUY|SELL|HOLD|AVOID|WATCH)\s*\|\s*(HIGH|MEDIUM|LOW)\s*\|\s*(.+)$/gm, (_, asset, dir, conv, reason) => {
+    html = html.replace(/^([^|<\n]{1,30})\s*\|\s*(BUY|SELL|HOLD|AVOID|WATCH)\s*\|\s*(HIGH|MEDIUM|LOW)\s*\|\s*(.+)$/gm, (_, asset, dir, conv, reason) => {
       const dc = dir==='BUY'?'#00ff88':dir==='SELL'||dir==='AVOID'?'#ff3366':'#ffb800';
       const cc = conv==='HIGH'?'#00ff88':conv==='LOW'?'#ff3366':'#ffb800';
       return `<div style="display:grid;grid-template-columns:110px 55px 65px 1fr;gap:6px;align-items:start;
