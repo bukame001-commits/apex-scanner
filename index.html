@@ -3191,9 +3191,15 @@ Return ONLY the raw JSON array. No markdown, no backticks, no preamble.`;
     setNewsLoading(false);
   }
 
+  function makeAbortSignal(ms) {
+    const c = new AbortController();
+    setTimeout(() => c.abort(), ms);
+    return c.signal;
+  }
+
   async function fetchFJFeed() {
     try {
-      const r = await fetch(BACKEND + '/api/fj-feed', {signal: AbortSignal.timeout(12000)});
+      const r = await fetch(BACKEND + '/api/fj-feed', {signal: makeAbortSignal(12000)});
       if (!r.ok) return [];
       const items = await r.json();
       return items.map(it => ({
@@ -3212,7 +3218,7 @@ Return ONLY the raw JSON array. No markdown, no backticks, no preamble.`;
 
   async function fetchCryptoPanic() {
     try {
-      const r = await fetch(BACKEND + '/api/crypto-news', {signal: AbortSignal.timeout(12000)});
+      const r = await fetch(BACKEND + '/api/crypto-news', {signal: makeAbortSignal(12000)});
       if (!r.ok) return [];
       const data = await r.json();
       return (data.results || []).map(it => ({
