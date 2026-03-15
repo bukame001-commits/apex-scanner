@@ -239,7 +239,7 @@
 
   <div class="header">
     <div class="header-badge">AI-POWERED MARKET INTELLIGENCE</div>
-    <h1>APEX <span>SCANNER</span> <span style="font-size:clamp(11px,2.5vw,16px);font-weight:400;color:var(--muted);letter-spacing:2px;vertical-align:middle;">v2.20</span></h1>
+    <h1>APEX <span>SCANNER</span> <span style="font-size:clamp(11px,2.5vw,16px);font-weight:400;color:var(--muted);letter-spacing:2px;vertical-align:middle;">v2.21</span></h1>
     <div class="header-sub">CLAUDE AI + GEMINI AI — CHOOSE YOUR ENGINE</div>
 
   </div>
@@ -3177,6 +3177,85 @@ Return ONLY the raw JSON array. No markdown, no backticks, no preamble.`;
   }
 
   // Close on backdrop click — defer until DOM is ready
+
+  // ── Digest Channel Manager ────────────────────────────────
+  function openDigestModal() {
+    document.getElementById('digestModal').classList.add('visible');
+    loadDigestChannels();
+  }
+  function closeDigestModal() {
+    document.getElementById('digestModal').classList.remove('visible');
+  }
+
+  async function loadDigestChannels() {
+    const list = document.getElementById('digestChannelList');
+    try {
+      const r = await fetch(BACKEND + '/digest/channels', {signal: makeAbortSignal(8000)});
+      if (!r.ok) { list.innerHTML = '<div style="color:var(--danger);font-size:10px;">Failed to load channels</div>'; return; }
+      const data = await r.json();
+      renderDigestChannels(data.all || []);
+    } catch(e) {
+      list.innerHTML = '<div style="color:var(--danger);font-size:10px;">Error: ' + e.message + '</div>';
+    }
+  }
+
+  function renderDigestChannels(channels) {
+    const list = document.getElementById('digestChannelList');
+    if (!channels.length) { list.innerHTML = '<div style="color:var(--muted);font-size:10px;">No channels</div>'; return; }
+    const flagMap = {tr: '🇹🇷', en: '🇬🇧'};
+    list.innerHTML = channels.map(ch => {
+      const isCustom = ch.custom === true;
+      const flag = flagMap[ch.lang] || '🌐';
+      return `<div style="display:flex;justify-content:space-between;align-items:center;
+        padding:8px 10px;margin-bottom:4px;border:1px solid var(--border);
+        background:var(--card);border-left:3px solid ${isCustom ? 'var(--accent2)' : 'var(--border)'};">
+        <div>
+          <span style="font-family:Share Tech Mono,monospace;font-size:11px;color:var(--strong);">
+            ${flag} @${ch.handle}
+          </span>
+          <span style="font-size:9px;color:var(--muted);margin-left:8px;">${ch.category} · ${ch.lang.toUpperCase()}</span>
+          ${isCustom ? '<span style="font-size:8px;color:var(--accent2);margin-left:6px;">CUSTOM</span>' : ''}
+        </div>
+        ${isCustom ? `<button onclick="removeDigestChannel('${ch.handle}')"
+          style="background:transparent;border:1px solid var(--danger);color:var(--danger);
+          font-family:Share Tech Mono,monospace;font-size:9px;padding:3px 8px;cursor:pointer;">DEL</button>` : ''}
+      </div>`;
+    }).join('');
+  }
+
+  async function addDigestChannel() {
+    const handle = document.getElementById('digestHandleInput').value.trim().replace(/^@/, '');
+    const lang   = document.getElementById('digestLangSelect').value;
+    const cat    = document.getElementById('digestCatSelect').value;
+    const status = document.getElementById('digestAddStatus');
+    if (!handle) { status.textContent = 'Enter a handle first'; status.style.color = 'var(--danger)'; return; }
+    status.textContent = 'Adding...'; status.style.color = 'var(--muted)';
+    try {
+      const r = await fetch(BACKEND + '/digest/channels', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({handle, lang, category: cat, name: '@' + handle})
+      });
+      const data = await r.json();
+      if (data.error) { status.textContent = data.error; status.style.color = 'var(--danger)'; return; }
+      status.textContent = '✓ Added @' + handle + ' (' + data.total + ' channels total)';
+      status.style.color = 'var(--accent2)';
+      document.getElementById('digestHandleInput').value = '';
+      loadDigestChannels();
+    } catch(e) { status.textContent = 'Error: ' + e.message; status.style.color = 'var(--danger)'; }
+  }
+
+  async function removeDigestChannel(handle) {
+    if (!confirm('Remove @' + handle + ' from digest?')) return;
+    try {
+      const r = await fetch(BACKEND + '/digest/channels/' + encodeURIComponent(handle), {method: 'DELETE'});
+      const data = await r.json();
+      if (data.error) { showToast('Error: ' + data.error); return; }
+      showToast('Removed @' + handle);
+      loadDigestChannels();
+    } catch(e) { showToast('Error: ' + e.message); }
+  }
+
   document.addEventListener('DOMContentLoaded', function() {
     const nm = document.getElementById('newsModal');
     if (nm) nm.addEventListener('click', function(e) {
@@ -3785,7 +3864,7 @@ Return ONLY the raw JSON array. No markdown, no backticks, no preamble.`;
         <span class="bar-icon">📰</span>
         <span class="bar-label">NEWS</span>
       </button>
-      <button class="bar-btn btn-digest" onclick="window.open('https://web-production-d8201.up.railway.app/digest','_blank')">
+      <button class="bar-btn btn-digest" onclick="openDigestModal()">
         <span class="bar-icon">🎬</span>
         <span class="bar-label">DIGEST</span>
       </button>
@@ -3891,5 +3970,60 @@ Return ONLY the raw JSON array. No markdown, no backticks, no preamble.`;
 </div>
 
 
+
+<!-- ══ DIGEST CHANNEL MANAGER MODAL ══════════════════════════ -->
+<div class="news-modal" id="digestModal">
+  <div class="news-panel" style="max-width:520px;width:100%;">
+    <button class="news-close" onclick="closeDigestModal()">✕ CLOSE</button>
+    <div class="news-title">🎬 CREATOR DIGEST</div>
+    <div class="news-subtitle">YOUTUBE CHANNEL MANAGER</div>
+
+    <div style="margin-bottom:14px;">
+      <a href="https://web-production-d8201.up.railway.app/digest" target="_blank"
+         style="display:inline-block;font-family:Share Tech Mono,monospace;font-size:10px;
+         color:var(--accent);border:1px solid var(--accent);padding:5px 14px;text-decoration:none;
+         letter-spacing:2px;">▶ OPEN DIGEST REPORT →</a>
+    </div>
+
+    <!-- Add channel form -->
+    <div style="border:1px solid var(--border);padding:14px;margin-bottom:16px;background:var(--surface);">
+      <div style="font-family:Share Tech Mono,monospace;font-size:10px;color:var(--accent);
+        letter-spacing:2px;margin-bottom:10px;">＋ ADD CHANNEL</div>
+      <div style="display:flex;gap:8px;margin-bottom:8px;">
+        <input id="digestHandleInput" placeholder="@handle or handle"
+          style="flex:1;background:var(--card);border:1px solid var(--border);color:var(--text);
+          font-family:Share Tech Mono,monospace;font-size:11px;padding:6px 10px;outline:none;"
+          onkeydown="if(event.key==='Enter') addDigestChannel()">
+        <button onclick="addDigestChannel()"
+          style="background:transparent;border:1px solid var(--accent2);color:var(--accent2);
+          font-family:Share Tech Mono,monospace;font-size:10px;padding:6px 14px;cursor:pointer;
+          letter-spacing:1px;">ADD</button>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <select id="digestLangSelect"
+          style="flex:1;background:var(--card);border:1px solid var(--border);color:var(--text);
+          font-family:Share Tech Mono,monospace;font-size:10px;padding:5px;">
+          <option value="en">🇬🇧 English</option>
+          <option value="tr">🇹🇷 Turkish</option>
+        </select>
+        <select id="digestCatSelect"
+          style="flex:1;background:var(--card);border:1px solid var(--border);color:var(--text);
+          font-family:Share Tech Mono,monospace;font-size:10px;padding:5px;">
+          <option value="Crypto">Crypto</option>
+          <option value="Finance">Finance</option>
+          <option value="Macro">Macro</option>
+        </select>
+      </div>
+      <div id="digestAddStatus" style="font-size:10px;color:var(--muted);margin-top:6px;font-family:Share Tech Mono,monospace;"></div>
+    </div>
+
+    <!-- Channel list -->
+    <div style="font-family:Share Tech Mono,monospace;font-size:10px;color:var(--accent);
+      letter-spacing:2px;margin-bottom:8px;">ACTIVE CHANNELS</div>
+    <div id="digestChannelList" style="max-height:320px;overflow-y:auto;">
+      <div style="color:var(--muted);font-size:10px;">Loading...</div>
+    </div>
+  </div>
+</div>
 </body>
 </html>
